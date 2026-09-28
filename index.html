@@ -65,12 +65,12 @@
     </div>
   </section>
 
-  <section class="card" id="sec-check" hidden>
+  <section class="card" id="sec-check">
     <h2><span class="num">3</span>입력 확인</h2>
-    <div id="check-summary"></div>
+    <div id="check-summary"><p class="muted">① 입력 파일에서 엑셀 두 개(가동_판매자가재, 배선일정분석)를 올리면 여기에 수요 요약이 나오고 <b>계산 시작</b> 버튼이 켜집니다. 계획 조건(②)은 기본값(v30) 그대로 두면 됩니다.</p></div>
     <div class="scroll"><table class="data" id="demand-table"></table></div>
     <ul id="checks" class="checks"></ul>
-    <button type="button" class="primary" id="run">계산 시작</button>
+    <button type="button" class="primary" id="run" disabled>계산 시작</button>
     <p class="hint" id="run-hint">PC에서 약 10~15분, 휴대폰은 더 걸립니다. 계산 중에는 이 탭을 닫거나 화면을 끄지 마세요.</p>
   </section>
 

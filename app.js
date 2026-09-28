@@ -77,7 +77,8 @@
     if (files.length) parse();
   }
   function parse() {
-    show('sec-check', false); show('sec-error', false);
+    show('sec-error', false); $('run').disabled = true;
+    $('check-summary').innerHTML = '<p class="muted">파일 읽는 중…</p>';
     worker.postMessage({ type: 'parse', files, params: P });
   }
   function renderParsed(m) {
