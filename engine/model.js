@@ -27,12 +27,12 @@
       const s = parts.join('\n').trim();
       return s.startsWith('+ ') ? s.slice(2) : s;
     }
-    text(objTerms, extra = []) {
+    text(objTerms, extra = [], extraBounds = {}) {
       const out = ['Minimize', ' obj: ' + LP.expr(objTerms), 'Subject To'];
       let k = 0;
       for (const [t, s, r] of this.cons.concat(extra)) out.push(` c${k++}: ${LP.expr(t)} ${s} ${numStr(r)}`);
       out.push('Bounds');
-      for (const [n, [lb, ub]] of Object.entries(this.bounds)) out.push(` ${numStr(lb)} <= ${n} <= ${ub === Infinity ? '+inf' : numStr(ub)}`);
+      for (const [n, [lb, ub]] of Object.entries(Object.assign({}, this.bounds, extraBounds))) out.push(` ${numStr(lb)} <= ${n} <= ${ub === Infinity ? '+inf' : numStr(ub)}`);
       if (this.bins.length) { out.push('Binary'); for (let i = 0; i < this.bins.length; i += 20) out.push(' ' + this.bins.slice(i, i + 20).join(' ')); }
       out.push('End');
       return out.join('\n');
@@ -96,8 +96,9 @@
     }
     const z = {}, s = {}, sr = {};
     for (const l of L) for (const f of LF[l]) for (const d of days) z[`${l}|${f}|${d}`] = lp.v('z', { bin: true });
-    for (const l of L) for (const d of days.slice(1)) s[`${l}|${d}`] = lp.v('s', { lb: 0, ub: 1 });
-    for (const k of Object.keys(RST)) if (RST[k].day > D0) sr[k] = lp.v('r', { lb: 0, ub: 1 });
+    // s·r은 이진으로 선언: 목적함수가 정수가 되어 하한 올림으로 최적성 증명이 빨라짐(실측 246초→97초)
+    for (const l of L) for (const d of days.slice(1)) s[`${l}|${d}`] = lp.v('s', { bin: true });
+    for (const k of Object.keys(RST)) if (RST[k].day > D0) sr[k] = lp.v('r', { bin: true });
 
     const byB = new Map();
     for (const e of x) { if (!byB.has(e.b.id)) byB.set(e.b.id, []); byB.get(e.b.id).push(e); }
@@ -141,6 +142,15 @@
     }
     if (O.t0) { for (const l of L) lp.fix(z[`${l}|${O.init[l]}|${O.t0}`], 1, 1); }
     else for (const l of L) if (P.initFamily[l]) lp.con([[1, z[`${l}|${P.initFamily[l]}|${D0}`]]], '=', 1);
+    // 최소 캠페인 길이(선택): 전환한 강종은 m일 이상 유지. 정기수리를 걸치는 구간은 제외
+    const m = P.minCampaign || 0;
+    if (m > 1) for (const l of L) for (let i = 1; i < days.length; i++) {
+      const d = days[i]; if (blk(l, d) || (O.t0 && i === 0)) continue;
+      for (let k = 1; k < m && i + k < days.length; k++) {
+        const dk = days[i + k]; if (blk(l, dk)) break;
+        for (const f of LF[l]) lp.con([[1, z[`${l}|${f}|${d}`]], [-1, z[`${l}|${f}|${days[i - 1]}`]], [-1, z[`${l}|${f}|${dk}`]]], '<=', 0);
+      }
+    }
     const base = O.baseState || {};
     if (O.freezeUntil) for (const l of L) for (const d of prodDays) if (d <= O.freezeUntil && base[`${l}|${d}`]) lp.fix(z[`${l}|${base[`${l}|${d}`]}|${d}`], 1, 1);
     // 안정성: 동결 뒤 날짜에서 기존 계획 강종을 유지하면 보상(= 다르면 벌점, 상수항 생략)
@@ -151,31 +161,56 @@
     const INV = x.map((e) => [Math.max(0, GP.diffDays(e.b.due, e.d)), e.v]);
     const LATE = x.filter((e) => e.d > e.b.due).map((e) => [GP.diffDays(e.d, e.b.due), e.v]);
     const SHORT = Object.values(short).map((v) => [1, v]);
-    const SR = Object.entries(sr).map(([k, v]) => { const l = RST[k].line; return [(RSF[l] - RSS[l]) / FS[l], v]; });
+    const SR = Object.entries(sr).map(([k, v]) => { const l = RST[k].line; return [Math.round(1000 * (RSF[l] - RSS[l]) / FS[l]) / 1000, v]; });
     log && log(`MILP 모델: 변수 ${lp.n} (이진 ${lp.bins.length}), 제약 ${lp.cons.length}${O.t0 ? ` — 재계획 ${GP.md(prodDays[0])}~` : ''}`);
 
     // 1단계: (지연·결품 최소) → M/C + 재가동 강종변경(M/C 환산) 최소
     const lateW = O.lateW == null ? 1 : O.lateW, shortW = O.shortW == null ? 1000 : O.shortW;
-    const obj1 = MC.concat(SR).concat(INV.map(([c, v]) => [1e-7 * c, v]))
-      .concat(LATE.map(([c, v]) => [lateW * c, v])).concat(SHORT.map(([c, v]) => [shortW * c, v]))
-      .concat(STAB.map((v) => [-(O.stabW || 0), v]));
+    // 1000배 정수 계수(M/C 1000, 재가동 강종변경 668). 선생산 타이브레이크는 2단계가 담당하므로 넣지 않음
+    const obj1 = MC.concat(SR).concat(LATE.map(([c, v]) => [lateW * c, v])).concat(SHORT.map(([c, v]) => [shortW * c, v]))
+      .concat(STAB.map((v) => [-(O.stabW || 0), v])).map(([c, v]) => [1000 * c, v]);
     const r1 = solve(highs, lp.text(obj1), { time_limit: P.timeLimit1, mip_rel_gap: 0 }, log, O.t0 ? '1단계(지연→M/C 최소)' : '1단계(M/C 최소)');
     const K = Math.round(GP.sum(MC, ([, v]) => r1.val(v)));
     const srFix = Object.fromEntries(Object.entries(sr).map(([k, v]) => [k, Math.round(r1.val(v))]));
     const late1 = GP.sum(LATE, ([c, v]) => c * r1.val(v)), short1 = GP.sum(SHORT, ([, v]) => r1.val(v));
     // 2단계: M/C ≤ K, 재가동 판단·지연·결품 고정, 선생산(톤·일) 최소. gapRel 0 — 허용오차를 두면 PC마다 다른 해가 나옴
     const extra = [[MC, '<=', K + 1e-6]].concat(Object.entries(sr).map(([k, v]) => [[[1, v]], '<=', srFix[k] + 1e-6]));
-    if (LATE.length) extra.push([LATE, '<=', late1 * (1 + 1e-7) + 1e-3]);
-    if (SHORT.length) extra.push([SHORT, '<=', short1 * (1 + 1e-7) + 1e-3]);
+    // 1단계 지연·결품 수준 유지(수치 오차 0.5톤·일/0.5t 허용 — 창 고정 시 1단계 해가 반드시 들어오도록)
+    if (LATE.length) extra.push([LATE, '<=', late1 * (1 + 1e-6) + 0.5]);
+    if (SHORT.length) extra.push([SHORT, '<=', short1 * (1 + 1e-6) + 0.5]);
     const obj2 = INV.concat(Object.values(sr).map((v) => [P.restartPenalty, v])).concat(STAB.map((v) => [-(O.stabW2 || 0), v]));
-    const r2 = solve(highs, lp.text(obj2, extra), { time_limit: P.timeLimit2, mip_rel_gap: 0 }, log, '2단계(선생산 최소)');
-
+    let r2;
+    const stateOf = (r) => { const st = {}; for (const l of L) for (const d of days) st[`${l}|${d}`] = LF[l].find((f) => r.val(z[`${l}|${f}|${d}`]) > 0.5); return st; };
+    if ((P.phase2Mode || 'fast') === 'fast') {
+      // 빠른 모드: 현재 해의 전환일 ±W일 창 안에서만 강종을 바꿀 수 있게 하고(창 밖 z 고정) 풀기를 개선이 없을 때까지 반복.
+      // 2026 4분기 실측: 창 ±7일 3회 반복으로 전체 탐색(256초)과 같은 최적해(1,156,913.67)를 21초에 찾음. 전역 최적 증명은 아님 → 정밀 모드
+      const W = P.phase2Window || 7;
+      let st = stateOf(r1), best = Infinity, tot2 = 0;
+      for (let it = 0; it < 12; it++) {
+        const sw = {};
+        for (const l of L) sw[l] = days.filter((d, i) => i > 0 && st[`${l}|${d}`] !== st[`${l}|${days[i - 1]}`]);
+        const fixB = {};
+        for (const l of L) for (const d of days) {
+          if (sw[l].some((x) => Math.abs(GP.diffDays(d, x)) <= W)) continue;
+          for (const f of LF[l]) { const v = st[`${l}|${d}`] === f ? 1 : 0; fixB[z[`${l}|${f}|${d}`]] = [v, v]; }
+        }
+        const r = solve(highs, lp.text(obj2, extra, fixB), { time_limit: P.timeLimit2, mip_rel_gap: 0 }, log, `2단계(선생산 최소) ${it + 1}회`);
+        tot2 += r.sec;
+        if (!r.optimal && !isFinite(r.res.ObjectiveValue)) break;
+        const improved = r.res.ObjectiveValue < best - 1e-6 * Math.max(1, Math.abs(best));
+        if (improved || !r2) { r2 = r; best = r.res.ObjectiveValue; st = stateOf(r); }
+        if (!improved && it > 0) break;
+      }
+      r2.windowed = true; r2.sec = tot2;
+    } else {
+      r2 = solve(highs, lp.text(obj2, extra), { time_limit: P.timeLimit2, mip_rel_gap: 0 }, log, '2단계(선생산 최소)');
+    }
     const state = {};
     for (const l of L) for (const d of days) state[`${l}|${d}`] = LF[l].find((f) => r2.val(z[`${l}|${f}|${d}`]) > 0.5);
     const INVv = GP.sum(x, (e) => r2.val(e.v) * Math.max(0, GP.diffDays(e.b.due, e.d)));
     const shortBy = Object.entries(short).map(([id, v]) => [+id, r2.val(v)]).filter(([, v]) => v > 0.05);
     return { state, K, srFix, INV: INVv, late: GP.sum(LATE, ([c, v]) => c * r2.val(v)), short: GP.sum(shortBy, ([, v]) => v), shortBy,
-      optimal1: r1.optimal, optimal2: r2.optimal, sec: [r1.sec, r2.sec], obj1: r1.res.ObjectiveValue };
+      optimal1: r1.optimal, optimal2: r2.optimal, phase2Exact: !r2.windowed, sec: [r1.sec, r2.sec], obj1: r1.res.ObjectiveValue / 1000 };
   };
 
   // ---------------- 캘린더(더미·정지) ----------------

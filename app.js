@@ -8,6 +8,7 @@
     set(v) { try { localStorage.setItem(LS_KEY, JSON.stringify(v)); } catch (e) { /* 저장 불가 환경 */ } },
   };
   let P = Object.assign(GP.clone(GP.DEFAULT_PARAMS), store.get() || {});
+  if (!P.phase2Mode) P.phase2Mode = 'fast';
   let files = [], parsed = null, result = null, meta = {};
   const worker = new Worker('worker.js');
 
@@ -18,7 +19,7 @@
     $('p-q').value = String(P.months[0]);
     $('p-rel').value = P.releaseDays;
     $('p-w1').checked = P.firstWindowPrevMonth;
-    $('p-t1').value = P.timeLimit1; $('p-t2').value = P.timeLimit2;
+    $('p-t1').value = P.timeLimit1; $('p-t2').value = P.timeLimit2; $('p-mode').value = P.phase2Mode || 'fast';
     $('p-init').innerHTML = P.lines.map((l) => `<label>${l} <select data-init="${l}"><option value="">자유(모델이 선택)</option>${P.lineFamilies[l].map((f) => `<option ${P.initFamily[l] === f ? 'selected' : ''}>${f}</option>`).join('')}</select></label>`).join('');
     $('p-sd').innerHTML = P.shutdowns.map((s, i) => `<div class="sd-row"><select data-sd="${i}" data-k="line">${P.lines.map((l) => `<option ${s.line === l ? 'selected' : ''}>${l}</option>`).join('')}</select><input type="date" data-sd="${i}" data-k="start" value="${s.start}"><span>~</span><input type="date" data-sd="${i}" data-k="end" value="${s.end}"><button type="button" class="ghost x" data-sddel="${i}" aria-label="삭제">✕</button></div>`).join('') || '<p class="hint">정기수리 없음</p>';
     $('p-loss').innerHTML = `<tr><th>항목</th>${P.lines.map((l) => `<th>${l}</th>`).join('')}</tr>` + LOSS.map(([k, lab]) => `<tr><td class="l">${lab}</td>${P.lines.map((l) => `<td><input type="number" step="any" data-loss="${k}" data-line="${l}" value="${P[k][l]}"></td>`).join('')}</tr>`).join('');
@@ -31,7 +32,7 @@
     const q = +$('p-q').value; P.months = [q, q + 1, q + 2];
     P.releaseDays = Math.max(0, +$('p-rel').value || 0);
     P.firstWindowPrevMonth = $('p-w1').checked;
-    P.timeLimit1 = Math.max(30, +$('p-t1').value || 1800); P.timeLimit2 = Math.max(30, +$('p-t2').value || 1800);
+    P.timeLimit1 = Math.max(30, +$('p-t1').value || 1800); P.timeLimit2 = Math.max(30, +$('p-t2').value || 1800); P.phase2Mode = $('p-mode').value;
     document.querySelectorAll('[data-init]').forEach((e) => { P.initFamily[e.dataset.init] = e.value; });
     document.querySelectorAll('[data-sd]').forEach((e) => { P.shutdowns[+e.dataset.sd][e.dataset.k] = e.value; });
     document.querySelectorAll('[data-loss]').forEach((e) => { const v = parseFloat(e.value); if (isFinite(v)) P[e.dataset.loss][e.dataset.line] = v; });
@@ -101,7 +102,7 @@
 
   // ---------------- 계산 ----------------
   let t0 = 0, timer = null, stage = 0, wake = null;
-  const STAGES = [['1단계: M/C 최소 강종 일정 탐색', 0, 45, 330], ['2단계: M/C 고정, 선생산 최소화', 45, 92, 330], ['평준화·목적지 배정', 92, 100, 10]];
+  const STAGES = [['1단계: M/C 최소 강종 일정 탐색', 0, 60, 120], ['2단계: M/C 고정, 선생산 최소화', 60, 97, 40], ['평준화·목적지 배정', 97, 100, 5]];
   function setStage(i) { stage = i; $('stage').textContent = STAGES[i][0]; }
   function t0Run() {
     t0 = Date.now(); let stageT = t0;
@@ -135,7 +136,7 @@
       const f = (v) => (isFinite(parseFloat(v)) ? GP.fmt(parseFloat(v), parseFloat(v) < 100 ? 3 : 0) : '없음');
       $('solver').textContent = `탐색 중 — 하한 ${f(m.bound)} · 현재 최선 ${f(m.best)} · 격차 ${/%$/.test(m.gap || '') ? m.gap : '-'}`;
     } else if (m.type === 'done') {
-      finish(); result = m.result; result.savedAt = new Date().toISOString(); renderResult();
+      finish(); result = m.result; result.savedAt = new Date().toISOString(); renderResult(); window._autoPublish && window._autoPublish();
     } else if (m.type === 'error') {
       finish(); show('sec-error', true); $('error-msg').textContent = m.msg + (m.stack ? '\n\n' + m.stack : '');
     }
@@ -218,7 +219,7 @@
   $('dl-json').onclick = () => download(new Blob([packResult()], { type: 'application/json' }), baseName() + '_결과.json');
   $('to-dash').onclick = () => {
     try { sessionStorage.setItem('cgl-dash-handoff', packResult()); } catch (e) { alert('브라우저 저장공간이 부족합니다. 결과 저장(.json) 후 대시보드에서 여세요.'); return; }
-    window.open('dashboard.html', '_blank');
+    window.open('./', '_blank');
   };
   $('result-file').onchange = async (ev) => {
     const f = ev.target.files[0]; if (!f) return;
@@ -244,14 +245,28 @@
       $('pub-msg').textContent = '받은 파일을 GitHub 저장소 gadong-plan-web의 published 폴더에 올리면(Add file → Upload files) 1~2분 뒤 모두에게 보입니다.';
     } catch (e) { $('pub-msg').textContent = '⚠ ' + e.message; }
   };
+  const PUB_KEY = 'cgl-plan-publish-v1';
+  try {
+    const s0 = JSON.parse(localStorage.getItem(PUB_KEY) || 'null');
+    if (s0) { $('pub-pw').value = $('pub-pw2').value = s0.pw || ''; $('pub-token').value = s0.token || ''; $('pub-save').checked = true; $('pub-auto').checked = !!s0.auto; }
+  } catch (e) { /* 저장 불가 */ }
+  function savePub() {
+    try {
+      if ($('pub-save').checked) localStorage.setItem(PUB_KEY, JSON.stringify({ pw: $('pub-pw').value, token: $('pub-token').value.trim(), auto: $('pub-auto').checked }));
+      else localStorage.removeItem(PUB_KEY);
+    } catch (e) { /* 저장 불가 */ }
+  }
+  ['pub-save', 'pub-auto'].forEach((id) => $(id).addEventListener('change', savePub));
+  window._autoPublish = () => { if ($('pub-auto').checked && $('pub-token').value.trim()) $('pub-go').click(); };
   $('pub-go').onclick = async () => {
+    savePub();
     const tok = $('pub-token').value.trim();
     if (!tok) { $('pub-msg').textContent = '⚠ 아래 "GitHub에 바로 게시"를 펼쳐 토큰을 넣거나, "게시용 파일 받기"를 쓰세요.'; document.querySelector('.publish details').open = true; return; }
     const btn = $('pub-go'); btn.disabled = true; $('pub-msg').textContent = '암호화·게시 중…';
     try {
       const env = await makeEnvelope();
       await GP.publishToGitHub(env, tok);
-      $('pub-msg').innerHTML = `게시 완료(${esc(env.label)}). 1~2분 뒤 <a href="dashboard.html" target="_blank">대시보드</a>에서 암호로 열 수 있습니다.`;
+      $('pub-msg').innerHTML = `게시 완료(${esc(env.label)}). 1~2분 뒤 <a href="./" target="_blank">대시보드</a>에서 암호로 열 수 있습니다.`;
     } catch (e) { $('pub-msg').textContent = '⚠ ' + e.message; }
     btn.disabled = false;
   };

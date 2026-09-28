@@ -29,6 +29,8 @@
     firstWindowPrevMonth: true,                          // 첫 달 1~5일 선적분은 전월 생산으로 가정
     restartPenalty: 1000,                                // 2단계: 재가동 강종변경 1회 = 선생산 N톤·일 (1단계 판단 고정용 보조항)
     timeLimit1: 1800, timeLimit2: 1800,                  // 초
+    phase2Mode: 'fast',                                  // 'fast' = 전환일 ±7일 창 반복(수십 초), 'exact' = 전체 탐색·최적 증명(수 분)
+    phase2Window: 7,
 
     // 생산속도(t/분). 실적 달성속도 2025.1~2026.7, 더미코일 제외
     rateBase: {

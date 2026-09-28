@@ -410,7 +410,7 @@
       ['첫 달 1~5일 선적분', P.firstWindowPrevMonth ? '전월 생산으로 가정(계획에서 제외)' : '계획에 포함'],
       ['정기수리', P.shutdowns.map((s) => `${s.line} ${s.start}~${s.end}`).join(', ') || '없음'],
       ['라인 생산 가능 강종', L.map((l) => `${l}: ${P.allowed[l].join(', ')}`).join(' / ')],
-      ['최적화', `1단계 M/C 최소(재가동 강종변경은 M/C 환산 가중) → 2단계 M/C·재가동 판단 고정 후 선생산(톤·일) 최소 → 평준화 LP(유휴 최소화). 1단계 ${GP.round(R.milp.sec[0])}초·2단계 ${GP.round(R.milp.sec[1])}초${R.milp.optimal1 && R.milp.optimal2 ? ', 모두 최적 증명' : ', ⚠ 시간 제한 도달'}`],
+      ['최적화', `1단계 M/C 최소(재가동 강종변경은 M/C 환산 가중) → 2단계 M/C·재가동 판단 고정 후 선생산(톤·일) 최소 → 평준화 LP(유휴 최소화). 1단계 ${GP.round(R.milp.sec[0])}초·2단계 ${GP.round(R.milp.sec[1])}초${!(R.milp.optimal1 && R.milp.optimal2) ? ', ⚠ 시간 제한 도달' : R.milp.phase2Exact === false ? ' (2단계 빠른 모드: 전환일 ±7일 창 반복 — 전체 최적 증명은 정밀 모드)' : ', 모두 최적 증명'}`],
     ];
     for (const [a, b] of prem) { put(wt, r, 1, a, { font: F9B }); put(wt, r, 2, b, { align: LEFT }); wt.mergeCells(r, 2, r, 6); r++; }
     widths(wt, [30, 12, 12, 8, 30, 30]);

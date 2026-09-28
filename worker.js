@@ -1,6 +1,6 @@
 /* 계산 전용 Web Worker: 엑셀 해석 + MILP/LP 계산. 데이터는 이 브라우저 밖으로 나가지 않는다. */
 importScripts('vendor/exceljs.min.js', 'vendor/highs.js',
-  'engine/params.js', 'engine/util.js', 'engine/parse.js', 'engine/model.js', 'engine/replan.js', 'engine/actual.js');
+  'engine/params.js', 'engine/util.js', 'engine/sail_default.js', 'engine/parse.js', 'engine/model.js', 'engine/replan.js', 'engine/actual.js');
 const GP = self.GP;
 let highsP = null, lastLog = 0;
 const post = (type, data) => self.postMessage(Object.assign({ type }, data));

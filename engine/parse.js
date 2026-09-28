@@ -52,25 +52,30 @@
     return e === 99 ? GP.monthEnd(y, m) : GP.ymd(y, m, Math.min(e, last));
   }
 
-  function parseSail(g, P, checks) {
+  // 시트 → [부서, 품명, 권역구분, 목적지명, 비중, 선적창] 행 배열
+  function sailRowsFromGrid(g) {
     const hdr = g[1].map(str);
     const col = (name, dflt) => { const i = hdr.findIndex((h) => h === name); return i > 0 ? i : dflt; };
-    const cDept = col('부서', 1), cName = col('품명', 3), cReg = col('권역구분', 5), cPort = col('목적지명', 6), cW = col('월평균판매량(참고)', 7), cWin = col('배선일정(출항일)', 8);
+    const c = [col('부서', 1), col('품명', 3), col('권역구분', 5), col('목적지명', 6), col('월평균판매량(참고)', 7), col('배선일정(출항일)', 8)];
+    const out = [];
+    for (let r = 2; r < g.length; r++) { const row = g[r]; if (row && str(row[c[0]])) out.push(c.map((i) => row[i])); }
+    return out;
+  }
+  function parseSail(rows, P, checks, srcLabel) {
     const SAIL = {};   // "부서|강종|권역" -> {선적창: [[항구, 비중]]}
     let n = 0;
-    for (let r = 2; r < g.length; r++) {
-      const row = g[r]; if (!row || !str(row[cDept])) continue;
-      const fam = P.sailFamily[str(row[cName])];
-      if (!fam) { checks.push({ level: 'warn', msg: `배선일정 ${r}행: 품명 '${str(row[cName])}'을 강종으로 해석할 수 없어 제외` }); continue; }
-      const regFull = str(row[cReg]); const reg = regFull.includes('_') ? regFull.slice(regFull.indexOf('_') + 1) : regFull;
-      const win = str(row[cWin]);
-      if (!(win in WEND)) { checks.push({ level: 'warn', msg: `배선일정 ${r}행: 선적창 '${win}' 해석 불가 — 제외` }); continue; }
-      const k = `${str(row[cDept])}|${fam}|${reg}`;
+    rows.forEach(([dept, name, regFull0, port, w, win0], i) => {
+      const fam = P.sailFamily[str(name)];
+      if (!fam) { checks.push({ level: 'warn', msg: `배선일정 ${i + 2}행: 품명 '${str(name)}'을 강종으로 해석할 수 없어 제외` }); return; }
+      const regFull = str(regFull0), reg = regFull.includes('_') ? regFull.slice(regFull.indexOf('_') + 1) : regFull;
+      const win = str(win0);
+      if (!(win in WEND)) { checks.push({ level: 'warn', msg: `배선일정 ${i + 2}행: 선적창 '${win}' 해석 불가 — 제외` }); return; }
+      const k = `${str(dept)}|${fam}|${reg}`;
       (SAIL[k] || (SAIL[k] = {}));
-      (SAIL[k][win] || (SAIL[k][win] = [])).push([str(row[cPort]), num(row[cW])]);
+      (SAIL[k][win] || (SAIL[k][win] = [])).push([str(port), num(w)]);
       n++;
-    }
-    checks.push({ level: 'info', msg: `배선일정 ${n}행 읽음 (권역 키 ${Object.keys(SAIL).length}개)` });
+    });
+    checks.push({ level: 'info', msg: `배선일정 ${srcLabel}: ${n}행 (권역 키 ${Object.keys(SAIL).length}개)` });
     return SAIL;
   }
 
@@ -231,9 +236,9 @@
     const wsSelf = GP.findSheet(workbooks, '자가재생산계획');
     if (!wsSales) checks.push({ level: 'error', msg: "'판매계획' 시트가 있는 파일이 없음" });
     if (!wsSelf) checks.push({ level: 'error', msg: "'자가재생산계획' 시트가 있는 파일이 없음" });
-    if (!wsSail) checks.push({ level: 'error', msg: "'정리_배선일정' 시트가 있는 파일이 없음 (배선일정분석 파일)" });
     if (checks.some((c) => c.level === 'error')) return { items, checks };
-    const SAIL = parseSail(GP.sheetGrid(wsSail, 12), P, checks);
+    const SAIL = wsSail ? parseSail(sailRowsFromGrid(GP.sheetGrid(wsSail, 12)), P, checks, '올린 파일')
+      : parseSail(GP.DEFAULT_SAIL_ROWS || [], P, checks, '기본값(2026-09 배선일정분석 — 선적 일정이 바뀌면 배선일정 파일도 올리세요)');
     const gS = GP.sheetGrid(wsSales, 40);
     let asOf = '';
     for (let r = 1; r <= 4 && r < gS.length; r++) for (const v of gS[r]) { const s = str(v); if (/\(\s*'?\d{2}\.\d{1,2}\.\d{1,2}/.test(s)) asOf = s; }
