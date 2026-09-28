@@ -51,18 +51,23 @@
     $('d-meta').textContent = [meta.asOf && `판매계획 기준 ${meta.asOf}`, meta.savedAt && `계산 ${new Date(meta.savedAt).toLocaleString('ko-KR')}`, `계획 기간 ${H.D0} ~ ${H.D1}`].filter(Boolean).join(' · ');
     renderNow(); renderReplan();
     const mcT = GP.sum(L, (l) => A.mc[l]), maxLoad = Math.max(...Object.values(A.load));
-    $('d-kpis').className = 'kpis';
+    const maxKey = Object.keys(A.load).find((k) => A.load[k] === maxLoad), [ml, mi] = maxKey.split('|');
+    renderExec();
     $('d-kpis').innerHTML = [
-      [`${mcT}회`, `M/C · ${L.map((l) => `${l} ${A.mc[l]}`).join(' / ')}`],
-      [`${GP.fmt(A.short)}t`, '결품', A.short > 0.5], [`${GP.fmt(A.lateT)}t`, '지연', A.lateT > 0.5],
-      [`${GP.fmt(A.earlyT)}t`, '전월 선생산'], [`${A.idle.length}일`, '유휴일'],
-      [`${GP.fmt(maxLoad * 100, 1)}%`, '최대 월 부하'],
-    ].map(([v, l, bad]) => `<div class="kpi ${bad ? 'bad' : ''}"><b>${v}</b><span>${l}</span></div>`).join('');
+      [`${mcT}회`, 'M/C(강종 전환)', `${L.map((l) => `${l} ${A.mc[l]}회`).join(' · ')}`],
+      [`${GP.fmt(A.short + A.lateT)}t`, '결품·지연', `결품 ${GP.fmt(A.short)}t · 지연 ${GP.fmt(A.lateT)}t`, A.short + A.lateT > 0.5],
+      [`${GP.fmt(A.earlyT)}t`, '전월 선생산', '납기월보다 앞 달 생산'],
+      [`${GP.fmt(maxLoad * 100, 1)}%`, '최대 월 부하', `${H.ym[+mi][1]}월 ${ml}`, maxLoad > 0.995],
+    ].map(([v, l, sub, bad]) => `<div class="kpi ${bad ? 'bad' : ''}"><span class="kl">${l}</span><b>${v}</b><span class="ks">${sub}</span></div>`).join('');
     const fams = [...new Set(L.flatMap((l) => P.lineFamilies[l]))];
-    $('d-legend').innerHTML = fams.map((f) => `<span><i class="sw" style="background:${famVar(f)}"></i>${f}</span>`).join('') + '<span><i class="sw" style="background:var(--mc)"></i>M/C·재가동</span><span><i class="sw" style="background:var(--down)"></i>설비정지·실적 미달</span><span><i class="sw" style="background:var(--sd)"></i>정기수리</span>';
-    renderDaily(); renderLoad(); renderEvents(); renderDept(); renderEarly();
+    const leg = fams.map((f) => `<span><i class="sw" style="background:${famVar(f)}"></i>${f}</span>`).join('') + '<span><i class="sw" style="background:var(--mc)"></i>M/C·재가동</span><span><i class="sw" style="background:var(--down)"></i>설비정지·실적 미달</span><span><i class="sw" style="background:var(--sd)"></i>정기수리</span>';
+    $('d-legend').innerHTML = leg; $('g-legend').innerHTML = leg;
+    $('g-tabs').innerHTML = H.ym.map(([, m], i) => `<button type="button" data-g="${i}">${m}월</button>`).join('');
+    const today = localToday(), ti = A.mIdx(today);
+    renderGantt(gMonth == null ? (ti >= 0 ? ti : 0) : Math.min(gMonth, H.ym.length - 1));
+    renderLoad(); renderEvents(); renderDept(); renderEarly();
     $('d-tabs').innerHTML = H.ym.map(([, m]) => `${m}월`).concat(['분기 요약']).map((t, i) => `<button type="button" data-tab="${i}">${t}</button>`).join('');
-    drawTab(Math.min(gTab, H.ym.length));
+    if (document.querySelector('details.more').open) { renderDaily(); drawTab(Math.min(gTab, H.ym.length)); }
   }
 
   // ---------------- 기준일 현황 ----------------
@@ -166,11 +171,72 @@
   }
   function renderEvents() {
     const P = R.P;
-    const items = A.events.map((e) => ({ d: e.date, html: `<div class="when">${GP.md(e.date)}(${GP.weekday(e.date)}) ${e.line} ${e.kind === 'M/C' ? `M/C ${e.from}→${e.to}` : `S/D 재가동 ${e.from === e.to ? e.to + ' 유지' : e.from + '→' + e.to}`} <span class="muted">· 손실 ${GP.fmt(e.loss)}분</span></div><div class="why">${esc(GP.eventReason(R, A, e))}</div>` }))
-      .concat(P.shutdowns.map((s) => ({ d: s.start, html: `<div class="when">${GP.md(s.start)}~${GP.md(s.end)} ${s.line} 정기수리 <span class="muted">· ${GP.diffDays(s.end, s.start) + 1}일</span></div>` })));
-    items.sort((a, b) => (a.d < b.d ? -1 : 1));
-    $('d-events').innerHTML = items.map((x) => `<li>${x.html}</li>`).join('');
+    const rows = A.events.map((e) => ({ d: e.date, cls: '', cells: [`${GP.md(e.date)}(${GP.weekday(e.date)})`, e.line, e.kind === 'M/C' ? `<b>${e.from} → ${e.to}</b>` : `재가동 <b>${e.from === e.to ? e.to + ' 유지' : e.from + ' → ' + e.to}</b>`, `${GP.fmt(e.loss / 60, 1)}h`], why: GP.eventReason(R, A, e) }))
+      .concat(P.shutdowns.map((x) => ({ d: x.start, cls: 'sdrow', cells: [`${GP.md(x.start)}~${GP.md(x.end)}`, x.line, `정기수리 ${GP.diffDays(x.end, x.start) + 1}일`, '-'], why: '' })));
+    rows.sort((a, b) => (a.d < b.d ? -1 : 1));
+    $('d-events').innerHTML = '<tr><th>일자</th><th>라인</th><th>전환</th><th>손실</th></tr>' + rows.map((r, i) =>
+      `<tr class="evrow ${r.cls}" data-i="${i}">${r.cells.map((c) => `<td>${c}</td>`).join('')}</tr>` + (r.why ? `<tr class="why-row" data-w="${i}" hidden><td colspan="4">${esc(r.why)}</td></tr>` : '')).join('');
   }
+  $('d-events').addEventListener('click', (ev) => { const tr = ev.target.closest('.evrow'); if (!tr) return; const w = $('d-events').querySelector(`[data-w="${tr.dataset.i}"]`); if (w) { w.hidden = !w.hidden; tr.classList.toggle('open', !w.hidden); } });
+
+  function renderExec() {
+    const P = R.P, L = P.lines, H = A.H, mcT = GP.sum(L, (l) => A.mc[l]);
+    const risks = [];
+    for (const l of L) H.ym.forEach(([, m], i) => { const v = A.load[`${l}|${i}`] || 0; if (v >= 0.995) risks.push(`${m}월 ${l} 부하 ${GP.fmt(v * 100)}% — 여유 없음, 설비 고장 시 바로 지연`); });
+    if (A.short + A.lateT > 0.5) risks.unshift(`결품·지연 ${GP.fmt(A.short + A.lateT)}t 발생`);
+    const sd = P.shutdowns.map((x) => `${x.line} 정기수리 ${GP.md(x.start)}~${GP.md(x.end)}`).join(', ');
+    $('d-exec').innerHTML = `<p class="headline">M/C <b>${mcT}회</b> · 결품·지연 <b>${GP.fmt(A.short + A.lateT)}t</b> · 전월 선생산 <b>${GP.fmt(A.earlyT)}t</b>${sd ? ` · ${sd}` : ''}</p>`
+      + (risks.length ? risks.map((t) => `<p class="risk">⚠ ${esc(t)}</p>`).join('') : '<p class="ok">✓ 결품·지연 없음, 모든 월 여유 있음</p>');
+  }
+
+  // ---------------- HTML 간트: 라인별 강종 행 + 부서 행 + 가동시간 ----------------
+  let gMonth = null;
+  const DSHORT = { '도금수출': '도금수출', '자동차수출': '자동차수출', '도금국내': '도금국내', '자동차내수': '자동차내수', '자가재': '자가재' };
+  function renderGantt(mi) {
+    gMonth = mi;
+    document.querySelectorAll('#g-tabs button').forEach((b) => b.classList.toggle('on', +b.dataset.g === mi));
+    const P = R.P, [y, m] = A.H.ym[mi], nd = GP.daysInMonth(y, m), FAM = P.alloyFamily;
+    const ds = Array.from({ length: nd }, (_, i) => GP.ymd(y, m, i + 1));
+    const fam = {}, dep = {};
+    for (const [d, l, a, c, t] of R.rows) { if (A.mIdx(d) !== mi) continue; fam[`${l}|${d}|${FAM[a]}`] = (fam[`${l}|${d}|${FAM[a]}`] || 0) + t; dep[`${l}|${d}|${c}`] = (dep[`${l}|${d}|${c}`] || 0) + t; }
+    const today = localToday();
+    let h = `<colgroup><col class="cc0"><col class="cc1">${ds.map(() => '<col>').join('')}<col class="ctot"></colgroup>` + '<thead><tr><th class="c0" rowspan="2">라인</th><th class="c1" rowspan="2">구분</th>' + ds.map((d) => `<th class="${d === today ? 'today' : ''}">${+d.slice(8)}</th>`).join('') + '<th class="tot" rowspan="2">계</th></tr><tr>'
+      + ds.map((d) => { const w = GP.weekday(d); return `<th class="wk ${w === '토' ? 'sat' : w === '일' ? 'sun' : ''}">${w}</th>`; }).join('') + '</tr></thead><tbody>';
+    for (const l of P.lines) {
+      const fams = GP.famOrder(P, l);
+      const deps = GP.DEPTS.filter((c) => ds.some((d) => (dep[`${l}|${d}|${c}`] || 0) > 0.5));
+      const rows = fams.map((f) => ({ kind: 'fam', f })).concat(deps.map((c) => ({ kind: 'dep', c })), [{ kind: 'hrs' }]);
+      const sdIdx = ds.map((d, i) => (A.calBy[`${l}|${d}`].blackout ? i : -1)).filter((i) => i >= 0);
+      rows.forEach((r, ri) => {
+        h += `<tr class="r-${r.kind}${ri === 0 ? ' first' : ''}">`;
+        if (ri === 0) h += `<th class="c0 line" rowspan="${rows.length}">${l}</th>`;
+        h += `<th class="c1">${r.kind === 'fam' ? `<i class="sw" style="background:${famVar(r.f)}"></i>${r.f}` : r.kind === 'dep' ? DSHORT[r.c] : '가동시간(h)'}</th>`;
+        let tot = 0;
+        ds.forEach((d, i) => {
+          if (sdIdx.includes(i)) {
+            if (ri === 0 && i === sdIdx[0]) { const sd = P.shutdowns.find((x) => x.line === l && x.start <= d && d <= x.end); h += `<td class="sdblock" colspan="${sdIdx.length}" rowspan="${rows.length}">정기수리<br>${sd ? `${GP.md(sd.start)}~${GP.md(sd.end)}` : ''}</td>`; }
+            return;
+          }
+          const c = A.calBy[`${l}|${d}`];
+          let v = 0, txt = '';
+          if (r.kind === 'fam') { v = fam[`${l}|${d}|${r.f}`] || 0; const mm = GP.isSwitch(c) && /\((.+)→/.exec(c.event); txt = v > 0.5 ? GP.fmt(v) : (mm && mm[1] === r.f && c.event.startsWith('M/C') ? 'M/C' : ''); }
+          else if (r.kind === 'dep') { v = dep[`${l}|${d}|${r.c}`] || 0; txt = v > 0.5 ? GP.fmt(v) : ''; }
+          else { const u = (A.used[`${l}|${d}`] || 0) / 60; txt = u > 0 ? u.toFixed(1) : ''; }
+          tot += v;
+          const cls = [GP.isSwitch(c) ? 'mc' : '', GP.isDown(c) ? 'down' : '', d === today ? 'today' : ''].filter(Boolean).join(' ');
+          h += `<td class="${cls}">${txt}</td>`;
+        });
+        h += `<td class="tot">${r.kind === 'hrs' ? '' : GP.fmt(tot)}</td></tr>`;
+      });
+    }
+    $('g-table').innerHTML = h + '</tbody>';
+    // 모바일 등 좁은 화면: 오늘(없으면 1일) 열이 보이게 가로 스크롤
+    const wrap = document.querySelector('.gtable-wrap'), ti = ds.indexOf(today);
+    if (wrap && wrap.scrollWidth > wrap.clientWidth) { const th = $('g-table').querySelectorAll('thead tr:first-child th')[2 + Math.max(0, ti - 1)]; wrap.scrollLeft = ti > 0 && th ? th.offsetLeft - 144 - 8 : 0; }
+  }
+  $('g-tabs').onclick = (ev) => { if (ev.target.dataset.g != null) renderGantt(+ev.target.dataset.g); };
+  document.querySelector('details.more').addEventListener('toggle', (ev) => { if (ev.target.open && R) { renderDaily(); drawTab(Math.min(gTab, A.H.ym.length)); } });
+
   function renderDept() {
     const H = A.H, t = {}, dem = {};
     for (const [d, l, a, c, x] of R.rows) { const k = `${c}|${A.mIdx(d)}`; t[k] = (t[k] || 0) + x; }
