@@ -132,7 +132,7 @@
       const f = (v) => (isFinite(parseFloat(v)) ? GP.fmt(parseFloat(v), parseFloat(v) < 100 ? 3 : 0) : '없음');
       $('solver').textContent = `탐색 중 — 하한 ${f(m.bound)} · 현재 최선 ${f(m.best)} · 격차 ${/%$/.test(m.gap || '') ? m.gap : '-'}`;
     } else if (m.type === 'done') {
-      finish(); result = m.result; renderResult();
+      finish(); result = m.result; result.savedAt = new Date().toISOString(); renderResult();
     } else if (m.type === 'error') {
       finish(); show('sec-error', true); $('error-msg').textContent = m.msg + (m.stack ? '\n\n' + m.stack : '');
     }
@@ -195,7 +195,12 @@
       await new Promise((r) => setTimeout(r, 400));
     }
   };
-  $('dl-json').onclick = () => download(new Blob([JSON.stringify({ app: 'cgl-plan', version: 1, result, meta })], { type: 'application/json' }), baseName() + '_결과.json');
+  const packResult = () => JSON.stringify({ app: 'cgl-plan', version: 1, savedAt: result.savedAt || new Date().toISOString(), result, meta });
+  $('dl-json').onclick = () => download(new Blob([packResult()], { type: 'application/json' }), baseName() + '_결과.json');
+  $('to-dash').onclick = () => {
+    try { sessionStorage.setItem('cgl-dash-handoff', packResult()); } catch (e) { alert('브라우저 저장공간이 부족합니다. 결과 저장(.json) 후 대시보드에서 여세요.'); return; }
+    window.open('dashboard.html', '_blank');
+  };
   $('result-file').onchange = async (ev) => {
     const f = ev.target.files[0]; if (!f) return;
     try {
