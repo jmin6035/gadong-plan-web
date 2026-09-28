@@ -103,12 +103,7 @@
   let t0 = 0, timer = null, stage = 0, wake = null;
   const STAGES = [['1단계: M/C 최소 강종 일정 탐색', 0, 45, 330], ['2단계: M/C 고정, 선생산 최소화', 45, 92, 330], ['평준화·목적지 배정', 92, 100, 10]];
   function setStage(i) { stage = i; $('stage').textContent = STAGES[i][0]; }
-  $('run').onclick = async () => {
-    if (!parsed) return;
-    readParams();
-    show('sec-result', false); show('sec-error', false); show('sec-progress', true);
-    $('log').innerHTML = ''; $('solver').textContent = ''; setStage(0);
-    $('run').disabled = true;
+  function t0Run() {
     t0 = Date.now(); let stageT = t0;
     clearInterval(timer);
     timer = setInterval(() => {
@@ -118,6 +113,14 @@
       $('bar-fill').style.width = `${a + (b - a) * f * 0.95}%`;
     }, 500);
     worker._onStage = () => { stageT = Date.now(); };
+  }
+  $('run').onclick = async () => {
+    if (!parsed) return;
+    readParams();
+    show('sec-result', false); show('sec-error', false); show('sec-progress', true);
+    $('log').innerHTML = ''; $('solver').textContent = ''; setStage(0);
+    $('run').disabled = true;
+    t0Run();
     try { if (navigator.wakeLock) wake = await navigator.wakeLock.request('screen'); } catch (e) { wake = null; }
     worker.postMessage({ type: 'run', items: parsed.items, params: P });
   };
@@ -138,7 +141,7 @@
     }
   };
   function finish() {
-    clearInterval(timer); $('bar-fill').style.width = '100%'; $('run').disabled = false;
+    clearInterval(timer); timer = null; $('bar-fill').style.width = '100%'; $('run').disabled = !parsed || parsed.checks.some((c) => c.level === 'error'); $('rp-run').disabled = false;
     if (wake) { wake.release().catch(() => {}); wake = null; }
   }
   document.addEventListener('visibilitychange', async () => {
@@ -164,7 +167,23 @@
     $('events').innerHTML = '<tr><th>일자</th><th>라인</th><th>구분</th><th>전환</th><th>손실(분)</th><th>이유</th></tr>' + A.events.map((e) => `<tr><td>${GP.md(e.date)}(${GP.weekday(e.date)})</td><td>${e.line}</td><td>${e.kind}</td><td>${e.from === e.to ? e.to + ' 유지' : `${e.from}→${e.to}`}</td><td class="n">${GP.fmt(e.loss, 1)}</td><td class="l">${esc(GP.eventReason(R, A, e))}</td></tr>`).join('');
     const er = GP.earlyReasons(R, A);
     $('early').innerHTML = '<tr><th>라인</th><th>강종</th><th>부서</th><th>생산월</th><th>마감</th><th>물량(t)</th><th>이유</th></tr>' + er.map((x) => `<tr><td>${x.line}</td><td>${x.alloy}</td><td>${x.cls}</td><td>${x.prodMonth}월</td><td>${GP.md(x.due)}</td><td class="n">${GP.fmt(x.tons, 1)}</td><td class="l">${esc(x.why)}</td></tr>`).join('') + `<tr><td colspan="5"><b>합계</b></td><td class="n"><b>${GP.fmt(A.earlyT, 1)}</b></td><td></td></tr>`;
+    renderReplanBox();
+    show('sec-replan', true);
+    const H = A.H, today = (() => { const d = new Date(); return GP.ymd(d.getFullYear(), d.getMonth() + 1, d.getDate()); })();
+    const last = GP.addDays(H.D1, -1);
+    $('rp-t0').min = H.D0; $('rp-t0').max = last;
+    if (!$('rp-t0').value || $('rp-t0').value < H.D0 || $('rp-t0').value > last) $('rp-t0').value = today < H.D0 ? H.D0 : today > last ? last : today;
     $('sec-result').scrollIntoView({ behavior: 'smooth' });
+  }
+  function renderReplanBox() {
+    const rp = result.replan, box = $('replan-box');
+    if (!rp) { box.hidden = true; return; }
+    const ev = (x) => { const [d, l, e] = x.split('|'); return `${GP.md(d)} ${l} ${e}`; };
+    box.hidden = false;
+    box.innerHTML = `<p><b>재계획 결과</b> — 실적 기준일 ${GP.md(rp.t0)}, 강종 동결 ~${rp.freezeUntil ? GP.md(rp.freezeUntil) : '없음'}</p>`
+      + rp.notes.map((n) => `<p>· ${esc(n)}</p>`).join('')
+      + `<p>· 전환 일정 변경: ${rp.removed.length || rp.added.length ? `없어짐 [${rp.removed.map(ev).join(', ') || '-'}] / 새로 생김 [${rp.added.map(ev).join(', ') || '-'}]` : '없음(기존 전환 일정 유지)'}</p>`
+      + `<p>· 지연 ${GP.fmt(rp.late)}톤·일${rp.shortBy.length ? `, 결품: ${rp.shortBy.map(esc).join(', ')}` : ', 결품 없음'}${rp.over.length ? `, 초과 생산: ${rp.over.map(esc).join(', ')}` : ''}</p>`;
   }
   function canvasFor(i) {
     const c = document.createElement('canvas');
@@ -209,6 +228,46 @@
       result = o.result; meta = o.meta || {}; renderResult();
     } catch (e) { alert('결과 파일을 열지 못했습니다: ' + e.message); }
   };
+
+  // ---------------- 실적 반영 재계획 ----------------
+  let rpEvents = [{ type: 'down', line: '2CGL', from: '', to: '', minutes: '', tons: '' }], rpXlsx = null;
+  function renderRpEvents() {
+    $('rp-events').innerHTML = rpEvents.map((e, i) => `<div class="sd-row">
+      <select data-rp="${i}" data-k="type"><option value="down" ${e.type === 'down' ? 'selected' : ''}>설비정지</option><option value="reject" ${e.type === 'reject' ? 'selected' : ''}>불량(재생산)</option></select>
+      <select data-rp="${i}" data-k="line">${P.lines.map((l) => `<option ${e.line === l ? 'selected' : ''}>${l}</option>`).join('')}</select>
+      <input type="date" data-rp="${i}" data-k="from" value="${e.from}" aria-label="시작일">
+      ${e.type === 'down' ? `<input type="date" data-rp="${i}" data-k="to" value="${e.to}" aria-label="종료일"><input type="number" data-rp="${i}" data-k="minutes" value="${e.minutes}" placeholder="분/일(빈칸=종일)" min="0" max="1440">`
+        : `<input type="number" data-rp="${i}" data-k="tons" value="${e.tons}" placeholder="불량 톤" min="0">`}
+      <button type="button" class="ghost x" data-rpdel="${i}" aria-label="삭제">✕</button></div>`).join('') || '<p class="hint">사건 없음 — 계획대로 생산했다고 보고 재계산</p>';
+  }
+  $('rp-events').addEventListener('change', (ev) => {
+    const t = ev.target, i = t.dataset.rp; if (i == null) return;
+    rpEvents[+i][t.dataset.k] = t.value;
+    if (t.dataset.k === 'type') renderRpEvents();
+  });
+  $('rp-events').addEventListener('click', (ev) => { const d = ev.target.dataset.rpdel; if (d != null) { rpEvents.splice(+d, 1); renderRpEvents(); } });
+  $('rp-add').onclick = () => { rpEvents.push({ type: 'down', line: P.lines[0], from: '', to: '', minutes: '', tons: '' }); renderRpEvents(); };
+  $('rp-template').onclick = async () => {
+    const t0 = $('rp-t0').value; if (!result || !t0) return;
+    const wb = GP.buildActualTemplate(ExcelJS, result, t0);
+    download(new Blob([await wb.xlsx.writeBuffer()], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }), `실적입력_${t0}.xlsx`);
+  };
+  $('rp-file').onchange = async (ev) => {
+    const f = ev.target.files[0]; rpXlsx = f ? await f.arrayBuffer() : null;
+    $('rp-file-name').textContent = f ? `${f.name} (방법 1로 계산)` : '';
+  };
+  $('rp-run').onclick = async () => {
+    const t0 = $('rp-t0').value; if (!result || !t0) return;
+    const events = rpEvents.filter((e) => e.from).map((e) => e.type === 'down'
+      ? { type: 'down', line: e.line, from: e.from, to: e.to || e.from, minutes: +e.minutes || 0 }
+      : { type: 'reject', line: e.line, date: e.from, tons: +e.tons || 0 });
+    show('sec-error', false); show('sec-progress', true);
+    $('log').innerHTML = ''; $('solver').textContent = ''; setStage(0);
+    $('rp-run').disabled = true; $('run').disabled = true;
+    t0Run(); try { if (navigator.wakeLock) wake = await navigator.wakeLock.request('screen'); } catch (e) { wake = null; }
+    worker.postMessage({ type: 'replan', base: result, t0, freeze: Math.max(0, +$('rp-freeze').value || 0), lateW: 1 / Math.max(1, +$('rp-tradeoff').value || 100), stabW: 1 / Math.max(1, +$('rp-stab').value || 10), xlsx: rpXlsx, events });
+  };
+  renderRpEvents();
 
   // ---------------- 공통 ----------------
   function download(blob, name) {

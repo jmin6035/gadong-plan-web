@@ -1,6 +1,6 @@
 /* 계산 전용 Web Worker: 엑셀 해석 + MILP/LP 계산. 데이터는 이 브라우저 밖으로 나가지 않는다. */
 importScripts('vendor/exceljs.min.js', 'vendor/highs.js',
-  'engine/params.js', 'engine/util.js', 'engine/parse.js', 'engine/model.js');
+  'engine/params.js', 'engine/util.js', 'engine/parse.js', 'engine/model.js', 'engine/replan.js', 'engine/actual.js');
 const GP = self.GP;
 let highsP = null, lastLog = 0;
 const post = (type, data) => self.postMessage(Object.assign({ type }, data));
@@ -46,6 +46,19 @@ self.onmessage = async (ev) => {
       }
       post('parsed', { items: res.items, checks: res.checks, asOf: res.asOf, sheets, summary });
       getHighs();                       // 솔버 미리 로드
+    } else if (msg.type === 'replan') {
+      const highs = await getHighs();
+      GP.solverExtra = { output_flag: true, log_to_console: true };
+      const t0 = Date.now(), log = (m) => post('log', { msg: m, sec: (Date.now() - t0) / 1000 });
+      let act;
+      if (msg.xlsx) {
+        const wb = new ExcelJS.Workbook(); await wb.xlsx.load(msg.xlsx);
+        act = GP.parseActualWorkbook(wb, msg.base, msg.t0);
+        for (const c of act.checks || []) if (c.level !== 'info') log(`${c.level === 'error' ? '오류' : '경고'}: ${c.msg}`);
+        if ((act.checks || []).some((c) => c.level === 'error')) throw new Error(act.checks.filter((c) => c.level === 'error').map((c) => c.msg).join(' / '));
+      } else act = GP.simulateActuals(msg.base, msg.t0, msg.events || []);
+      const R = GP.replan(highs, msg.base, act, { freezeDays: msg.freeze, lateW: msg.lateW, stabW: msg.stabW, stabW2: msg.stabW * 5000 }, log);
+      post('done', { result: R, sec: (Date.now() - t0) / 1000 });
     } else if (msg.type === 'run') {
       const highs = await getHighs();
       GP.solverExtra = { output_flag: true, log_to_console: true };

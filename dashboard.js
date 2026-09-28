@@ -24,7 +24,7 @@
     $('d-empty').hidden = true; $('d-body').hidden = false;
     $('d-title').textContent = `'${String(H.ym[0][0]).slice(2)}.${H.ym.map(([, m]) => m).join('·')}월 도금 CGL 가동계획`;
     $('d-meta').textContent = [meta.asOf && `판매계획 기준 ${meta.asOf}`, meta.savedAt && `계산 ${new Date(meta.savedAt).toLocaleString('ko-KR')}`, `계획 기간 ${H.D0} ~ ${H.D1}`].filter(Boolean).join(' · ');
-    renderNow();
+    renderNow(); renderReplan();
     const mcT = GP.sum(L, (l) => A.mc[l]), maxLoad = Math.max(...Object.values(A.load));
     $('d-kpis').className = 'kpis';
     $('d-kpis').innerHTML = [
@@ -34,7 +34,7 @@
       [`${GP.fmt(maxLoad * 100, 1)}%`, '최대 월 부하'],
     ].map(([v, l, bad]) => `<div class="kpi ${bad ? 'bad' : ''}"><b>${v}</b><span>${l}</span></div>`).join('');
     const fams = [...new Set(L.flatMap((l) => P.lineFamilies[l]))];
-    $('d-legend').innerHTML = fams.map((f) => `<span><i class="sw" style="background:${famVar(f)}"></i>${f}</span>`).join('') + '<span><i class="sw" style="background:var(--mc)"></i>M/C·재가동</span><span><i class="sw" style="background:var(--sd)"></i>정기수리</span>';
+    $('d-legend').innerHTML = fams.map((f) => `<span><i class="sw" style="background:${famVar(f)}"></i>${f}</span>`).join('') + '<span><i class="sw" style="background:var(--mc)"></i>M/C·재가동</span><span><i class="sw" style="background:var(--down)"></i>설비정지·실적 미달</span><span><i class="sw" style="background:var(--sd)"></i>정기수리</span>';
     renderDaily(); renderLoad(); renderEvents(); renderDept(); renderEarly();
     $('d-tabs').innerHTML = H.ym.map(([, m]) => `${m}월`).concat(['분기 요약']).map((t, i) => `<button type="button" data-tab="${i}">${t}</button>`).join('');
     drawTab(Math.min(gTab, H.ym.length));
@@ -56,7 +56,7 @@
       const toDate = GP.sum(R.rows.filter((r) => r[1] === l && A.mIdx(r[0]) === mi && r[0] <= d), (r) => r[4]);
       const deps = Object.entries(byDep[l] || {}).sort((a, b) => b[1] - a[1]).map(([k, v]) => `${k} ${GP.fmt(v)}t`).join(', ');
       const state = c.blackout ? '<span class="pill">정기수리</span>' : `<i class="sw" style="background:${famVar(c.fam)}"></i> ${c.fam}`;
-      return `<div class="line-card"><h3>${l} ${state} ${c.event && !c.blackout ? `<span class="pill warn">${esc(c.event)}</span>` : ''}</h3><dl>
+      return `<div class="line-card"><h3>${l} ${state} ${c.event && !c.blackout ? `<span class="pill ${GP.isSwitch(c) ? 'warn' : 'down'}">${esc(c.event)}</span>` : ''}</h3><dl>
         <dt>계획 생산</dt><dd>${c.blackout ? '-' : `${GP.fmt(prod)}t (가동률 ${c.cap > 0 ? GP.fmt(used / c.cap * 100) : 0}%)`}</dd>
         <dt>부서별</dt><dd>${deps || '-'}</dd>
         <dt>현재 캠페인</dt><dd>${cp ? `${cp.fam} ${GP.md(cp.start)}~${GP.md(cp.end)} (${GP.diffDays(d, cp.start) + 1}/${GP.diffDays(cp.end, cp.start) + 1}일)` : '-'}</dd>
@@ -67,6 +67,17 @@
     }).join('');
   }
   $('d-date').onchange = () => R && renderNow();
+  function renderReplan() {
+    const rp = R.replan, el = $('d-replan');
+    if (!rp) { el.hidden = true; return; }
+    const ev = (x) => { const [d, l, e] = x.split('|'); return `${GP.md(d)} ${l} ${esc(e)}`; };
+    el.hidden = false;
+    el.innerHTML = `<h2>실적 반영 재계획 <small class="muted">— ${GP.md(rp.t0)}까지 실적, ${rp.freezeUntil ? GP.md(rp.freezeUntil) + '까지 강종 동결' : '동결 없음'}</small></h2>
+      <ul class="changes">${rp.notes.map((n) => `<li>${esc(n)}</li>`).join('')}
+      <li>실적 ${GP.fmt(rp.actualT)}t / 같은 기간 계획 ${GP.fmt(rp.planToDateT)}t (${rp.actualT >= rp.planToDateT ? '+' : ''}${GP.fmt(rp.actualT - rp.planToDateT)}t)</li>
+      <li>전환 일정: ${rp.removed.length || rp.added.length ? `<b>취소</b> ${rp.removed.map(ev).join(', ') || '-'} · <b>신규</b> ${rp.added.map(ev).join(', ') || '-'}` : '변경 없음'}</li>
+      <li>지연 ${GP.fmt(rp.late)}톤·일 · 결품 ${rp.shortBy.length ? rp.shortBy.map(esc).join(', ') : '없음'}</li></ul>`;
+  }
 
   // ---------------- 일별 차트 (라인별 작은 배수, 같은 y축) ----------------
   function niceMax(v) { const p = 10 ** Math.floor(Math.log10(v)); return Math.ceil(v / p / (v / p > 5 ? 2 : 1)) * p * (v / p > 5 ? 2 : 1); }
@@ -80,13 +91,17 @@
     const ticks = [0, ymax / 2, ymax];
     box.innerHTML = P.lines.map((l) => {
       let s = `<svg class="daily" width="${W}" height="${mt + h + mb}" role="img" aria-label="${l} 일별 계획 생산량">`;
+      if (R.replan) {
+        const i1 = days.indexOf(R.replan.t0);
+        if (i1 >= 0) s += `<rect x="${ml}" y="${mt}" width="${(i1 + 1) * band}" height="${h}" fill="var(--soft)"/><line x1="${ml + (i1 + 1) * band}" x2="${ml + (i1 + 1) * band}" y1="${mt - 12}" y2="${mt + h}" stroke="var(--ink)" stroke-width="1"/><text x="${ml + (i1 + 1) * band - 4}" y="${mt + 10}" text-anchor="end" style="fill:var(--ink)">실적</text><text x="${ml + (i1 + 1) * band + 4}" y="${mt + 10}" style="fill:var(--ink)">재계획</text>`;
+      }
       for (const t of ticks) s += `<line class="grid" x1="${ml}" x2="${W - mr}" y1="${y(t)}" y2="${y(t)}"/><text x="${ml - 6}" y="${y(t) + 4}" text-anchor="end">${GP.fmt(t)}</text>`;
       days.forEach((d, i) => {
         const x = ml + i * band, c = A.calBy[`${l}|${d}`], v = A.prodLD[`${l}|${d}`] || 0;
         if (+d.slice(8) === 1) s += `<line class="grid" x1="${x}" x2="${x}" y1="${mt}" y2="${mt + h}"/><text x="${x + 2}" y="${mt + h + 16}">${+d.slice(5, 7)}월</text>`;
         else if (+d.slice(8) % 5 === 0 && +d.slice(8) <= GP.daysInMonth(+d.slice(0, 4), +d.slice(5, 7)) - 3) s += `<text x="${x + band / 2}" y="${mt + h + 16}" text-anchor="middle">${+d.slice(8)}</text>`;
         if (c.blackout) { s += `<rect x="${x}" y="${mt}" width="${band}" height="${h}" fill="var(--sd)"/>`; return; }
-        if (c.event) s += `<rect x="${x}" y="${mt - 12}" width="${band}" height="6" rx="2" fill="var(--mc)"/>`;
+        if (GP.isSwitch(c) || GP.isDown(c)) s += `<rect x="${x}" y="${mt - 12}" width="${band}" height="6" rx="2" fill="var(${GP.isSwitch(c) ? '--mc' : '--down'})"/>`;
         if (v > 0.5) {
           const bx = x + (band - bw) / 2, by = y(v), r = Math.min(4, bw / 2, mt + h - by);
           s += `<path class="bar" d="M${bx},${mt + h} V${by + r} Q${bx},${by} ${bx + r},${by} H${bx + bw - r} Q${bx + bw},${by} ${bx + bw},${by + r} V${mt + h} Z" fill="${famVar(c.fam)}"/>`;

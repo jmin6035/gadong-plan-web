@@ -1,7 +1,7 @@
 /* 월별 간트(회사 양식) canvas 그리기. 원본: gadong-plan code/plot_gantt_final.py (matplotlib) */
 (function (root) {
   const GP = root.GP || (root.GP = {});
-  const C = { ink: '#1a1a1a', grid: '#b7b7b0', head: '#eef0f2', sat: '#f4c07a', sun: '#f2a3a3', mc: '#fff36b', sd: '#c7c7c0', restart: '#1c8a4a', white: '#ffffff', note: '#8a4b00', self: '#1f4e9a' };
+  const C = { ink: '#1a1a1a', grid: '#b7b7b0', head: '#eef0f2', sat: '#f4c07a', sun: '#f2a3a3', mc: '#fff36b', sd: '#c7c7c0', restart: '#1c8a4a', white: '#ffffff', down: '#f4cccc', note: '#8a4b00', self: '#1f4e9a' };
   const FONT = '"Malgun Gothic","Apple SD Gothic Neo","Noto Sans KR","Noto Sans CJK KR",sans-serif';
 
   /* canvas에 한 달 간트를 그림. scale=픽셀 배율 */
@@ -61,14 +61,14 @@
           let t = '';
           if (c.blackout) o.bg = C.sd;
           else {
-            if (c.event) o.bg = C.mc;
+            if (GP.isSwitch(c)) o.bg = C.mc; else if (GP.isDown(c)) o.bg = C.down;
             if (key === 'hrs') { const h = (A.used[`${l}|${ds}`] || 0) / 60; t = h > 0 ? h.toFixed(0) : ''; }
             else {
               const v = famLD[`${l}|${ds}|${key}`] || 0; tot += v;
-              t = v > 0.5 ? GP.fmt(v) : (c.event && /\((.+)→/.exec(c.event) && /\((.+)→/.exec(c.event)[1] === key ? (c.event.startsWith('M/C') ? 'M/C' : '') : '');
+              t = v > 0.5 ? GP.fmt(v) : (GP.isSwitch(c) && /\((.+)→/.exec(c.event) && /\((.+)→/.exec(c.event)[1] === key ? (c.event.startsWith('M/C') ? 'M/C' : '') : '');
               if (v > 0.5 && (selfLD[`${l}|${ds}`] || 0) > 0.5) { o.bold = true; o.color = C.self; }
             }
-            if (c.event && c.event.startsWith('S/D')) { o.edge = C.restart; o.lw = 2.4; }
+            if (GP.isSwitch(c) && c.event.startsWith('S/D')) { o.edge = C.restart; o.lw = 2.4; }
           }
           cell(x0 + (d - 1) * DW, yy, DW, RH, t, o);
         }

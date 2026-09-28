@@ -26,6 +26,9 @@
     const D1 = GP.monthEnd(ym[ym.length - 1][0], ym[ym.length - 1][1]);
     return { ym, D0, D1, days: GP.dateRange(D0, D1) };
   };
+  // 캘린더 이벤트 구분: 강종 전환(M/C·정기수리 후 재가동) vs 설비정지·실적 미달
+  GP.isSwitch = (c) => !!(c && c.event) && /^(M\/C|S\/D 재가동)/.test(c.event);
+  GP.isDown = (c) => !!(c && c.event) && /추가정지|실적 미달/.test(c.event);
   GP.isBlackout = (P, line, d) => P.shutdowns.some((s) => s.line === line && s.start <= d && d <= s.end);
   // 라인별 S/D 재가동일(정기수리 끝난 다음날, 기간 안인 것만)
   GP.restartDays = (P, H) => {

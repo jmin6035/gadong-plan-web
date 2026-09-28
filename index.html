@@ -91,6 +91,7 @@
       <button type="button" class="ghost" id="dl-json">결과 저장(.json)</button>
       <button type="button" class="ghost" id="to-dash">대시보드로 보기</button>
     </div>
+    <div id="replan-box" class="lines" hidden></div>
     <div id="summary-lines" class="lines"></div>
     <h3>월별 간트</h3>
     <div class="tabs" id="gantt-tabs"></div>
@@ -100,6 +101,28 @@
     <div class="scroll"><table class="data" id="events"></table></div>
     <h3>전월 선생산</h3>
     <div class="scroll"><table class="data" id="early"></table></div>
+  </section>
+
+  <section class="card" id="sec-replan" hidden>
+    <h2><span class="num">4</span>실적 반영 재계획</h2>
+    <p class="hint">위 결과를 기준 계획으로 두고, 기준일까지의 실적(설비고장·불량 반영)으로 남은 기간을 다시 계산합니다. 지연·결품을 먼저 막고, 그다음 M/C 최소, 같은 조건이면 기존 계획과 가까운 일정을 고릅니다.</p>
+    <div class="grid">
+      <label>실적 기준일(이날까지 실적) <input type="date" id="rp-t0"></label>
+      <label>강종 동결 <span class="inline"><input type="number" id="rp-freeze" value="2" min="0" max="10"> 일(기준일 다음날부터)</span></label>
+      <label>지연과 M/C 맞교환 기준 <span class="inline">M/C 1회 = 지연 <input type="number" id="rp-tradeoff" value="100" min="1" step="10"> 톤·일</span><small class="muted">작을수록 납기 우선(M/C 늘려서라도 지연 축소), 클수록 M/C 우선</small></label>
+      <label>기존 일정 유지 강도 <span class="inline">강종이 바뀐 라인·일 <input type="number" id="rp-stab" value="10" min="1" step="1"> 일 = M/C 1회</span><small class="muted">작을수록 기존 일정을 강하게 유지(현장 혼란↓), 클수록 자유롭게 재배치</small></label>
+    </div>
+    <h3>방법 1 — 실적 엑셀 (MES 연동 시 이 형식)</h3>
+    <div class="row">
+      <button type="button" class="ghost" id="rp-template">양식 받기(기존 계획으로 채움)</button>
+      <label class="ghost btnlike">실적 엑셀 올리기<input type="file" id="rp-file" accept=".xlsx" hidden></label>
+      <span id="rp-file-name" class="muted"></span>
+    </div>
+    <h3>방법 2 — 간단 입력 <small>(엑셀 없이: 기존 계획대로 생산했다고 보고 아래 사건만 반영)</small></h3>
+    <div id="rp-events"></div>
+    <button type="button" class="ghost" id="rp-add">+ 사건 추가</button>
+    <div class="row"><button type="button" class="primary" id="rp-run">재계획 실행</button></div>
+    <p class="hint">남은 기간이 짧을수록 빨리 끝납니다. 결과는 위 “결과”에 표시되고 엑셀·대시보드도 재계획 기준으로 바뀝니다.</p>
   </section>
 
   <section class="card" id="sec-error" hidden>
@@ -117,6 +140,7 @@
 <script src="engine/util.js"></script>
 <script src="engine/report.js"></script>
 <script src="engine/gantt.js"></script>
+<script src="engine/actual.js"></script>
 <script src="app.js"></script>
 </body>
 </html>

@@ -33,12 +33,12 @@
       const k = `${c.line}|${mIdx(c.date)}`;
       if (c.blackout) continue;
       capM[k] = (capM[k] || 0) + c.cap; usedM[k] = (usedM[k] || 0) + (used[`${c.line}|${c.date}`] || 0);
-      if ((used[`${c.line}|${c.date}`] || 0) < 1) idle.push([c.date, c.line]);
+      if ((used[`${c.line}|${c.date}`] || 0) < 1 && !GP.isDown(c)) idle.push([c.date, c.line]);
     }
     for (const k of Object.keys(capM)) load[k] = usedM[k] / capM[k];
-    const events = R.cal.filter((c) => c.event && !c.event.includes('정기수리')).map((c) => {
+    const events = R.cal.filter((c) => GP.isSwitch(c)).map((c) => {
       const m = /\((.+)→(.+)\)/.exec(c.event);
-      return { date: c.date, line: c.line, kind: c.event.startsWith('M/C') ? 'M/C' : 'S/D 재가동', from: m ? m[1] : c.fam, to: m ? m[2] : c.fam, loss: c.mcdummy, event: c.event };
+      return { date: c.date, line: c.line, kind: c.event.startsWith('M/C') ? 'M/C' : 'S/D 재가동', from: m ? m[1] : c.fam, to: m ? m[2] : c.fam, loss: c.mcdummy, event: c.event.split(' · ')[0] };
     }).sort((a, b) => (a.date + a.line < b.date + b.line ? -1 : 1));
     const mc = Object.fromEntries(L.map((l) => [l, events.filter((e) => e.line === l && (e.kind === 'M/C' || e.from !== e.to)).length]));
     // 캠페인: 정기수리일을 끊는 기준으로 같은 강종 연속 가동일
@@ -123,6 +123,10 @@
       `• 부하: ` + L.map((l) => `${l} ` + A.H.ym.map((_, i) => `${GP.fmt((A.load[`${l}|${i}`] || 0) * 100, 1)}%`).join('/')).join(', '),
       `• 전제: ① 첫 달 1~5일 선적분 ${GP.fmt(GP.sum(R.sept, (s) => s.tons))}t은 전월 생산${P.firstWindowPrevMonth ? '' : '(미적용)'} ② 첫날 강종 ` + L.map((l) => `${l} ${P.initFamily[l] || '자유'}`).join('·') + ` ③ 주문재는 마감 ${P.releaseDays}일 전부터 생산 가능 ④ 정기수리 ` + (P.shutdowns.map((s) => `${s.line} ${GP.md(s.start)}~${GP.md(s.end)}`).join(', ') || '없음'),
     ];
+    if (R.replan) {
+      const rp = R.replan, ev = (x) => { const [d, l, e] = x.split('|'); return `${GP.md(d)} ${l} ${e}`; };
+      lines.unshift(`• 재계획: ${GP.md(rp.t0)}까지 실적 반영(${rp.notes.join(' / ')}). 전환 변경 — 취소 ${rp.removed.map(ev).join(', ') || '없음'}, 신규 ${rp.added.map(ev).join(', ') || '없음'}. 지연 ${GP.fmt(rp.late)}톤·일.`);
+    }
     if (!R.milp.optimal1 || !R.milp.optimal2) lines.push('• ⚠ 시간 제한으로 최적성 증명 전에 멈춘 단계가 있음 — 결과는 그때까지 찾은 최선해(다시 실행하면 달라질 수 있음).');
     return lines;
   };
@@ -134,7 +138,7 @@
   const fill = (hex) => ({ type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF' + hex } });
   const HF = fill('1F3864'), HFONT = { name: AR, size: 9, bold: true, color: { argb: 'FFFFFFFF' } };
   const MCF = fill('FFF36B'), SDF = fill('C7C7C0'), SUBF = fill('EEF0F2'), SAT = fill('F4C07A'), SUN = fill('F2A3A3');
-  const JAF = fill('DDEBF7'), DML = fill('D9D9D9'), DMH = fill('F8CBAD'), EARLYF = fill('FCE4D6');
+  const DOWNF = fill('F4CCCC'), JAF = fill('DDEBF7'), DML = fill('D9D9D9'), DMH = fill('F8CBAD'), EARLYF = fill('FCE4D6');
   const th = { style: 'thin', color: { argb: 'FFBFBFBF' } }, BD = { top: th, left: th, bottom: th, right: th };
   const CEN = { horizontal: 'center', vertical: 'middle', wrapText: true };
   const LEFT = { horizontal: 'left', vertical: 'top', wrapText: true };
@@ -246,7 +250,7 @@
     r = 5;
     for (const c of R.cal.slice().sort((a, b) => (a.date + a.line < b.date + b.line ? -1 : 1))) {
       const k = `${c.line}|${c.date}`, u = A.used[k] || 0, p = A.prodLD[k] || 0;
-      const st = { fill: c.blackout ? SDF : (c.event ? MCF : undefined) };
+      const st = { fill: c.blackout ? SDF : GP.isSwitch(c) ? MCF : GP.isDown(c) ? DOWNF : undefined };
       const vals = [c.date, GP.weekday(c.date), +c.date.slice(5, 7), c.line, c.blackout ? '' : c.fam, c.event, c.blackout, GP.round(c.equip, 2), GP.round(c.nonfam, 2), c.mcdummy, GP.round(c.cap, 1)]
         .concat(DEPTS.map((dp) => GP.round(depLD[`${k}|${dp}`] || 0, 1)), [GP.round(p, 1), GP.round(u, 1), c.cap > 0 ? GP.round(c.cap - u, 1) : 0, c.cap > 0 ? u / c.cap : '', GP.round(earlyLD[k] || 0, 1), u > 0 ? GP.round(p / (u / 60), 1) : '']);
       vals.forEach((v, j) => put(wp, r, j + 1, v, Object.assign({}, st, { fmt: j === 19 ? '0%' : j === 21 ? '0.0' : (j >= 6 ? NUM : undefined) })));
@@ -325,7 +329,7 @@
         for (let dd = 1; dd <= nd; dd++) {
           const d = GP.ymd(y, m, dd), c = A.calBy[`${l}|${d}`];
           if (c.blackout) { bo.push(2 + dd); continue; }
-          if (c.event) {
+          if (GP.isSwitch(c)) {
             for (let x = start; x < rr; x++) if (x !== jaRow) wg.getCell(x, 2 + dd).fill = MCF;
             const mm = /\((.+)→/.exec(c.event);
             if (mm) fams.forEach((f, k) => { if (f === mm[1] && !wg.getCell(start + k, 2 + dd).value) wg.getCell(start + k, 2 + dd).value = c.event.startsWith('M/C') ? 'M/C' : '재가동'; });

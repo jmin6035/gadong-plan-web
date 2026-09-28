@@ -1,10 +1,10 @@
 /* 대시보드 전용. 강종 색: AL 파랑 · AZ 주황 · MAC 청록 (색각 이상 검증 통과, 범례·툴팁·표 병행) */
 :root {
   --fam-AL: #2a78d6; --fam-AZ: #eb6834; --fam-MAC: #1baf7a;
-  --grid: #e6e6e3; --sd: #d6d6d0; --mc: #f5d90a; --bar-neutral: #6da7ec; --bar-full: #1f3864;
+  --grid: #e6e6e3; --sd: #d6d6d0; --mc: #f5d90a; --bar-neutral: #6da7ec; --bar-full: #1f3864; --down: #d64545;
 }
 @media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) { --fam-AL: #3987e5; --fam-AZ: #d95926; --fam-MAC: #199e70; --grid: #2e3542; --sd: #3a3f48; --mc: #c9b200; --bar-neutral: #3987e5; --bar-full: #dbe6f7; }
+  :root:not([data-theme="light"]) { --fam-AL: #3987e5; --fam-AZ: #d95926; --fam-MAC: #199e70; --grid: #2e3542; --sd: #3a3f48; --mc: #c9b200; --bar-neutral: #3987e5; --bar-full: #dbe6f7; --down: #e66767; }
 }
 .top-row { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; flex-wrap: wrap; }
 .top-actions { display: flex; gap: 8px; flex-wrap: wrap; }
@@ -60,3 +60,7 @@ svg .hit { fill: transparent; cursor: pointer; }
 body.dash.drag main { outline: 3px dashed var(--brand); outline-offset: 6px; }
 
 #d-date { min-width: 150px; }
+.replan { border-left: 4px solid var(--mc); }
+.changes { margin: 0; padding-left: 18px; font-size: 14px; }
+.changes li { margin: 3px 0; }
+.pill.down { background: var(--down); color: #fff; }
