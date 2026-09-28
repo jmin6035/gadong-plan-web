@@ -91,6 +91,25 @@
       <button type="button" class="ghost" id="dl-json">결과 저장(.json)</button>
       <button type="button" class="ghost" id="to-dash">대시보드로 보기</button>
     </div>
+    <div class="publish">
+      <h3>모두에게 게시 <small>— 어느 폰·PC에서든 대시보드에서 같은 결과를 보게 합니다</small></h3>
+      <p class="hint">결과를 암호로 잠가 사이트에 올립니다. 암호를 아는 사람만 대시보드에서 열 수 있고, 암호화·해제는 각자 브라우저 안에서만 합니다. 암호는 단어 3~4개 이상으로 길게 정하세요.</p>
+      <div class="grid">
+        <label>게시 암호 <input type="password" id="pub-pw" autocomplete="new-password"></label>
+        <label>암호 확인 <input type="password" id="pub-pw2" autocomplete="new-password"></label>
+        <label>설명(선택) <input type="text" id="pub-label" placeholder="예: 4분기 확정안 v30"></label>
+      </div>
+      <details>
+        <summary>GitHub에 바로 게시(관리자) — 토큰 필요</summary>
+        <label>GitHub 토큰 <input type="password" id="pub-token" autocomplete="off" placeholder="github_pat_..."></label>
+        <p class="hint">토큰 만들기: GitHub → Settings → Developer settings → Fine-grained tokens → Generate new token. Repository access = Only select repositories → <b>gadong-plan-web</b>, Permissions → Repository → <b>Contents: Read and write</b>. 토큰은 저장하지 않으며 이 창을 닫으면 사라집니다.</p>
+      </details>
+      <div class="row">
+        <button type="button" class="primary" id="pub-go">GitHub에 바로 게시</button>
+        <button type="button" class="ghost" id="pub-file">게시용 파일 받기</button>
+      </div>
+      <p class="hint" id="pub-msg"></p>
+    </div>
     <div id="replan-box" class="lines" hidden></div>
     <div id="summary-lines" class="lines"></div>
     <h3>월별 간트</h3>
@@ -141,6 +160,7 @@
 <script src="engine/report.js"></script>
 <script src="engine/gantt.js"></script>
 <script src="engine/actual.js"></script>
+<script src="engine/crypto.js"></script>
 <script src="app.js"></script>
 </body>
 </html>

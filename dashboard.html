@@ -25,8 +25,17 @@
 
 <main class="wrap">
   <section class="card empty" id="d-empty">
-    <h2>계획 결과를 여세요</h2>
-    <p>계획 계산 화면에서 받은 <b>결과 파일(.json)</b>을 위 버튼으로 열거나 이 창에 끌어다 놓으세요. 파일은 이 브라우저 안에서만 읽습니다.</p>
+    <h2 id="d-empty-title">계획 결과를 여세요</h2>
+    <p id="d-empty-text">계획 계산 화면에서 받은 <b>결과 파일(.json)</b>을 위 버튼으로 열거나 이 창에 끌어다 놓으세요. 파일은 이 브라우저 안에서만 읽습니다.</p>
+    <form id="d-unlock" class="unlock" hidden>
+      <p id="d-pubinfo"></p>
+      <div class="row">
+        <input type="password" id="d-pw" placeholder="게시 암호" autocomplete="current-password" aria-label="게시 암호">
+        <button type="submit" class="primary">열기</button>
+      </div>
+      <label class="check"><input type="checkbox" id="d-remember"> 이 기기에서 암호 기억(개인 기기에서만)</label>
+      <p class="hint" id="d-unlock-msg"></p>
+    </form>
     <p class="hint">사내 서버·공유폴더에 결과 파일을 두면 <code>dashboard.html?src=결과파일주소</code> 로 바로 열 수 있습니다.</p>
   </section>
 
@@ -85,6 +94,7 @@
 <script src="engine/util.js"></script>
 <script src="engine/report.js"></script>
 <script src="engine/gantt.js"></script>
+<script src="engine/crypto.js"></script>
 <script src="dashboard.js"></script>
 </body>
 </html>

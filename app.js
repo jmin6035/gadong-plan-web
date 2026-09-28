@@ -229,6 +229,33 @@
     } catch (e) { alert('결과 파일을 열지 못했습니다: ' + e.message); }
   };
 
+  // ---------------- 게시(암호화) ----------------
+  async function makeEnvelope() {
+    const pw = $('pub-pw').value, pw2 = $('pub-pw2').value;
+    if (pw.length < 10) throw new Error('암호는 10자 이상으로 정하세요');
+    if (pw !== pw2) throw new Error('암호 확인이 다릅니다');
+    const label = $('pub-label').value.trim() || `${result.P.year} ${result.P.months[0]}~${result.P.months[2]}월 계획${result.replan ? ` (재계획 ${result.replan.t0})` : ''}`;
+    return GP.encryptJSON(JSON.parse(packResult()), pw, label);
+  }
+  $('pub-file').onclick = async () => {
+    try {
+      const env = await makeEnvelope();
+      download(new Blob([JSON.stringify(env)], { type: 'application/json' }), 'latest.plan.enc.json');
+      $('pub-msg').textContent = '받은 파일을 GitHub 저장소 gadong-plan-web의 published 폴더에 올리면(Add file → Upload files) 1~2분 뒤 모두에게 보입니다.';
+    } catch (e) { $('pub-msg').textContent = '⚠ ' + e.message; }
+  };
+  $('pub-go').onclick = async () => {
+    const tok = $('pub-token').value.trim();
+    if (!tok) { $('pub-msg').textContent = '⚠ 아래 "GitHub에 바로 게시"를 펼쳐 토큰을 넣거나, "게시용 파일 받기"를 쓰세요.'; document.querySelector('.publish details').open = true; return; }
+    const btn = $('pub-go'); btn.disabled = true; $('pub-msg').textContent = '암호화·게시 중…';
+    try {
+      const env = await makeEnvelope();
+      await GP.publishToGitHub(env, tok);
+      $('pub-msg').innerHTML = `게시 완료(${esc(env.label)}). 1~2분 뒤 <a href="dashboard.html" target="_blank">대시보드</a>에서 암호로 열 수 있습니다.`;
+    } catch (e) { $('pub-msg').textContent = '⚠ ' + e.message; }
+    btn.disabled = false;
+  };
+
   // ---------------- 실적 반영 재계획 ----------------
   let rpEvents = [{ type: 'down', line: '2CGL', from: '', to: '', minutes: '', tons: '' }], rpXlsx = null;
   function renderRpEvents() {

@@ -64,3 +64,5 @@ body.dash.drag main { outline: 3px dashed var(--brand); outline-offset: 6px; }
 .changes { margin: 0; padding-left: 18px; font-size: 14px; }
 .changes li { margin: 3px 0; }
 .pill.down { background: var(--down); color: #fff; }
+.unlock { margin: 12px 0; }
+.unlock input[type=password] { font: inherit; padding: 8px 10px; border: 1px solid var(--line); border-radius: 6px; background: var(--card); color: var(--ink); flex: 1 1 200px; }

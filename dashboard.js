@@ -7,7 +7,30 @@
   const famVar = (f) => `var(--fam-${f})`;
   let R = null, A = null, meta = {}, gTab = 0;
 
+  let pendingEnv = null;
+  const PW_KEY = 'cgl-dash-pw';
+  function askPassword(env) {
+    pendingEnv = env;
+    $('d-empty-title').textContent = '게시된 최신 계획';
+    $('d-empty-text').textContent = '암호를 넣으면 게시된 계획 결과가 열립니다. 암호 해제는 이 브라우저 안에서만 합니다.';
+    $('d-pubinfo').innerHTML = `<b>${esc(env.label || '계획 결과')}</b> · 게시 ${new Date(env.created).toLocaleString('ko-KR')}`;
+    $('d-unlock').hidden = false;
+    let saved = null; try { saved = localStorage.getItem(PW_KEY); } catch (e) { saved = null; }
+    if (saved) { $('d-pw').value = saved; $('d-remember').checked = true; unlock(); }
+    else $('d-pw').focus();
+  }
+  async function unlock() {
+    $('d-unlock-msg').textContent = '여는 중…';
+    try {
+      const o = await GP.decryptJSON(pendingEnv, $('d-pw').value);
+      try { if ($('d-remember').checked) localStorage.setItem(PW_KEY, $('d-pw').value); else localStorage.removeItem(PW_KEY); } catch (e) { /* 저장 불가 */ }
+      $('d-unlock-msg').textContent = '';
+      load(o);
+    } catch (e) { $('d-unlock-msg').textContent = '⚠ ' + e.message; try { localStorage.removeItem(PW_KEY); } catch (x) { /* 무시 */ } }
+  }
+  $('d-unlock').onsubmit = (ev) => { ev.preventDefault(); unlock(); };
   function load(o) {
+    if (o && o.app === 'cgl-plan-enc') { askPassword(o); return; }
     if (o && o.app === 'cgl-plan') { R = o.result; meta = Object.assign({}, o.meta, { savedAt: o.savedAt }); }
     else if (o && o.rows && o.cal && o.P) { R = o; meta = {}; }
     else throw new Error('계획 결과 파일 형식이 아닙니다');
@@ -182,4 +205,5 @@
   try { handoff = sessionStorage.getItem('cgl-dash-handoff'); } catch (e) { handoff = null; }
   if (src) fetch(src, { cache: 'no-store' }).then((r) => { if (!r.ok) throw new Error(`HTTP ${r.status}`); return r.json(); }).then(load).catch((e) => { $('d-empty').insertAdjacentHTML('beforeend', `<p class="hint" style="color:var(--err)">주소에서 결과를 읽지 못함: ${esc(e.message)}</p>`); });
   else if (handoff) { try { load(JSON.parse(handoff)); } catch (e) { /* 무시 */ } }
+  else fetch(GP.PUBLISH_PATH, { cache: 'no-store' }).then((r) => (r.ok ? r.json() : null)).then((env) => { if (env) askPassword(env); }).catch(() => { /* 게시본 없음 */ });
 })();

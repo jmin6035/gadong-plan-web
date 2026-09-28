@@ -35,7 +35,7 @@ h3 small { color: var(--muted); font-weight: normal; }
 label { display: flex; flex-direction: column; gap: 4px; font-size: 14px; }
 label.check { flex-direction: row; align-items: center; gap: 8px; }
 .inline { display: flex; align-items: center; gap: 6px; }
-input[type=number], input[type=date], select { font: inherit; padding: 6px 8px; border: 1px solid var(--line); border-radius: 6px; background: var(--card); color: var(--ink); min-width: 0; }
+input[type=number], input[type=date], input[type=password], input[type=text], select { font: inherit; padding: 6px 8px; border: 1px solid var(--line); border-radius: 6px; background: var(--card); color: var(--ink); min-width: 0; }
 .inline input { width: 80px; }
 .sd-row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-bottom: 8px; }
 .sd-row select, .sd-row input { flex: 1 1 130px; }
@@ -83,3 +83,5 @@ pre { white-space: pre-wrap; font-size: 13px; color: var(--err); }
   .card { padding: 12px; }
   body { font-size: 14px; }
 }
+.publish { border: 1px solid var(--line); border-radius: 8px; padding: 12px; margin-top: 14px; background: var(--soft); }
+.publish h3 { margin-top: 0; }
