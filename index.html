@@ -1,0 +1,121 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CGL 가동계획</title>
+<meta name="description" content="도금 1·2CGL 분기 일별 가동계획 — 브라우저 안에서만 계산">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='6' fill='%231f3864'/><rect x='5' y='9' width='12' height='5' fill='%23fff36b'/><rect x='12' y='18' width='15' height='5' fill='%23ffffff'/></svg>">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header class="top">
+  <div class="wrap">
+    <h1>CGL 분기 가동계획</h1>
+    <p class="sub">판매계획·자가재계획·배선일정 엑셀을 올리면 도금 1·2CGL 일별 가동계획(M/C 최소 → 선생산 최소 → 평준화)을 계산해 엑셀·간트로 내려받습니다.</p>
+    <p class="privacy">🔒 파일은 서버로 전송되지 않습니다. 모든 계산은 이 브라우저 안에서만 합니다.</p>
+  </div>
+</header>
+
+<main class="wrap">
+  <section class="card" id="sec-files">
+    <h2><span class="num">1</span>입력 파일</h2>
+    <label class="drop" id="drop">
+      <input type="file" id="files" accept=".xlsx" multiple>
+      <strong>엑셀 파일 선택 (여러 개 한 번에)</strong>
+      <span>필요한 시트: <b>판매계획</b>, <b>자가재생산계획</b> (가동_판매자가재 파일) · <b>정리_배선일정</b> (배선일정분석 파일)</span>
+    </label>
+    <ul id="file-list" class="files"></ul>
+    <details class="load-result">
+      <summary>저장해 둔 계산 결과 열기(.json) — 파일 없이 결과만 다시 보기</summary>
+      <input type="file" id="result-file" accept=".json">
+    </details>
+  </section>
+
+  <section class="card" id="sec-params">
+    <h2><span class="num">2</span>계획 조건</h2>
+    <div class="grid">
+      <label>연도 <input type="number" id="p-year" min="2024" max="2035"></label>
+      <label>분기
+        <select id="p-q"><option value="1">1분기(1~3월)</option><option value="4">2분기(4~6월)</option><option value="7">3분기(7~9월)</option><option value="10">4분기(10~12월)</option></select>
+      </label>
+      <label>주문재 생산 가능 시점 <span class="inline"><input type="number" id="p-rel" min="0" max="90"> 일 전부터</span></label>
+      <label class="check"><input type="checkbox" id="p-w1"> 첫 달 1~5일 선적분은 전월 생산으로 가정</label>
+    </div>
+    <h3>첫날 강종 <small>(전월 말 라인 상태)</small></h3>
+    <div class="grid" id="p-init"></div>
+    <h3>정기수리(S/D)</h3>
+    <div id="p-sd"></div>
+    <button type="button" class="ghost" id="sd-add">+ 정기수리 추가</button>
+    <details>
+      <summary>고급: 시간손실·생산속도·계산 시간 제한</summary>
+      <h3>시간손실(분)</h3>
+      <div class="scroll"><table class="edit" id="p-loss"></table></div>
+      <h3>생산속도(t/hr) <small>— 라인×강종×부서, 실적 달성속도</small></h3>
+      <div class="scroll"><table class="edit" id="p-rate"></table></div>
+      <div class="grid">
+        <label>1단계 시간 제한(초) <input type="number" id="p-t1" min="30"></label>
+        <label>2단계 시간 제한(초) <input type="number" id="p-t2" min="30"></label>
+      </div>
+    </details>
+    <div class="row">
+      <button type="button" class="ghost" id="p-reset">기본값(v30) 복원</button>
+      <button type="button" class="ghost" id="p-export">조건 저장(.json)</button>
+      <label class="ghost btnlike">조건 불러오기<input type="file" id="p-import" accept=".json" hidden></label>
+    </div>
+  </section>
+
+  <section class="card" id="sec-check" hidden>
+    <h2><span class="num">3</span>입력 확인</h2>
+    <div id="check-summary"></div>
+    <div class="scroll"><table class="data" id="demand-table"></table></div>
+    <ul id="checks" class="checks"></ul>
+    <button type="button" class="primary" id="run">계산 시작</button>
+    <p class="hint" id="run-hint">PC에서 약 10~15분, 휴대폰은 더 걸립니다. 계산 중에는 이 탭을 닫거나 화면을 끄지 마세요.</p>
+  </section>
+
+  <section class="card" id="sec-progress" hidden>
+    <h2>계산 중 <span id="elapsed" class="muted"></span></h2>
+    <div class="bar"><div id="bar-fill"></div></div>
+    <p id="stage" class="stage"></p>
+    <p id="solver" class="muted mono"></p>
+    <ol id="log" class="log"></ol>
+  </section>
+
+  <section class="card" id="sec-result" hidden>
+    <h2>결과</h2>
+    <div id="kpis" class="kpis"></div>
+    <div class="row">
+      <button type="button" class="primary" id="dl-xlsx">엑셀 받기</button>
+      <button type="button" class="ghost" id="dl-png">간트 PNG 받기</button>
+      <button type="button" class="ghost" id="dl-json">결과 저장(.json)</button>
+    </div>
+    <div id="summary-lines" class="lines"></div>
+    <h3>월별 간트</h3>
+    <div class="tabs" id="gantt-tabs"></div>
+    <div class="gantt-box"><img id="gantt-img" alt="월별 간트"></div>
+    <p class="hint">이미지를 누르면 원본 크기로 열립니다. 굵은 파란 숫자 = 자가재 포함일, 노란색 = M/C·재가동, 회색 = 정기수리.</p>
+    <h3>M/C·S/D 일정과 이유</h3>
+    <div class="scroll"><table class="data" id="events"></table></div>
+    <h3>전월 선생산</h3>
+    <div class="scroll"><table class="data" id="early"></table></div>
+  </section>
+
+  <section class="card" id="sec-error" hidden>
+    <h2>오류</h2>
+    <pre id="error-msg"></pre>
+  </section>
+</main>
+
+<footer class="wrap foot">
+  계산 엔진: HiGHS(WASM) · 엑셀: ExcelJS · 모델 기준: 확정안 v30 (M/C 최소 → M/C 고정 후 선생산 최소 → 유휴 최소 평준화)
+</footer>
+
+<script src="vendor/exceljs.min.js"></script>
+<script src="engine/params.js"></script>
+<script src="engine/util.js"></script>
+<script src="engine/report.js"></script>
+<script src="engine/gantt.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
