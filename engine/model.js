@@ -178,7 +178,9 @@
     // 1단계 지연·결품 수준 유지(수치 오차 0.5톤·일/0.5t 허용 — 창 고정 시 1단계 해가 반드시 들어오도록)
     if (LATE.length) extra.push([LATE, '<=', late1 * (1 + 1e-6) + 0.5]);
     if (SHORT.length) extra.push([SHORT, '<=', short1 * (1 + 1e-6) + 0.5]);
-    const obj2 = INV.concat(Object.values(sr).map((v) => [P.restartPenalty, v])).concat(STAB.map((v) => [-(O.stabW2 || 0), v]));
+    // 허용오차(0.5)를 선생산 절감에 쓰지 못하도록 지연·결품에 큰 벌점(톤·일당 1,000 / 톤당 100만)
+    const obj2 = INV.concat(Object.values(sr).map((v) => [P.restartPenalty, v])).concat(STAB.map((v) => [-(O.stabW2 || 0), v]))
+      .concat(LATE.map(([c, v]) => [1000 * c, v])).concat(SHORT.map(([, v]) => [1e6, v]));
     let r2;
     const stateOf = (r) => { const st = {}; for (const l of L) for (const d of days) st[`${l}|${d}`] = LF[l].find((f) => r.val(z[`${l}|${f}|${d}`]) > 0.5); return st; };
     if ((P.phase2Mode || 'fast') === 'fast') {

@@ -274,7 +274,8 @@
   if (src) fetch(src, { cache: 'no-store' }).then((r) => { if (!r.ok) throw new Error(`HTTP ${r.status}`); return r.json(); }).then(load).catch((e) => { $('d-empty').insertAdjacentHTML('beforeend', `<p class="hint" style="color:var(--err)">주소에서 결과를 읽지 못함: ${esc(e.message)}</p>`); });
   else if (handoff) { try { load(JSON.parse(handoff)); } catch (e) { /* 무시 */ } }
   else fetch(GP.PUBLISH_PATH, { cache: 'no-store' }).then((r) => (r.ok ? r.json() : null)).then((env) => {
-    if (env) askPassword(env);
+    if (env && env.app === 'cgl-plan') { shownCreated = env.savedAt || 'plain'; load(env); }   // 사내 서버: 평문 결과 → 바로 표시
+    else if (env) askPassword(env);
     else { $('d-empty-title').textContent = '아직 게시된 계획이 없습니다'; $('d-empty-text').textContent = '계획 담당자가 계획 계산 화면(plan.html)에서 계산 후 “게시”하면 여기에 자동으로 표시됩니다. 결과 파일(.json)이 있으면 위 “결과 파일 열기”로 볼 수도 있습니다.'; }
   }).catch(() => { /* 게시본 없음 */ });
   // 상시 화면용: 5분마다 새 게시본이 있으면 자동으로 바꿔 보여줌(암호를 기억한 기기)
@@ -282,9 +283,9 @@
     if (!shownCreated || document.hidden) return;
     try {
       const r = await fetch(GP.PUBLISH_PATH, { cache: 'no-store' }); if (!r.ok) return;
-      const env = await r.json(); if (env.created === shownCreated) return;
-      const o = await GP.decryptJSON(env, $('d-pw').value);
-      shownCreated = env.created; load(o);
+      const env = await r.json(); const stamp = env.created || env.savedAt; if (stamp === shownCreated) return;
+      const o = env.app === 'cgl-plan' ? env : await GP.decryptJSON(env, $('d-pw').value);
+      shownCreated = stamp; load(o);
       $('d-meta').textContent += ' · 새 게시본으로 자동 갱신됨';
     } catch (e) { /* 다음 주기에 재시도 */ }
   }, 5 * 60 * 1000);
