@@ -26,3 +26,10 @@ require('../engine/report.js'); require('../engine/mes.js');
   ok('일별 실적 합 9,813t', Math.abs(GP.sum(an.daily, (r) => r[4]) - 9812.58) < 0.01);
   if (process.env.GP_OUT) fs.writeFileSync(process.env.GP_OUT, JSON.stringify(GP.mesSummary(an, clean)));
 })().catch((e) => { console.error(e); process.exit(1); });
+// 웹 mesExport = Python mes.export (주별 추이 포함) 비교용 저장
+if (process.env.GP_EXPORT) (async () => {
+  const fs = require('fs'), path = require('path'); const { GP, ExcelJS } = require('./load');
+  const wb = new ExcelJS.Workbook(); await wb.xlsx.readFile(path.join(process.env.GP_MES, 'prod_SOPSE1010.xlsx'));
+  const { clean, an } = GP.mesFromWorkbooks([wb], GP.clone(GP.DEFAULT_PARAMS));
+  fs.writeFileSync(process.env.GP_EXPORT, JSON.stringify(GP.mesExport(an, clean, clean.coils)));
+})();

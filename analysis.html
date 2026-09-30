@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CGL 실적 분석</title>
+<meta name="description" content="도금 1·2CGL MES 실적 분석 — 속도·M/C·손실 추이와 파라미터 후보(계획 담당자용)">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='6' fill='%231f3864'/><polyline points='5,24 12,15 18,19 27,7' fill='none' stroke='%23fff36b' stroke-width='3'/></svg>">
+<link rel="stylesheet" href="style.css">
+<link rel="stylesheet" href="dashboard.css">
+</head>
+<body class="dash">
+<header class="top">
+  <div class="wrap top-row">
+    <div>
+      <h1>CGL 실적 분석 <small style="font-size:14px;font-weight:normal;opacity:.8">계획 담당자용</small></h1>
+      <p class="sub" id="a-meta">MES 실적으로 생산속도·M/C·손실을 다시 계산해 계획 조건과 비교합니다.</p>
+    </div>
+    <div class="top-actions">
+      <a class="btnlike light" href="rolling.html">롤링(계획)</a>
+      <a class="btnlike light" href="./">대시보드</a>
+    </div>
+  </div>
+</header>
+
+<main class="wrap">
+  <section class="card empty" id="a-empty">
+    <h2 id="a-empty-title">자동 분석 결과 불러오는 중…</h2>
+    <p id="a-empty-text">사내 PC 자동 실행기가 매일 올리는 분석 결과를 엽니다.</p>
+    <form id="a-unlock" class="unlock" hidden>
+      <p id="a-pubinfo"></p>
+      <div class="row">
+        <input type="password" id="a-pw" placeholder="분석 암호" autocomplete="current-password" aria-label="분석 암호">
+        <button type="submit" class="primary">열기</button>
+      </div>
+      <label class="check"><input type="checkbox" id="a-remember" checked> 이 기기에서 암호 기억(공용 PC면 해제)</label>
+      <p class="hint" id="a-unlock-msg"></p>
+    </form>
+  </section>
+
+  <div id="a-body" hidden>
+    <section class="card">
+      <h2>라인별 요약 <small class="muted" id="a-period"></small></h2>
+      <div class="lines-now" id="a-lines"></div>
+      <ul class="checks" id="a-warns"></ul>
+    </section>
+
+    <section class="card">
+      <h2>파라미터 후보 <small class="muted">— 체크한 항목을 롤링(계획) 조건에 반영</small></h2>
+      <div class="scroll"><table class="data" id="a-cands"></table></div>
+      <div class="row">
+        <button type="button" class="primary" id="a-apply">선택 항목을 롤링 조건에 반영</button>
+        <span class="hint" id="a-msg"></span>
+      </div>
+      <p class="hint">속도(t/hr)는 제품 두께 구성에 크게 좌우됩니다(박물일수록 낮음). 기간이 짧거나 두께 구성이 치우치면 틀린 값이 나오므로 28일 이상·표본이 충분할 때만 “반영 권장”으로 표시합니다. 반영은 이 기기의 롤링 화면 조건에 저장되고, 계산을 다시 돌려야 계획에 적용됩니다.</p>
+    </section>
+
+    <section class="card">
+      <h2>주별 속도 추이 <small class="muted">(t/hr, 주 = 월요일 시작, 더미 제외)</small></h2>
+      <div class="scroll"><table class="data" id="a-weekly"></table></div>
+      <p class="hint">굵은 빨강 = 현재 조건보다 5% 이상 낮음, 굵은 파랑 = 5% 이상 높음. 칸에 마우스를 올리면 그 주 물량·코일 수가 보입니다. 속도 차이는 설비보다 두께 구성(박물 비중) 변화 때문인 경우가 많습니다.</p>
+    </section>
+
+    <div class="two">
+      <section class="card">
+        <h2>주별 제품 생산량 <small class="muted">(t)</small></h2>
+        <div class="scroll"><table class="data" id="a-wtons"></table></div>
+      </section>
+      <section class="card">
+        <h2>강종 전환(M/C) 실적</h2>
+        <div class="scroll"><table class="data" id="a-events"></table></div>
+      </section>
+    </div>
+
+    <details class="card more">
+      <summary><h2>해석 확인 내역</h2></summary>
+      <ul class="checks" id="a-checks"></ul>
+    </details>
+  </div>
+
+  <details class="card more" id="a-manual">
+    <summary><h2>엑셀로 직접 분석 <small class="muted">— MES 생산실적 엑셀을 올려 바로 분석(자동 실행기 없이)</small></h2></summary>
+    <label class="ghost btnlike">MES 실적 엑셀 올리기(여러 개 가능)<input type="file" id="a-file" accept=".xlsx" multiple hidden></label>
+    <span id="a-file-name" class="muted"></span>
+    <p class="hint">파일은 이 브라우저 안에서만 읽습니다. 비교 기준은 이 기기의 롤링 화면 조건(없으면 기본값 v30)입니다.</p>
+  </details>
+</main>
+<footer class="wrap foot">계획 담당자용. 조회는 대시보드, 계획 계산·재계획·게시는 롤링 화면에서.</footer>
+
+<script src="vendor/exceljs.min.js"></script>
+<script src="engine/params.js"></script>
+<script src="engine/util.js"></script>
+<script src="engine/mes.js"></script>
+<script src="engine/crypto.js"></script>
+<script src="analysis.js"></script>
+</body>
+</html>

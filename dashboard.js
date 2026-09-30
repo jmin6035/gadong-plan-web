@@ -49,7 +49,7 @@
     $('d-empty').hidden = true; $('d-body').hidden = false;
     $('d-title').textContent = `'${String(H.ym[0][0]).slice(2)}.${H.ym.map(([, m]) => m).join('·')}월 도금 CGL 가동계획`;
     $('d-meta').textContent = [meta.asOf && `판매계획 기준 ${meta.asOf}`, meta.savedAt && `계산 ${new Date(meta.savedAt).toLocaleString('ko-KR')}`, meta.auto && `MES 자동 갱신 ${new Date(meta.auto.runAt).toLocaleString('ko-KR')}${meta.auto.actualTo ? ` (실적 ~${GP.md(meta.auto.actualTo)})` : ''}`, `계획 기간 ${H.D0} ~ ${H.D1}`].filter(Boolean).join(' · ');
-    renderNow(); renderReplan(); renderMes();
+    renderNow(); renderReplan();
     const mcT = GP.sum(L, (l) => A.mc[l]), maxLoad = Math.max(...Object.values(A.load));
     const maxKey = Object.keys(A.load).find((k) => A.load[k] === maxLoad), [ml, mi] = maxKey.split('|');
     renderExec();
@@ -121,23 +121,6 @@
       <div class="scroll"><table class="data vs"><tr><th>라인</th>${days.map((d) => `<th>${GP.md(d)}</th>`).join('')}</tr>${L.map((l) => `<tr><td>${l}</td>${days.map((d) => cell(d, l)).join('')}</tr>`).join('')}</table></div>
       ${rp.byDept ? `<div class="scroll"><table class="data vs"><tr><th>부서</th><th>계획</th><th>실적</th><th>차이</th><th>달성</th></tr>${rp.byDept.filter((r) => r[1] || r[2]).map(([c, p, a]) => `<tr><td>${c}</td><td class="n">${GP.fmt(p)}</td><td class="n">${GP.fmt(a)}</td><td class="n ${a < p - 1 ? 'neg' : ''}">${a >= p ? '+' : ''}${GP.fmt(a - p)}</td><td class="n">${pct(a, p)}</td></tr>`).join('')}</table></div>` : ''}`;
   }
-  // MES 실적 분석 요약(게시 시 meta.mes)
-  function renderMes() {
-    const m = meta.mes, el = $('d-mes');
-    if (!m) { el.hidden = true; return; }
-    el.hidden = false;
-    const v = (c, x) => (x == null ? '-' : GP.fmt(x * (c.scale || 1), 1));
-    el.innerHTML = `<h2>실적 분석 <small class="muted">— MES 실적 ${m.period.from} ~ ${m.period.to}, 현재 계획 조건과 비교</small></h2>
-      <div class="lines-now">${Object.entries(m.lines).map(([l, x]) => `<div class="line-card"><h3>${l}</h3><dl>
-        <dt>제품 생산</dt><dd>${GP.fmt(x.tons)}t · 코일 ${GP.fmt(x.coils)}개</dd>
-        <dt>제품 가동률</dt><dd>${GP.fmt(x.util * 100, 1)}%</dd>
-        <dt>M/C</dt><dd>${x.mcN}건${x.mcMedian != null ? ` · 중앙값 ${GP.fmt(x.mcMedian)}분` : ''}</dd>
-        <dt>배경손실</dt><dd>더미 ${GP.fmt(x.bgDummyPerDay, 1)} + 기타 ${GP.fmt(x.bgStopPerDay, 1)}분/일</dd></dl></div>`).join('')}</div>
-      <div class="scroll"><table class="data mes-t"><tr><th>항목</th><th>현재</th><th>실적</th><th>차이</th></tr>${m.cands.map((c) => { const d = c.cur && c.act != null ? c.act / c.cur - 1 : null;
-        return `<tr><td class="l">${esc(c.label.replace(/ 속도$/, ''))} <small class="muted">${esc(c.unit)}</small>${c.flag ? ` <span class="pill ${c.ok ? 'warn' : ''}">${c.ok ? '반영 검토' : '표본 부족'}</span>` : ''}</td><td class="n">${v(c, c.cur)}</td><td class="n"><b>${v(c, c.act)}</b></td><td class="n ${c.flag ? 'neg' : ''}">${d == null ? '-' : (d > 0 ? '+' : '') + GP.fmt(d * 100, 1) + '%'}</td></tr>`; }).join('')}</table></div>
-      <p class="hint">속도는 두께 구성에 따라 달라지므로 28일 이상 쌓인 실적만 반영을 검토합니다. 반영 여부는 계획 담당자가 정합니다.</p>`;
-  }
-
   // ---------------- 일별 차트 (라인별 작은 배수, 같은 y축) ----------------
   function niceMax(v) { const p = 10 ** Math.floor(Math.log10(v)); return Math.ceil(v / p / (v / p > 5 ? 2 : 1)) * p * (v / p > 5 ? 2 : 1); }
   function renderDaily() {
@@ -305,7 +288,7 @@
   else GP.fetchPublished().then((env) => {
     if (env && env.app === 'cgl-plan') { shownCreated = env.savedAt || 'plain'; load(env); }   // 사내 서버: 평문 결과 → 바로 표시
     else if (env) askPassword(env);
-    else { $('d-empty-title').textContent = '아직 게시된 계획이 없습니다'; $('d-empty-text').textContent = '계획 담당자가 계획 계산 화면(plan.html)에서 계산 후 “게시”하면 여기에 자동으로 표시됩니다. 결과 파일(.json)이 있으면 위 “결과 파일 열기”로 볼 수도 있습니다.'; }
+    else { $('d-empty-title').textContent = '아직 게시된 계획이 없습니다'; $('d-empty-text').textContent = '계획이 게시되면 여기에 자동으로 표시됩니다. 결과 파일(.json)이 있으면 위 “결과 파일 열기”로 볼 수도 있습니다.'; }
   }).catch(() => { /* 게시본 없음 */ });
   // 상시 화면용: 5분마다 새 게시본이 있으면 자동으로 바꿔 보여줌(암호를 기억한 기기)
   setInterval(async () => {

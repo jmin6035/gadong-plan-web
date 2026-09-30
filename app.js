@@ -83,7 +83,7 @@
     worker.postMessage({ type: 'parse', files, params: P });
   }
   function renderParsed(m) {
-    parsed = m; meta = Object.assign({ checks: m.checks, asOf: m.asOf }, meta.mes ? { mes: meta.mes } : {});
+    parsed = m; meta = { checks: m.checks, asOf: m.asOf };
     const need = ['판매계획', '자가재생산계획', '정리_배선일정'];
     $('file-list').innerHTML = m.sheets.map((f) => `<li>${esc(f.name)} ${f.sheets.filter((s) => need.includes(s.replace(/\s/g, ''))).map((s) => `<span class="tag ok">✓ ${esc(s)}</span>`).join('') || '<span class="tag">필요한 시트 없음</span>'}</li>`).join('');
     const errs = m.checks.filter((c) => c.level === 'error'), warns = m.checks.filter((c) => c.level === 'warn');
@@ -310,46 +310,6 @@
     worker.postMessage({ type: 'replan', base: result, t0, freeze: Math.max(0, +$('rp-freeze').value || 0), lateW: 1 / Math.max(1, +$('rp-tradeoff').value || 100), stabW: 1 / Math.max(1, +$('rp-stab').value || 10), xlsx: rpXlsx, events });
   };
   renderRpEvents();
-
-  // ---------------- 실적 분석(MES 쿼리) ----------------
-  let mes = null;
-  $('mes-file').onchange = async (ev) => {
-    const fl = [...ev.target.files]; if (!fl.length) return;
-    $('mes-file-name').textContent = `${fl.map((f) => f.name).join(', ')} 읽는 중…`;
-    try {
-      const wbs = [];
-      for (const f of fl) { const wb = new ExcelJS.Workbook(); await wb.xlsx.load(await f.arrayBuffer()); wbs.push(wb); }
-      readParams();
-      const { clean, an } = GP.mesFromWorkbooks(wbs, P);
-      mes = { clean, an };
-      $('mes-file-name').textContent = fl.map((f) => f.name).join(', ');
-      renderMes();
-    } catch (e) { $('mes-file-name').textContent = '⚠ 읽기 실패: ' + e.message; console.error(e); }
-  };
-  function renderMes() {
-    const { clean, an } = mes;
-    show('mes-out', true);
-    $('mes-checks').innerHTML = clean.checks.map((c) => `<li class="${c.level}">${{ error: '오류', warn: '경고', info: '정보' }[c.level]} · ${esc(c.msg)}</li>`).join('');
-    if (!an) { $('mes-summary').innerHTML = ''; $('mes-cands').innerHTML = ''; $('mes-events').innerHTML = ''; delete meta.mes; return; }
-    meta.mes = GP.mesSummary(an, clean);
-    $('mes-summary').innerHTML = `<p>실적 기간 <b>${an.period.from} ~ ${an.period.to}</b></p>` + Object.entries(an.lines).map(([l, x]) =>
-      `<p><b>${l}</b> · 코일 ${GP.fmt(x.coils)}개 · 제품 ${GP.fmt(x.tons)}t (더미 ${GP.fmt(x.dummyT)}t) · 제품 가동률 ${GP.fmt(x.util * 100, 1)}% · M/C ${x.mcN}건 · 배경손실 ${GP.fmt(x.bgDummyPerDay + x.bgStopPerDay, 1)}분/일 (현재 조건 ${GP.fmt(P.nonfamDummy[l] + P.equipDown[l], 1)})${x.longMin ? ` · 장기정지 ${GP.fmt(x.longMin / 60, 1)}시간(별도)` : ''}</p>`).join('');
-    const v = (c, x) => (x == null || !isFinite(x) ? '-' : GP.fmt(x * (c.scale || 1), 1));
-    $('mes-cands').innerHTML = '<tr><th>반영</th><th>항목</th><th>현재</th><th>실적</th><th>차이</th><th>근거</th><th>판정</th></tr>' + an.cands.map((c, i) =>
-      `<tr><td><input type="checkbox" data-cand="${i}" ${c.apply ? 'checked' : ''} ${isFinite(c.act) ? '' : 'disabled'}></td><td class="l">${esc(c.label)}</td><td class="n">${v(c, c.cur)}</td><td class="n"><b>${v(c, c.act)}</b></td>`
-      + `<td class="n">${c.diff == null ? '-' : (c.diff > 0 ? '+' : '') + GP.fmt(c.diff * 100, 1) + '%'}</td><td class="l muted">${esc(c.basis)}</td>`
-      + `<td>${c.apply ? '<span class="tag ok">반영 권장</span>' : c.flag ? `<span class="tag">검토${c.ok ? '' : '(표본 부족)'}</span>` : '유지'}</td></tr>`).join('');
-    $('mes-events').innerHTML = '<tr><th>시작</th><th>라인</th><th>구분</th><th>전환</th><th>손실(분)</th><th>현재 조건</th><th>더미코일</th></tr>' + (an.events.map((e) =>
-      `<tr><td>${esc(e.at)}</td><td>${e.line}</td><td>${esc(e.kind)}</td><td>${e.from}→${e.to}</td><td class="n"><b>${GP.fmt(e.minutes)}</b></td><td class="n">${e.kind === 'M/C' ? GP.fmt(P.switchDummy[e.line], 1) : '-'}</td><td class="n">${e.dummyN}개 ${GP.fmt(e.dummyT, 1)}t</td></tr>`).join('') || '<tr><td colspan="7" class="muted">기간 중 강종 전환 없음</td></tr>');
-    $('mes-msg').textContent = '';
-  }
-  $('mes-apply').onclick = () => {
-    if (!mes || !mes.an) return;
-    const pick = [...document.querySelectorAll('[data-cand]')].filter((e) => e.checked).map((e) => mes.an.cands[+e.dataset.cand]);
-    if (!pick.length) { $('mes-msg').textContent = '선택한 항목이 없습니다.'; return; }
-    P = GP.mesApply(P, pick); store.set(P); renderParams(); files.length && parse();
-    $('mes-msg').textContent = `${pick.length}개 항목을 계획 조건에 반영했습니다(② 고급에서 확인·되돌리기: 기본값 복원). 계산을 다시 돌려야 계획에 반영됩니다.`;
-  };
 
   // ---------------- 공통 ----------------
   function download(blob, name) {

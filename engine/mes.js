@@ -225,6 +225,29 @@
     };
   };
 
+  /* 주별(월요일 시작) 라인×강종×부서 속도 추이. 행: [주, 라인, 강종, 부서, 톤, 가동분, 코일수] — Python mes.weekly 와 동일 */
+  GP.mesWeekly = function (coils, R = GP.MES_RULES) {
+    const g = {};
+    for (const c of coils) {
+      if (c.dummy || !c.fam || !c.cls || !(c.run > 0 && c.run < R.speedRunMax)) continue;
+      const wd = (new Date(c.day + 'T00:00:00Z').getUTCDay() + 6) % 7, wk = GP.addDays(c.day, -wd);
+      const k = `${wk}|${c.line}|${c.fam}|${c.cls}`, x = g[k] || (g[k] = [0, 0, 0]);
+      x[0] += c.t; x[1] += c.run; x[2]++;
+    }
+    return Object.keys(g).sort().map((k) => k.split('|').concat([GP.round(g[k][0], 3), GP.round(g[k][1], 1), g[k][2]]));
+  };
+  /* 분석 화면용 전체 결과 — Python mes.export 와 같은 형식 */
+  GP.mesExport = function (an, clean, coils) {
+    const r = (x, k) => (x != null && isFinite(x) ? GP.round(x, k) : null);
+    return Object.assign(GP.mesSummary(an, clean), {
+      app: 'cgl-analysis', version: 1,
+      speed: an.speed.map((s) => ({ key: s.key, n: s.n, t: r(s.t, 1), run: r(s.run, 0), act: r(s.act, 6), cur: r(s.cur, 6), thick: r(s.thick, 3), width: r(s.width, 0) })),
+      events: an.events.map((e) => ({ line: e.line, at: e.at, from: e.from, to: e.to, minutes: e.minutes, kind: e.kind, dummyN: e.dummyN, dummyT: r(e.dummyT, 1) })),
+      cands: an.cands.map((c) => ({ path: c.path, label: c.label, unit: c.unit, scale: c.scale || 1, cur: r(c.cur, 6), act: r(c.act, 6), n: r(c.n, 1), basis: c.basis, ok: c.ok, flag: c.flag, apply: c.apply })),
+      daily: an.daily, weekly: GP.mesWeekly(coils), checks: (clean && clean.checks) || [],
+    });
+  };
+
   /* 재계획 입력으로 변환 — 마감일은 같은 부서·강종군의 가장 이른 미완료 버킷에 순서대로 배정 */
   GP.mesToActual = function (an, coils, R, t0Given) {
     const P = R.P, H = GP.horizon(P), checks = [];

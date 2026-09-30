@@ -138,3 +138,5 @@ table.gtable { table-layout: fixed; min-width: 1320px; }
 table.vs td small { color: var(--muted); font-weight: normal; }
 .neg { color: var(--down); font-weight: bold; }
 @media (max-width: 560px) { h2 small { display: block; margin-top: 2px; } table.mes-t td, table.mes-t th { padding: 5px 4px; font-size: 13px; } table.mes-t td.l { white-space: normal; min-width: 0; } table.mes-t .pill { font-size: 11px; padding: 0 5px; } }
+.two > * { min-width: 0; }
+.pos { color: var(--fam-AL); font-weight: bold; }
