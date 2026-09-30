@@ -48,7 +48,7 @@
     const P = R.P, H = A.H, L = P.lines;
     $('d-empty').hidden = true; $('d-body').hidden = false;
     $('d-title').textContent = `'${String(H.ym[0][0]).slice(2)}.${H.ym.map(([, m]) => m).join('·')}월 도금 CGL 가동계획`;
-    $('d-meta').textContent = [meta.asOf && `판매계획 기준 ${meta.asOf}`, meta.savedAt && `계산 ${new Date(meta.savedAt).toLocaleString('ko-KR')}`, `계획 기간 ${H.D0} ~ ${H.D1}`].filter(Boolean).join(' · ');
+    $('d-meta').textContent = [meta.asOf && `판매계획 기준 ${meta.asOf}`, meta.savedAt && `계산 ${new Date(meta.savedAt).toLocaleString('ko-KR')}`, meta.auto && `MES 자동 갱신 ${new Date(meta.auto.runAt).toLocaleString('ko-KR')}${meta.auto.actualTo ? ` (실적 ~${GP.md(meta.auto.actualTo)})` : ''}`, `계획 기간 ${H.D0} ~ ${H.D1}`].filter(Boolean).join(' · ');
     renderNow(); renderReplan(); renderMes();
     const mcT = GP.sum(L, (l) => A.mc[l]), maxLoad = Math.max(...Object.values(A.load));
     const maxKey = Object.keys(A.load).find((k) => A.load[k] === maxLoad), [ml, mi] = maxKey.split('|');
@@ -302,7 +302,7 @@
   try { handoff = sessionStorage.getItem('cgl-dash-handoff'); } catch (e) { handoff = null; }
   if (src) fetch(src, { cache: 'no-store' }).then((r) => { if (!r.ok) throw new Error(`HTTP ${r.status}`); return r.json(); }).then(load).catch((e) => { $('d-empty').insertAdjacentHTML('beforeend', `<p class="hint" style="color:var(--err)">주소에서 결과를 읽지 못함: ${esc(e.message)}</p>`); });
   else if (handoff) { try { load(JSON.parse(handoff)); } catch (e) { /* 무시 */ } }
-  else fetch(GP.PUBLISH_PATH, { cache: 'no-store' }).then((r) => (r.ok ? r.json() : null)).then((env) => {
+  else GP.fetchPublished().then((env) => {
     if (env && env.app === 'cgl-plan') { shownCreated = env.savedAt || 'plain'; load(env); }   // 사내 서버: 평문 결과 → 바로 표시
     else if (env) askPassword(env);
     else { $('d-empty-title').textContent = '아직 게시된 계획이 없습니다'; $('d-empty-text').textContent = '계획 담당자가 계획 계산 화면(plan.html)에서 계산 후 “게시”하면 여기에 자동으로 표시됩니다. 결과 파일(.json)이 있으면 위 “결과 파일 열기”로 볼 수도 있습니다.'; }
@@ -311,8 +311,8 @@
   setInterval(async () => {
     if (!shownCreated || document.hidden) return;
     try {
-      const r = await fetch(GP.PUBLISH_PATH, { cache: 'no-store' }); if (!r.ok) return;
-      const env = await r.json(); const stamp = env.created || env.savedAt; if (stamp === shownCreated) return;
+      const env = await GP.fetchPublished(); if (!env) return;
+      const stamp = env.created || env.savedAt; if (stamp === shownCreated) return;
       const o = env.app === 'cgl-plan' ? env : await GP.decryptJSON(env, $('d-pw').value);
       shownCreated = stamp; load(o);
       $('d-meta').textContent += ' · 새 게시본으로 자동 갱신됨';

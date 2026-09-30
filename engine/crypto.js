@@ -31,6 +31,19 @@
   };
   // 게시 파일 위치(사이트 기준 상대경로). 사내 서버로 옮기면 여기만 바꾸거나 ?src= 로 지정
   GP.PUBLISH_PATH = 'published/latest.plan.enc.json';
+  // 게시본 위치: 사내 PC 자동 실행기(Supabase) + 계획 화면 수동 게시(GitHub). 둘 다 읽어 더 최근 것을 보여줌
+  GP.SUPABASE_URL = 'https://gatcqxrzaonjsixajrwd.supabase.co';
+  GP.PUBLISH_SOURCES = [GP.SUPABASE_URL + '/storage/v1/object/public/published/latest.plan.enc.json', GP.PUBLISH_PATH];
+  GP.fetchPublished = async function (sources = GP.PUBLISH_SOURCES) {
+    const got = await Promise.all(sources.map(async (u) => {
+      try {
+        const r = await fetch(u + (/^https?:/.test(u) ? `?v=${Date.now()}` : ''), { cache: 'no-store' });   // CDN 캐시 우회
+        return r.ok ? await r.json() : null;
+      } catch (e) { return null; }
+    }));
+    const stamp = (e) => (e && (e.created || e.savedAt)) || '';
+    return got.filter(Boolean).sort((a, b) => (stamp(a) < stamp(b) ? 1 : -1))[0] || null;
+  };
   GP.PUBLISH_REPO = { owner: 'jmin6035', repo: 'gadong-plan-web', branch: 'main' };
 
   /* GitHub에 바로 게시(관리자용). token: 이 저장소 Contents 쓰기 권한만 준 fine-grained 토큰. 브라우저 → GitHub API 직접 호출 */
