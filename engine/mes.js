@@ -12,6 +12,8 @@
     dept: { '도금수출그룹': '도금수출', '도금판매그룹': '도금국내', '컬러수출그룹': '자가재', '컬러건재판매그룹': '자가재', '컬러판매그룹': '자가재' },
     autoDept: '자동차강판판매그룹',          // 최종고객사명에 한글 있으면 자동차내수, 없으면 자동차수출
     dummyDept: '공정출하그룹',               // 더미: 계약번호에 D 또는 이 부서
+    // 라인번호가 없을 때(생산실적 조회 화면 엑셀) 제품번호 앞 2자리로 라인 추정. AA=1CGL은 샘플로 확인, BA=2CGL은 재고·출하 샘플 기준 추정(확인 필요)
+    linePrefix: { AA: '1CGL', BA: '2CGL' },
     speedRunMax: 300,                       // 속도 산출 코일: 0 < 가동시간 < 300분 (기존 속도 산출 정의와 동일)
     longStop: 1440,                         // 한 번에 1일 이상 멈춤 = 정기수리·장기정지(배경손실에서 제외, 별도 표시)
     minDays: 28,                            // 파라미터 반영 권장 최소 기간(일)
@@ -82,14 +84,15 @@
       if (t.header.includes('제품등급') && t.header.includes('제품번호')) for (const r of t.rows) { const g = str(r['제품등급']); if (g) gradeBy[str(r['제품번호'])] = g; }
     }
     const famOf = (p) => { for (const [re, f] of R.family) if (new RegExp(re).test(p)) return f; return ''; };
-    const seen = new Set(), coils = [], bad = { dup: 0, noLine: 0, time: 0, sum: 0, dur: 0 }, unkName = {}, unkDept = {};
+    const seen = new Set(), coils = [], bad = { dup: 0, noLine: 0, time: 0, sum: 0, dur: 0, byPrefix: 0 }, unkName = {}, unkDept = {};
     let dCon = 0, dDept = 0;
     for (const t of coilT) for (const r of t.rows) {
       const id = str(r['제품번호']);
       if (!id || /합계|소계|total/i.test(id)) continue;
       if (seen.has(id)) { bad.dup++; continue; }
       seen.add(id);
-      const line = normLine(str(r['라인번호'])) || lineBy[str(r['생산번호'])] || '';
+      let line = normLine(str(r['라인번호'])) || lineBy[str(r['생산번호'])] || '';
+      if (!line && R.linePrefix[id.slice(0, 2)]) { line = R.linePrefix[id.slice(0, 2)]; bad.byPrefix++; }
       if (!line) { bad.noLine++; continue; }
       const s = toMin(r['작업시작시각']), e = toMin(r['작업종료시각']);
       const run = num(r['가동시간']) || 0, stop = num(r['휴지시간']) || 0;
@@ -114,6 +117,7 @@
     if (!coils.length) checks.push({ level: 'error', msg: '해석된 코일이 없음(라인번호·시각 확인)' });
     if (bad.dup) checks.push({ level: 'info', msg: `중복 제품번호 ${bad.dup}건 제외` });
     if (bad.noLine) checks.push({ level: 'warn', msg: `라인번호를 못 찾은 코일 ${bad.noLine}건 제외 — 쿼리에 라인번호 열을 넣거나 작업휴지(라인번호·생산번호) 엑셀을 같이 올리세요` });
+    if (bad.byPrefix) checks.push({ level: 'info', msg: `라인번호 없는 코일 ${bad.byPrefix}건은 제품번호 앞글자로 라인 추정(` + Object.entries(R.linePrefix).map(([k, v]) => `${k}=${v}`).join(', ') + ')' });
     if (bad.time) checks.push({ level: 'warn', msg: `작업 시작·종료시각 오류 ${bad.time}건 제외` });
     if (bad.sum) checks.push({ level: 'warn', msg: `작업시간 ≠ 가동시간+휴지시간 ${bad.sum}건 — 시간 정의가 바뀌었는지 확인` });
     if (bad.dur) checks.push({ level: 'warn', msg: `종료−시작 ≠ 작업시간 ${bad.dur}건` });
