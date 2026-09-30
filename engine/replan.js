@@ -9,7 +9,8 @@
 (function (root) {
   const GP = root.GP || (root.GP = {});
 
-  GP.REPLAN_DEFAULTS = { freezeDays: 2, allowLate: true, maxLate: 14, lateW: 0.01, shortW: 1000, stabW: 0.1, stabW2: 500 };
+  // timeLimit 1e7초 = 사실상 무제한: 재계획은 오래 걸려도 최적 증명까지(시간 제한에 걸리면 최적이 아닌 해가 조용히 나옴). phase2Mode 'exact' = 2단계도 전체 탐색
+  GP.REPLAN_DEFAULTS = { freezeDays: 2, allowLate: true, maxLate: 14, lateW: 0.01, shortW: 1000, stabW: 0.1, stabW2: 500, timeLimit: 1e7, phase2Mode: 'exact' };
 
   /* 시험용 가짜 실적: 기존 계획을 t0까지 그대로 생산했다고 보고 교란을 적용.
      교란: {type:'down', line, from, to, minutes?} 설비정지(과거면 실적 감소, 미래면 가동가능시간 차감, minutes 없으면 종일)
@@ -56,8 +57,9 @@
     for (const c of R.cal) baseState[`${c.line}|${c.date}`] = c.fam;
     const MO = { t0: act.t0, init: act.state, freezeUntil: O.freezeDays > 0 ? GP.addDays(act.t0, O.freezeDays) : null, baseState, allowLate: O.allowLate, maxLate: O.maxLate, lateW: O.lateW, shortW: O.shortW, stabW: O.stabW, stabW2: O.stabW2, extraDown: act.extraDown || {} };
     log && log(`실적 ${GP.fmt(GP.sum(act.rows, (r) => r[4]))}t 반영(~${GP.md(act.t0)}), 남은 수요 ${GP.fmt(GP.sum(rem, (b) => b.orig))}t, 강종 동결 ~${MO.freezeUntil ? GP.md(MO.freezeUntil) : '없음'}`);
-    const milp = GP.runMILP(highs, rem, P, log, MO);
-    const lev = GP.runLevel(highs, rem, P, milp.state, log, MO);
+    const PS = Object.assign({}, P, { timeLimit1: O.timeLimit, timeLimit2: O.timeLimit, phase2Mode: O.phase2Mode });
+    const milp = GP.runMILP(highs, rem, PS, log, MO);
+    const lev = GP.runLevel(highs, rem, PS, milp.state, log, MO);
     const rows = act.rows.concat(lev.rows).sort((p, q) => (p.join('\u0001') < q.join('\u0001') ? -1 : 1));
     const actDay = {};
     for (const r of act.rows) actDay[`${r[1]}|${r[0]}`] = (actDay[`${r[1]}|${r[0]}`] || 0) + r[4];
@@ -77,13 +79,13 @@
       t0: act.t0, freezeUntil: MO.freezeUntil, notes: act.notes || [], actualT: GP.sum(act.rows, (r) => r[4]),
       planToDateT: GP.sum(R.rows.filter((r) => r[0] <= act.t0), (r) => r[4]),
       removed: before.filter((x) => !after.includes(x)), added: after.filter((x) => !before.includes(x)),
-      over, shortBy, late: milp.late, baseMC: R.milp && R.milp.K, options: O,
+      over, shortBy, late: milp.late, baseMC: R.milp && R.milp.K, options: O, optimal: !!(milp.optimal1 && milp.optimal2 && milp.phase2Exact),
     };
     // 계획 대비 실적(대시보드): 라인×일, 부서 누계
     replan.vsPlan = [];
     for (const d of GP.dateRange(H.D0, act.t0)) for (const l of P.lines) replan.vsPlan.push([d, l, GP.round(planDay[`${l}|${d}`] || 0, 1), GP.round(actDay[`${l}|${d}`] || 0, 1)]);
     replan.byDept = GP.DEPTS_ALL.map((c) => [c, GP.round(GP.sum(R.rows.filter((r) => r[0] <= act.t0 && r[3] === c), (r) => r[4]), 1), GP.round(GP.sum(act.rows.filter((r) => r[3] === c), (r) => r[4]), 1)]);
-    log && log(`재계획: M/C(남은 기간) ${milp.K}회, 지연 ${GP.fmt(milp.late)}톤·일, 결품 ${GP.fmt(milp.short)}t, 전환 변경 −${replan.removed.length}/+${replan.added.length}`);
+    log && log(`재계획${replan.optimal ? '(최적 증명)' : '(최적 미증명 — 시간 제한)'}: M/C(남은 기간) ${milp.K}회, 지연 ${GP.fmt(milp.late)}톤·일, 결품 ${GP.fmt(milp.short)}t, 전환 변경 −${replan.removed.length}/+${replan.added.length}`);
     return Object.assign({}, R, { rows, cal, dest: dest.rows, destBad: dest.bad, slack: lev.slack, milp: Object.assign({}, milp, { base: R.milp }), replan });
   };
   if (typeof module !== 'undefined') module.exports = GP;
