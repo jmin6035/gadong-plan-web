@@ -54,7 +54,7 @@
       const d = toDate(row.getCell(1).value), l = toStr(row.getCell(2).value), a = toStr(row.getCell(3).value), c = toStr(row.getCell(4).value);
       const du = toDate(row.getCell(5).value), t = +toStr(row.getCell(6).value).replace(/,/g, '');
       if (!d && !l) return;
-      if (!d || !P.lines.includes(l) || !P.alloyFamily[a] || !GP.DEPTS.includes(c) || !(t > 0)) { checks.push({ level: 'warn', msg: `실적 ${r}행 해석 불가 — 제외 (${[d, l, a, c, t].join(', ')})` }); return; }
+      if (!d || !P.lines.includes(l) || !P.alloyFamily[a] || !GP.DEPTS_ALL.includes(c) || !(t > 0)) { checks.push({ level: 'warn', msg: `실적 ${r}행 해석 불가 — 제외 (${[d, l, a, c, t].join(', ')})` }); return; }
       raw.push({ d, l, a, c, du, t });
     });
     const t0 = t0Given || raw.reduce((m, x) => (x.d > m ? x.d : m), '');

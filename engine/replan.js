@@ -40,6 +40,7 @@
   };
 
   /* R: 기준 계획 결과, act: {t0, rows, state, extraDown, notes}. 반환: 같은 형식의 결과(과거=실적 + 미래=재계획) */
+  GP.DEPTS_ALL = ['도금수출', '자동차수출', '도금국내', '자동차내수', '자가재'];   // report.js DEPTS 와 같은 순서(워커엔 report.js 없음)
   GP.replan = function (highs, R, act, opts = {}, log) {
     const P = R.P, H = GP.horizon(P), O = Object.assign({}, GP.REPLAN_DEFAULTS, opts);
     if (act.t0 < H.D0 || act.t0 >= H.D1) throw new Error(`실적 기준일 ${act.t0}이 계획 기간 밖`);
@@ -78,6 +79,10 @@
       removed: before.filter((x) => !after.includes(x)), added: after.filter((x) => !before.includes(x)),
       over, shortBy, late: milp.late, baseMC: R.milp && R.milp.K, options: O,
     };
+    // 계획 대비 실적(대시보드): 라인×일, 부서 누계
+    replan.vsPlan = [];
+    for (const d of GP.dateRange(H.D0, act.t0)) for (const l of P.lines) replan.vsPlan.push([d, l, GP.round(planDay[`${l}|${d}`] || 0, 1), GP.round(actDay[`${l}|${d}`] || 0, 1)]);
+    replan.byDept = GP.DEPTS_ALL.map((c) => [c, GP.round(GP.sum(R.rows.filter((r) => r[0] <= act.t0 && r[3] === c), (r) => r[4]), 1), GP.round(GP.sum(act.rows.filter((r) => r[3] === c), (r) => r[4]), 1)]);
     log && log(`재계획: M/C(남은 기간) ${milp.K}회, 지연 ${GP.fmt(milp.late)}톤·일, 결품 ${GP.fmt(milp.short)}t, 전환 변경 −${replan.removed.length}/+${replan.added.length}`);
     return Object.assign({}, R, { rows, cal, dest: dest.rows, destBad: dest.bad, slack: lev.slack, milp: Object.assign({}, milp, { base: R.milp }), replan });
   };

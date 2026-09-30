@@ -130,3 +130,11 @@ table.gtable { table-layout: fixed; min-width: 1320px; }
 .gtable tr.r-fam td { font-size: 12.5px; letter-spacing: -0.4px; }
 .gtable tr.r-dep td { letter-spacing: -0.3px; }
 @media (min-width: 1500px) { table.gtable { min-width: 1400px; } }
+
+.vs-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 10px; margin: 6px 0 10px; }
+.vs-card { border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; display: flex; flex-direction: column; gap: 2px; }
+.vs-card .hero { font-size: 26px; font-weight: 800; font-variant-numeric: tabular-nums; }
+.vs-card small { color: var(--muted); }
+table.vs td small { color: var(--muted); font-weight: normal; }
+.neg { color: var(--down); font-weight: bold; }
+@media (max-width: 560px) { h2 small { display: block; margin-top: 2px; } table.mes-t td, table.mes-t th { padding: 5px 4px; font-size: 13px; } table.mes-t td.l { white-space: normal; min-width: 0; } table.mes-t .pill { font-size: 11px; padding: 0 5px; } }

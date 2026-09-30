@@ -1,6 +1,6 @@
 /* 계산 전용 Web Worker: 엑셀 해석 + MILP/LP 계산. 데이터는 이 브라우저 밖으로 나가지 않는다. */
 importScripts('vendor/exceljs.min.js', 'vendor/highs.js',
-  'engine/params.js', 'engine/util.js', 'engine/sail_default.js', 'engine/parse.js', 'engine/model.js', 'engine/replan.js', 'engine/actual.js');
+  'engine/params.js', 'engine/util.js', 'engine/sail_default.js', 'engine/parse.js', 'engine/model.js', 'engine/replan.js', 'engine/actual.js', 'engine/mes.js');
 const GP = self.GP;
 let highsP = null, lastLog = 0;
 const post = (type, data) => self.postMessage(Object.assign({ type }, data));
@@ -53,7 +53,12 @@ self.onmessage = async (ev) => {
       let act;
       if (msg.xlsx) {
         const wb = new ExcelJS.Workbook(); await wb.xlsx.load(msg.xlsx);
-        act = GP.parseActualWorkbook(wb, msg.base, msg.t0);
+        const tables = GP.mesTables(GP.mesSheetsFromWorkbooks([wb]));
+        if (GP.isMesQuery(tables)) {             // MES 실적 쿼리 엑셀(코일 단위) → 일별 실적으로 집계
+          const cl = GP.mesClean(tables);
+          act = cl.checks.some((c) => c.level === 'error') ? { checks: cl.checks } : GP.mesToActual(GP.mesAnalyze(cl.coils, msg.base.P), cl.coils, msg.base, msg.t0);
+          act.checks = cl.checks.concat(act.checks || []);
+        } else act = GP.parseActualWorkbook(wb, msg.base, msg.t0);
         for (const c of act.checks || []) if (c.level !== 'info') log(`${c.level === 'error' ? '오류' : '경고'}: ${c.msg}`);
         if ((act.checks || []).some((c) => c.level === 'error')) throw new Error(act.checks.filter((c) => c.level === 'error').map((c) => c.msg).join(' / '));
       } else act = GP.simulateActuals(msg.base, msg.t0, msg.events || []);

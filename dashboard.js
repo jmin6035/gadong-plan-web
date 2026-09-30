@@ -49,7 +49,7 @@
     $('d-empty').hidden = true; $('d-body').hidden = false;
     $('d-title').textContent = `'${String(H.ym[0][0]).slice(2)}.${H.ym.map(([, m]) => m).join('·')}월 도금 CGL 가동계획`;
     $('d-meta').textContent = [meta.asOf && `판매계획 기준 ${meta.asOf}`, meta.savedAt && `계산 ${new Date(meta.savedAt).toLocaleString('ko-KR')}`, `계획 기간 ${H.D0} ~ ${H.D1}`].filter(Boolean).join(' · ');
-    renderNow(); renderReplan();
+    renderNow(); renderReplan(); renderMes();
     const mcT = GP.sum(L, (l) => A.mc[l]), maxLoad = Math.max(...Object.values(A.load));
     const maxKey = Object.keys(A.load).find((k) => A.load[k] === maxLoad), [ml, mi] = maxKey.split('|');
     renderExec();
@@ -106,7 +106,36 @@
       <ul class="changes">${rp.notes.map((n) => `<li>${esc(n)}</li>`).join('')}
       <li>실적 ${GP.fmt(rp.actualT)}t / 같은 기간 계획 ${GP.fmt(rp.planToDateT)}t (${rp.actualT >= rp.planToDateT ? '+' : ''}${GP.fmt(rp.actualT - rp.planToDateT)}t)</li>
       <li>전환 일정: ${rp.removed.length || rp.added.length ? `<b>취소</b> ${rp.removed.map(ev).join(', ') || '-'} · <b>신규</b> ${rp.added.map(ev).join(', ') || '-'}` : '변경 없음'}</li>
-      <li>지연 ${GP.fmt(rp.late)}톤·일 · 결품 ${rp.shortBy.length ? rp.shortBy.map(esc).join(', ') : '없음'}</li></ul>`;
+      <li>지연 ${GP.fmt(rp.late)}톤·일 · 결품 ${rp.shortBy.length ? rp.shortBy.map(esc).join(', ') : '없음'}</li></ul>` + vsPlanHtml(rp);
+  }
+  // 계획 대비 실적: 라인별 누계 달성률 + 최근 7일 + 부서 누계
+  function vsPlanHtml(rp) {
+    if (!rp.vsPlan || !rp.vsPlan.length) return '';
+    const L = R.P.lines, pct = (a, p) => (p > 0 ? `${GP.fmt(a / p * 100, 1)}%` : '-');
+    const cum = L.map((l) => { const x = rp.vsPlan.filter((r) => r[1] === l); return [l, GP.sum(x, (r) => r[2]), GP.sum(x, (r) => r[3])]; });
+    const days = [...new Set(rp.vsPlan.map((r) => r[0]))].slice(-7);
+    const cell = (d, l) => { const r = rp.vsPlan.find((x) => x[0] === d && x[1] === l) || [d, l, 0, 0], g = r[3] - r[2];
+      return `<td class="n ${g < -1 ? 'neg' : ''}">${GP.fmt(r[3])}<small>/${GP.fmt(r[2])}</small></td>`; };
+    return `<h3>계획 대비 실적 <small class="muted">(실적/계획, t)</small></h3>
+      <div class="vs-cards">${cum.map(([l, p, a]) => `<div class="vs-card"><b>${l}</b><span class="hero ${a < p - 1 ? 'neg' : ''}">${pct(a, p)}</span><small>누계 ${GP.fmt(a)} / ${GP.fmt(p)}t (${a >= p ? '+' : ''}${GP.fmt(a - p)})</small></div>`).join('')}</div>
+      <div class="scroll"><table class="data vs"><tr><th>라인</th>${days.map((d) => `<th>${GP.md(d)}</th>`).join('')}</tr>${L.map((l) => `<tr><td>${l}</td>${days.map((d) => cell(d, l)).join('')}</tr>`).join('')}</table></div>
+      ${rp.byDept ? `<div class="scroll"><table class="data vs"><tr><th>부서</th><th>계획</th><th>실적</th><th>차이</th><th>달성</th></tr>${rp.byDept.filter((r) => r[1] || r[2]).map(([c, p, a]) => `<tr><td>${c}</td><td class="n">${GP.fmt(p)}</td><td class="n">${GP.fmt(a)}</td><td class="n ${a < p - 1 ? 'neg' : ''}">${a >= p ? '+' : ''}${GP.fmt(a - p)}</td><td class="n">${pct(a, p)}</td></tr>`).join('')}</table></div>` : ''}`;
+  }
+  // MES 실적 분석 요약(게시 시 meta.mes)
+  function renderMes() {
+    const m = meta.mes, el = $('d-mes');
+    if (!m) { el.hidden = true; return; }
+    el.hidden = false;
+    const v = (c, x) => (x == null ? '-' : GP.fmt(x * (c.scale || 1), 1));
+    el.innerHTML = `<h2>실적 분석 <small class="muted">— MES 실적 ${m.period.from} ~ ${m.period.to}, 현재 계획 조건과 비교</small></h2>
+      <div class="lines-now">${Object.entries(m.lines).map(([l, x]) => `<div class="line-card"><h3>${l}</h3><dl>
+        <dt>제품 생산</dt><dd>${GP.fmt(x.tons)}t · 코일 ${GP.fmt(x.coils)}개</dd>
+        <dt>제품 가동률</dt><dd>${GP.fmt(x.util * 100, 1)}%</dd>
+        <dt>M/C</dt><dd>${x.mcN}건${x.mcMedian != null ? ` · 중앙값 ${GP.fmt(x.mcMedian)}분` : ''}</dd>
+        <dt>배경손실</dt><dd>더미 ${GP.fmt(x.bgDummyPerDay, 1)} + 기타 ${GP.fmt(x.bgStopPerDay, 1)}분/일</dd></dl></div>`).join('')}</div>
+      <div class="scroll"><table class="data mes-t"><tr><th>항목</th><th>현재</th><th>실적</th><th>차이</th></tr>${m.cands.map((c) => { const d = c.cur && c.act != null ? c.act / c.cur - 1 : null;
+        return `<tr><td class="l">${esc(c.label.replace(/ 속도$/, ''))} <small class="muted">${esc(c.unit)}</small>${c.flag ? ` <span class="pill ${c.ok ? 'warn' : ''}">${c.ok ? '반영 검토' : '표본 부족'}</span>` : ''}</td><td class="n">${v(c, c.cur)}</td><td class="n"><b>${v(c, c.act)}</b></td><td class="n ${c.flag ? 'neg' : ''}">${d == null ? '-' : (d > 0 ? '+' : '') + GP.fmt(d * 100, 1) + '%'}</td></tr>`; }).join('')}</table></div>
+      <p class="hint">속도는 두께 구성에 따라 달라지므로 28일 이상 쌓인 실적만 반영을 검토합니다. 반영 여부는 계획 담당자가 정합니다.</p>`;
   }
 
   // ---------------- 일별 차트 (라인별 작은 배수, 같은 y축) ----------------
