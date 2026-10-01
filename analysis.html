@@ -39,6 +39,11 @@
   </section>
 
   <div id="a-body" hidden>
+    <section class="card" id="a-weekly-report" hidden>
+      <h2>주간 분석 보고서 <small class="muted" id="a-wr-meta"></small></h2>
+      <div class="report" id="a-wr-body"></div>
+    </section>
+
     <section class="card">
       <h2>라인별 요약 <small class="muted" id="a-period"></small></h2>
       <div class="lines-now" id="a-lines"></div>
@@ -52,7 +57,7 @@
         <button type="button" class="primary" id="a-apply">선택 항목을 롤링 조건에 반영</button>
         <span class="hint" id="a-msg"></span>
       </div>
-      <p class="hint">속도(t/hr)는 제품 두께 구성에 크게 좌우됩니다(박물일수록 낮음). 기간이 짧거나 두께 구성이 치우치면 틀린 값이 나오므로 28일 이상·표본이 충분할 때만 “반영 권장”으로 표시합니다. 반영은 이 기기의 롤링 화면 조건에 저장되고, 계산을 다시 돌려야 계획에 적용됩니다.</p>
+      <p class="hint"><b>M/C 손실과 비강종 더미는 같이 반영됩니다</b>(한쪽만 바꾸면 손실이 이중으로 잡힘). 속도(t/hr)는 제품 두께 구성에 크게 좌우됩니다(박물일수록 낮음). 기간이 짧거나 두께 구성이 치우치면 틀린 값이 나오므로 28일 이상·표본이 충분할 때만 “반영 권장”으로 표시합니다. 반영은 이 기기의 롤링 화면 조건에 저장되고, 계산을 다시 돌려야 계획에 적용됩니다.</p>
     </section>
 
     <section class="card">
@@ -71,6 +76,12 @@
         <div class="scroll"><table class="data" id="a-events"></table></div>
       </section>
     </div>
+
+    <section class="card" id="a-reason-card" hidden>
+      <h2>휴지 사유 <small class="muted">— 휴지 쿼리 기준, 많은 순</small></h2>
+      <div class="scroll"><table class="data" id="a-reasons"></table></div>
+      <p class="hint">M/C = 강종전환(Mode change) 휴지, 계획 = 정기수리 등 계획휴지(SINK ROLL 교체 포함 — 계획 조건의 “설비정지”에 들어감), 비계획 = 설비고장·운전이상.</p>
+    </section>
 
     <details class="card more">
       <summary><h2>해석 확인 내역</h2></summary>

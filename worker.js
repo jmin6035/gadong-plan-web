@@ -56,7 +56,7 @@ self.onmessage = async (ev) => {
         const tables = GP.mesTables(GP.mesSheetsFromWorkbooks([wb]));
         if (GP.isMesQuery(tables)) {             // MES 실적 쿼리 엑셀(코일 단위) → 일별 실적으로 집계
           const cl = GP.mesClean(tables);
-          act = cl.checks.some((c) => c.level === 'error') ? { checks: cl.checks } : GP.mesToActual(GP.mesAnalyze(cl.coils, msg.base.P), cl.coils, msg.base, msg.t0);
+          act = cl.checks.some((c) => c.level === 'error') ? { checks: cl.checks } : GP.mesToActual(GP.mesAnalyze(cl.coils, msg.base.P, GP.MES_RULES, cl.stops), cl.coils, msg.base, msg.t0);
           act.checks = cl.checks.concat(act.checks || []);
         } else act = GP.parseActualWorkbook(wb, msg.base, msg.t0);
         for (const c of act.checks || []) if (c.level !== 'info') log(`${c.level === 'error' ? '오류' : '경고'}: ${c.msg}`);
