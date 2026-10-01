@@ -233,7 +233,7 @@
   // ---------------- 게시(암호화) ----------------
   async function makeEnvelope() {
     const pw = $('pub-pw').value, pw2 = $('pub-pw2').value;
-    if (pw.length < 10) throw new Error('암호는 10자 이상으로 정하세요');
+    if (pw.length < 6) throw new Error('암호는 6자 이상으로 정하세요');
     if (pw !== pw2) throw new Error('암호 확인이 다릅니다');
     const label = $('pub-label').value.trim() || `${result.P.year} ${result.P.months[0]}~${result.P.months[2]}월 계획${result.replan ? ` (재계획 ${result.replan.t0})` : ''}`;
     return GP.encryptJSON(JSON.parse(packResult()), pw, label);
