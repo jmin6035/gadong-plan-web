@@ -332,6 +332,98 @@ def main():
                         return
         raise RuntimeError(f"메뉴 '{name}' 를 눌러도 화면이 열리지 않음(후보 {len(cand)}개: {[ (x.tag_name, (x.text or '')[:20]) for x in cand[:4]]})")
 
+    OPEN_JS = r"""
+      var name = arguments[0], oid = arguments[1], jq = window.$ || window.jQuery, out = {cand: [], log: []};
+      var norm = function (v) { return String(v || '').replace(/\s+/g, ' ').trim(); };
+      var tree = jq ? jq('#tree-left') : null, inst = null;
+      try { inst = tree && tree.jstree ? tree.jstree(true) : null; } catch (e) { out.log.push('jstree 없음 ' + e); }
+      if (inst && inst.get_json) {
+        var flat = inst.get_json('#', {flat: true}) || [];
+        out.log.push('트리 노드 ' + flat.length + '개');
+        flat.forEach(function (n) {
+          var a = n.a_attr || {}, t = norm(n.text).replace(/<[^>]*>/g, '');
+          if ((oid && String(a.obj_id || '').indexOf(oid) !== -1) || norm(a.mnu_nm) === name || norm(a.disp_mnu_nm) === name || t === name)
+            out.cand.push({id: n.id, text: t, obj_id: a.obj_id || '', mnu_id: a.mnu_id || '', src: 'jstree'});
+        });
+      }
+      document.querySelectorAll('#tree-left a.jstree-anchor').forEach(function (a) {
+        var t = norm(a.textContent), o = a.getAttribute('obj_id') || '';
+        if ((oid && o.indexOf(oid) !== -1) || norm(a.getAttribute('mnu_nm')) === name || norm(a.getAttribute('disp_mnu_nm')) === name || t === name) {
+          var li = a.closest('li');
+          if (!out.cand.some(function (c) { return c.id === (li && li.id); })) out.cand.push({id: li ? li.id : '', text: t, obj_id: o, mnu_id: a.getAttribute('mnu_id') || '', src: 'dom'});
+        }
+      });
+      return JSON.stringify(out);"""
+
+    def open_menu(name, oid, diag):
+        """좌측 메뉴(jsTree)에서 이름(mnu_nm) 또는 화면ID(obj_id)가 맞는 메뉴를 찾아 화면이 열릴 때까지 여러 방법으로 열기"""
+        driver.switch_to.default_content()
+        try:
+            driver.execute_script('arguments[0].click();', WebDriverWait(driver, 5).until(EC.element_to_be_clickable((By.XPATH, '//*[@id="collapseButton"]'))))
+            time.sleep(1)
+        except Exception:
+            pass
+        box = WebDriverWait(driver, 10).until(EC.visibility_of_element_located((By.XPATH, '//*[@id="SEARCH_VAL"]')))
+        n0 = len(driver.find_elements(By.TAG_NAME, 'iframe'))
+        found = None
+        for query, how in ((name, 'find'), (oid, 'find'), (name, 'enter')):
+            box.send_keys(Keys.CONTROL + 'a', Keys.BACKSPACE, query)
+            if how == 'find':
+                try:
+                    driver.execute_script('arguments[0].click();', driver.find_element(By.ID, 'FIND_BTN'))
+                except Exception as e:
+                    diag.append(['find_btn', str(e)[:150]])
+            else:
+                box.send_keys(Keys.ENTER)
+            time.sleep(3)
+            info = json.loads(driver.execute_script(OPEN_JS, name, oid))
+            diag.append([f'search {query}/{how}', json.dumps(info, ensure_ascii=False)[:1500]])
+            if info['cand']:
+                found = info['cand']
+                break
+        if not found:
+            raise RuntimeError(f"메뉴 '{name}'({oid}) 를 트리에서 찾지 못함")
+        # 화면ID가 맞는 것 우선
+        found.sort(key=lambda c: 0 if oid and oid in (c.get('obj_id') or '') else 1)
+        print(f"    메뉴 후보: {[(c['text'], c['obj_id']) for c in found[:3]]}")
+        for c in found[:3]:
+            nid = c['id']
+            steps = [
+                ('jstree select', "var i=jQuery('#tree-left').jstree(true); if(i._open_to) i._open_to(arguments[0]); i.deselect_all(); i.select_node(arguments[0]); return 1;"),
+                ('jquery click', "var a=jQuery('#tree-left li[id=\"'+arguments[0]+'\"] > a.jstree-anchor'); a[0].scrollIntoView({block:'center'}); a.trigger('click'); return a.length;"),
+                ('dblclick', "var a=jQuery('#tree-left li[id=\"'+arguments[0]+'\"] > a.jstree-anchor'); a.trigger('dblclick'); return a.length;"),
+            ]
+            for label, js in steps:
+                try:
+                    r = driver.execute_script(js, nid)
+                except Exception as e:
+                    diag.append([f'open {nid} {label}', 'error ' + str(e)[:150]])
+                    continue
+                for _ in range(6):
+                    time.sleep(1)
+                    if len(driver.find_elements(By.TAG_NAME, 'iframe')) > n0:
+                        diag.append([f'open {nid} {label}', f'성공 (반환 {r})'])
+                        time.sleep(4)
+                        return
+                diag.append([f'open {nid} {label}', f'화면 안 열림 (반환 {r})'])
+            try:                                            # 마지막: 실제 마우스 클릭
+                a_el = driver.find_element(By.CSS_SELECTOR, f'#tree-left li[id="{nid}"] > a.jstree-anchor')
+                driver.execute_script("arguments[0].scrollIntoView({block:'center'});", a_el)
+                ActionChains(driver).move_to_element(a_el).click().perform()
+                for _ in range(6):
+                    time.sleep(1)
+                    if len(driver.find_elements(By.TAG_NAME, 'iframe')) > n0:
+                        diag.append([f'open {nid} mouse', '성공'])
+                        time.sleep(4)
+                        return
+                diag.append([f'open {nid} mouse', '화면 안 열림'])
+            except Exception as e:
+                diag.append([f'open {nid} mouse', 'error ' + str(e)[:150]])
+        raise RuntimeError(f"메뉴 '{name}' 후보 {len(found)}개를 눌러도 화면이 안 열림")
+
+    def save_diag(diag):
+        json.dump({'columns': ['step', 'value'], 'rows': diag}, open(os.path.join(xdir, 'snap_probe.json'), 'w', encoding='utf-8'), ensure_ascii=False)
+
     def open_by_id(query, keyword):
         """메뉴 검색창에 query 입력 → 결과 중 문서 순서상 첫 번째(keyword 포함) 메뉴를 눌러 화면이 열리는지 확인"""
         driver.switch_to.default_content()
@@ -462,7 +554,15 @@ def main():
         driver.find_element(By.XPATH, '//*[@id="loginsubmit"]').click()
         time.sleep(8)
         if a.probe:                                         # 진단만 하고 나머지 내려받기는 건너뜀
-            probe(a.probe)
+            diag = []
+            try:
+                open_menu('제품재고 현황', 'SSHPC4025', diag)
+                print('  ✅ 제품재고 현황 화면 열림')
+            except Exception as e:
+                print(f'  ⚠ {e}')
+            save_diag(diag)
+            for st_, v in diag:
+                print('   ', st_, '|', str(v)[:160])
             a.stock_only = a.no_extra = True
         if not a.stock_only:
             # ①② 쿼리 화면
@@ -545,7 +645,11 @@ def main():
             for plant, name in (('도금', 'snap_stock_g'), ('컬러', 'snap_stock_c')):
                 print(f'▶ {name} (제품재고현황 {plant}, 분석용)')
                 try:
-                    open_by_id('4025', '제품재고')                    # 메뉴 검색 '4025' → 결과 2개 중 첫 번째 = [SSHPC4025] 제품재고 현황
+                    diag = []
+                    try:
+                        open_menu('제품재고 현황', 'SSHPC4025', diag)     # 좌측 jsTree: mnu_nm·obj_id 로 찾기
+                    finally:
+                        save_diag(diag)                             # 성공·실패 과정 기록(Claude 확인용)
                     if frame_with("//*[contains(normalize-space(text()), '입고일자')]") is None:
                         raise RuntimeError(f"화면을 찾지 못함(열린 iframe {len(driver.find_elements(By.TAG_NAME, 'iframe'))}개)")
                     merged = None
