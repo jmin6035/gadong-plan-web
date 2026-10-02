@@ -335,14 +335,15 @@ def main():
     OPEN_JS = r"""
       var name = arguments[0], oid = arguments[1], jq = window.$ || window.jQuery, out = {cand: [], log: []};
       try {
-      var norm = function (v) { return String(v || '').replace(/\s+/g, ' ').trim(); };
+      var norm = function (v) { return String(v || '').replace(/<[^>]*>/g, '').replace(/\s+/g, ''); };   // 띄어쓰기 무시 비교
+      name = norm(name);
       var tree = jq ? jq('#tree-left') : null, inst = null;
       try { inst = tree && tree.jstree ? tree.jstree(true) : null; } catch (e) { out.log.push('jstree 없음 ' + e); }
       if (inst && inst.get_json) {
         var flat = inst.get_json('#', {flat: true}) || [];
         out.log.push('트리 노드 ' + flat.length + '개');
         flat.forEach(function (n) {
-          var a = n.a_attr || {}, t = norm(n.text).replace(/<[^>]*>/g, '');
+          var a = n.a_attr || {}, t = norm(n.text);
           if ((oid && String(a.obj_id || '').indexOf(oid) !== -1) || norm(a.mnu_nm) === name || norm(a.disp_mnu_nm) === name || t === name)
             out.cand.push({id: n.id, text: t, obj_id: a.obj_id || '', mnu_id: a.mnu_id || '', src: 'jstree'});
         });
@@ -373,7 +374,9 @@ def main():
             box = driver.find_element(By.ID, 'SEARCH_VAL')
         n0 = len(driver.find_elements(By.TAG_NAME, 'iframe'))
         found = None
-        for query, how in ((name, 'find'), (oid, 'find'), (name, 'enter')):
+        # 사용자가 하는 방식 그대로: 검색창에 '제품재고현황' 입력 후 Enter → 안 되면 찾기 버튼·띄어쓰기·화면ID 순
+        nospace = name.replace(' ', '')
+        for query, how in ((nospace, 'enter'), (nospace, 'find'), (name, 'enter'), (name, 'find'), (oid, 'find')):
             try:
                 box.send_keys(Keys.CONTROL + 'a', Keys.BACKSPACE, query)
             except Exception as e:                          # 입력이 막히면 JS로 값 넣기
