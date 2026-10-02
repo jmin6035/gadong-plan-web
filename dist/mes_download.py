@@ -106,6 +106,7 @@ def main():
     ap.add_argument('--out', default=os.path.join(HERE, 'mes'))
     ap.add_argument('--no-extra', action='store_true', help='컬러·출하·재고(분석용) 내려받기 생략')
     ap.add_argument('--stock-only', action='store_true', help='제품재고·소재재고만 받기(도금 실적은 건너뜀)')
+    ap.add_argument('--probe', help='메뉴 검색어를 넣고 검색 결과 화면 구조를 기록(진단용, 예: 4025)')
     a = ap.parse_args()
     today = datetime.date.today()
     d1 = a.d1 or (today - datetime.timedelta(days=1)).strftime('%Y%m%d')
@@ -372,6 +373,76 @@ def main():
                         return
         raise RuntimeError(f"'{query}' 검색 결과를 눌러도 화면이 열리지 않음")
 
+    PROBE_JS = r"""
+      var q = arguments[0], kw = arguments[1], out = [];
+      var all = document.querySelectorAll('body *');
+      for (var i = 0; i < all.length; i++) {
+        var e = all[i], t = (e.textContent || '');
+        if (t.indexOf(q) === -1 && t.indexOf(kw) === -1) continue;
+        var leaf = true;
+        for (var j = 0; j < e.children.length; j++) { var c = e.children[j].textContent || ''; if (c.indexOf(q) !== -1 || c.indexOf(kw) !== -1) { leaf = false; break; } }
+        if (!leaf) continue;
+        var r = e.getBoundingClientRect();
+        out.push({tag: e.tagName, id: e.id, cls: String(e.className).slice(0, 80), text: t.trim().slice(0, 60),
+                  vis: !!(e.offsetParent || r.width), x: Math.round(r.left), y: Math.round(r.top),
+                  onclick: (e.getAttribute('onclick') || (e.parentElement && e.parentElement.getAttribute('onclick')) || '').slice(0, 200),
+                  html: (e.parentElement && e.parentElement.parentElement ? e.parentElement.parentElement.outerHTML : e.outerHTML).slice(0, 900)});
+      }
+      var sv = document.getElementById('SEARCH_VAL'), box = sv;
+      for (var k = 0; k < 4 && box && box.parentElement; k++) box = box.parentElement;
+      return JSON.stringify({items: out.slice(0, 40), searchArea: box ? box.outerHTML.slice(0, 6000) : null,
+                             iframes: Array.prototype.map.call(document.querySelectorAll('iframe'), function (f) { return f.src || f.name || f.id; })});"""
+
+    def probe(query, kw='제품재고'):
+        """진단: 메뉴 검색 후 화면 구조·클릭 결과를 mes/extra/snap_probe.json 에 기록(자동 실행기가 암호화해 올림)"""
+        rows = []
+        driver.switch_to.default_content()
+        try:
+            driver.execute_script('arguments[0].click();', WebDriverWait(driver, 5).until(EC.element_to_be_clickable((By.XPATH, '//*[@id="collapseButton"]'))))
+            time.sleep(1)
+        except Exception as e:
+            rows.append(['collapse', str(e)[:200]])
+        box = WebDriverWait(driver, 10).until(EC.visibility_of_element_located((By.XPATH, '//*[@id="SEARCH_VAL"]')))
+        box.send_keys(Keys.CONTROL + 'a', Keys.BACKSPACE, query)
+        time.sleep(3)
+        rows.append(['before_enter', driver.execute_script(PROBE_JS, query, kw)])
+        box.send_keys(Keys.ENTER)
+        time.sleep(4)
+        info = driver.execute_script(PROBE_JS, query, kw)
+        rows.append(['after_enter', info])
+        try:
+            driver.save_screenshot(os.path.join(xdir, 'probe.png'))
+        except Exception:
+            pass
+        items = json.loads(info)['items']
+        print(f'  검색 후 "{query}"/"{kw}" 포함 요소 {len(items)}개:')
+        for it in items[:10]:
+            print(f"    {it['tag']} id={it['id']} vis={it['vis']} ({it['x']},{it['y']}) {it['text'][:40]}")
+        # 보이는 후보를 하나씩 눌러 화면이 열리는지 기록
+        els = [e for e in driver.find_elements(By.XPATH, f"//*[contains(normalize-space(.), '{kw}') and not(*[contains(normalize-space(.), '{kw}')])]") if e.is_displayed()]
+        for idx, e in enumerate(els[:4]):
+            try:
+                n0 = len(driver.find_elements(By.TAG_NAME, 'iframe'))
+                txt = (e.text or '').strip()[:40]
+                ActionChains(driver).move_to_element(e).click().perform()
+                time.sleep(6)
+                fr = driver.find_elements(By.TAG_NAME, 'iframe')
+                res = f"클릭 {idx + 1} [{txt}] → iframe {n0}→{len(fr)}"
+                if len(fr) > n0:
+                    driver.switch_to.frame(fr[-1])
+                    res += ' | 화면 글자: ' + (driver.find_element(By.TAG_NAME, 'body').text or '')[:200].replace('\n', ' ')
+                    driver.switch_to.default_content()
+                print('   ', res)
+                rows.append([f'click_{idx + 1}', res])
+                if len(fr) > n0:
+                    break
+            except Exception as ex:
+                rows.append([f'click_{idx + 1}', 'error ' + str(ex)[:200]])
+                print(f'    클릭 {idx + 1} 오류: {str(ex)[:120]}')
+                driver.switch_to.default_content()
+        json.dump({'columns': ['step', 'value'], 'rows': rows}, open(os.path.join(xdir, 'snap_probe.json'), 'w', encoding='utf-8'), ensure_ascii=False)
+        print('  진단 기록 저장: mes/extra/snap_probe.json, probe.png')
+
     def frame_with(xpath, visible=False):
         for fr in reversed(driver.find_elements(By.TAG_NAME, 'iframe')):
             try:
@@ -390,6 +461,9 @@ def main():
         driver.find_element(By.XPATH, '//*[@id="password_input"]').send_keys(pw)
         driver.find_element(By.XPATH, '//*[@id="loginsubmit"]').click()
         time.sleep(8)
+        if a.probe:                                         # 진단만 하고 나머지 내려받기는 건너뜀
+            probe(a.probe)
+            a.stock_only = a.no_extra = True
         if not a.stock_only:
             # ①② 쿼리 화면
             print(f'쿼리 화면 — 기간 {d0} ~ {d1}')
@@ -520,9 +594,9 @@ def main():
         driver.quit()
         shutil.rmtree(dl, ignore_errors=True)
     print('받은 파일:', ok_files, '/ 분석용:', extra_files)
-    if len(ok_files) < 3 and not a.stock_only:
+    if len(ok_files) < 3 and not a.stock_only and not a.probe:
         print('⚠ 일부 파일을 받지 못했습니다 — 자동 실행기는 받은 파일로만 돕니다(누적 저장소에 이전 자료가 있으면 그대로 유지)')
-    if not a.no_auto and (ok_files or extra_files):
+    if not a.no_auto and (ok_files or extra_files or a.probe):
         sys.exit(subprocess.call([sys.executable, '-m', 'cglplan', 'auto', '--config', os.path.join(HERE, 'auto_config.json')], cwd=HERE))
 
 
