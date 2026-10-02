@@ -397,6 +397,60 @@ def main():
       }
       return JSON.stringify(out);"""
 
+    EXACT_JS = r"""
+      var want = arguments[0], out = [];
+      var clean = function (v) { return String(v || '').replace(/\s+/g, ' ').trim().replace(/^[^가-힣A-Za-z0-9\[]+/, '').trim(); };
+      document.querySelectorAll('[data-cgl-step]').forEach(function (e) { e.removeAttribute('data-cgl-step'); });
+      var all = document.querySelectorAll('body *');
+      for (var i = 0; i < all.length; i++) {
+        var e = all[i], tg = e.tagName;
+        if (e.id === 'SEARCH_VAL' || tg === 'SCRIPT' || tg === 'STYLE' || tg === 'OPTION' || tg === 'TITLE' || tg === 'INPUT') continue;
+        if (clean(e.textContent) !== want) continue;                      // 띄어쓰기까지 정확히 같은 글자만
+        var leaf = true;
+        for (var j = 0; j < e.children.length; j++) if (clean(e.children[j].textContent) === want) { leaf = false; break; }
+        if (!leaf) continue;
+        var vis = !!(e.offsetParent || e.getClientRects().length);
+        e.setAttribute('data-cgl-step', String(out.length));
+        out.push({k: out.length, tag: tg, id: e.id, cls: String(e.className).slice(0, 60), vis: vis, parent: (e.parentElement ? e.parentElement.outerHTML : '').slice(0, 400)});
+      }
+      return JSON.stringify(out);"""
+
+    def open_by_path(path, diag, search=None):
+        """좌측 메뉴를 사람이 누르듯 단계별로(예: 출하관리 → 제품재고 → 제품재고 현황). 글자는 띄어쓰기까지 정확히 일치.
+        마지막 단계에서 화면(iframe)이 열리면 성공"""
+        box = menu_panel(diag)
+        if search:
+            box.send_keys(Keys.CONTROL + 'a', Keys.BACKSPACE, search, Keys.ENTER)
+            time.sleep(3)
+        n0 = len(driver.find_elements(By.TAG_NAME, 'iframe'))
+        for depth, step in enumerate(path):
+            last = depth == len(path) - 1
+            got = []
+            for _ in range(5):
+                got = json.loads(driver.execute_script(EXACT_JS, step))
+                if any(g['vis'] for g in got):
+                    break
+                time.sleep(1)
+            diag.append([f'path {step}', json.dumps(got, ensure_ascii=False)[:1500]])
+            vis = sorted([g for g in got if g['vis']], key=lambda g: g['k'])
+            if not vis:
+                raise RuntimeError(f"메뉴 단계 '{step}' 가 화면에 안 보임(같은 글자 {len(got)}개)")
+            el = driver.find_element(By.CSS_SELECTOR, f'[data-cgl-step="{vis[0]["k"]}"]')
+            if last:
+                if click_until_frame(el, diag, f'path {step}', n0):
+                    return
+                raise RuntimeError(f"'{step}' 를 눌러도 화면이 안 열림")
+            # 중간 단계: 펼치기(이미 펼쳐져 있으면 다음 단계 글자가 이미 보임 → 누르지 않음)
+            nxt = json.loads(driver.execute_script(EXACT_JS, path[depth + 1]))
+            if any(g['vis'] for g in nxt):
+                diag.append([f'path {step}', '다음 단계가 이미 보여 누르지 않음'])
+                continue
+            try:
+                driver.execute_script('arguments[0].click();', el)
+            except Exception:
+                ActionChains(driver).move_to_element(el).click().perform()
+            time.sleep(2)
+
     def click_until_frame(el, diag, label, n0):
         """요소를 JS 클릭 → 안 열리면 마우스 클릭 → 더블클릭. 화면(iframe)이 늘면 True"""
         for how in ('js', 'mouse', 'dbl'):
@@ -742,12 +796,25 @@ def main():
                 e = min(f + datetime.timedelta(days=89), today)
                 ranges.append((f.strftime('%Y%m%d'), e.strftime('%Y%m%d')))
                 f = e + datetime.timedelta(days=1)
+            stock_diag = []
             for plant, name in (('도금', 'snap_stock_g'), ('컬러', 'snap_stock_c')):
                 print(f'▶ {name} (제품재고현황 {plant}, 분석용)')
                 try:
-                    diag = []
+                    diag = stock_diag
+                    already = frame_with("//*[contains(normalize-space(text()), '입고일자')]") is not None   # 도금 때 연 화면이면 그대로 사용
+                    driver.switch_to.default_content()
                     try:
-                        open_menu('제품재고 현황', 'SSHPC4025', diag)     # 좌측 jsTree: mnu_nm·obj_id 로 찾기
+                        if already:
+                            raise StopIteration
+                        # '제품재고현황'(붙여 씀)과 '제품재고 현황'(띄어 씀)은 다른 메뉴 — 출하관리 → 제품재고 → 제품재고 현황(띄어 씀)
+                        try:
+                            open_by_path(['출하관리', '제품재고', '제품재고 현황'], diag, search='제품재고 현황')
+                        except Exception as e1:
+                            diag.append(['path 검색후 실패', str(e1)[:200]])
+                            open_by_path(['출하관리', '제품재고', '제품재고 현황'], diag)
+                        print("    메뉴 열림: 출하관리 → 제품재고 → 제품재고 현황")
+                    except StopIteration:
+                        print('    이미 열린 제품재고 현황 화면 사용')
                     finally:
                         save_diag(diag)                             # 성공·실패 과정 기록(Claude 확인용)
                     if frame_with("//*[contains(normalize-space(text()), '입고일자')]") is None:
