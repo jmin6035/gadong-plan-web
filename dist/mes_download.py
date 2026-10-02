@@ -108,6 +108,7 @@ def main():
     ap.add_argument('--stock-only', action='store_true', help='제품재고·소재재고만 받기(도금 실적은 건너뜀)')
     ap.add_argument('--probe', help='메뉴 검색어를 넣고 검색 결과 화면 구조를 기록(진단용, 예: 4025)')
     ap.add_argument('--stock-manual', action='store_true', help='제품재고: 화면 이동·조회는 사람이 하고, 표 읽기만 자동')
+    ap.add_argument('--stock-months', type=int, default=6, help='재고현황 기준월 몇 달치(이번 달 포함, 기본 6)')
     a = ap.parse_args()
     today = datetime.date.today()
     d1 = a.d1 or (today - datetime.timedelta(days=1)).strftime('%Y%m%d')
@@ -796,70 +797,87 @@ def main():
                 driver.execute_script('arguments[0].click();', WebDriverWait(driver, 10).until(EC.element_to_be_clickable((By.XPATH, '//*[@id="mnuSearchBtn"]/span'))))
             if run_chunks('screen_prod', None, run_screen, 10) is None:
                 export("//div[contains(@class, 'jqx-grid-cell')]", 'screen_prod.xlsx')
-        # ⑤ 제품재고현황(도금·컬러, 현재 시점 스냅샷) — 입고일자를 구간으로 나눠 전부 읽음(표 행수 제한 대비)
+        # ⑤ 재고현황 [SMKTF1030] — 조회기준 '기준월', 월별로 조회해 합침(사용자 안내 2026-10-02)
         if not a.no_extra:
-            STOCK_JS = r'''
-              var jq = window.$ || window.jQuery, plant = arguments[0], d0 = arguments[1], d1 = arguments[2], out = {plant: null, dates: []};
-              var mk = function (v) { return new Date(+v.slice(0, 4), +v.slice(4, 6) - 1, +v.slice(6, 8)); };
-              jq('.jqx-dropdownlist, [role=combobox]').each(function () {
-                if (out.plant) return; var dd = jq(this);
+            MONTH_JS = r"""
+              var jq = window.$ || window.jQuery, ym = arguments[0], out = {mode: null, dates: [], form: []};
+              var y = +ym.slice(0, 4), m = +ym.slice(4, 6), d = new Date(y, m - 1, 1), txt = ym.slice(0, 4) + '-' + ym.slice(4, 6);
+              // 1) 조회기준 = 기준월 (드롭다운·라디오·버튼 중 있는 것)
+              if (jq) jq('.jqx-dropdownlist, [role=combobox]').each(function () {
+                if (out.mode) return; var dd = jq(this);
                 try { var it = dd.jqxDropDownList('getItems') || [];
-                  for (var i = 0; i < it.length; i++) if (String(it[i].label).indexOf(plant) !== -1) { dd.jqxDropDownList('selectIndex', it[i].index); out.plant = it[i].label; break; } } catch (e) {}
+                  for (var i = 0; i < it.length; i++) if (String(it[i].label).indexOf('기준월') !== -1) { dd.jqxDropDownList('selectIndex', it[i].index); out.mode = 'dropdown:' + it[i].label; break; } } catch (e) {}
               });
-              var ds = jq('.jqx-datetimeinput').filter(function () { return jq(this).is(':visible'); });
-              ds.each(function (i) { if (i > 1) return; try { jq(this).jqxDateTimeInput('setDate', mk(i === 0 ? d0 : d1)); out.dates.push(jq(this).jqxDateTimeInput('getText')); } catch (e) { out.dates.push(null); } });
-              return out;'''
-            ranges = [('20000101', '20231231')]
-            f = datetime.date(2024, 1, 1)
-            while f <= today:
-                e = min(f + datetime.timedelta(days=89), today)
-                ranges.append((f.strftime('%Y%m%d'), e.strftime('%Y%m%d')))
-                f = e + datetime.timedelta(days=1)
+              if (!out.mode) {
+                var els = document.querySelectorAll('label, span, div, input[type=radio]');
+                for (var i = 0; i < els.length && !out.mode; i++) {
+                  var e = els[i], t = (e.textContent || e.value || '').replace(/\s+/g, '');
+                  if (t === '기준월' && (e.offsetParent || e.getClientRects().length)) {
+                    var r = e.querySelector && e.querySelector('input[type=radio]') || (e.htmlFor && document.getElementById(e.htmlFor)) || e;
+                    try { if (jq && jq(r).jqxRadioButton) jq(r).jqxRadioButton('check'); } catch (x) {}
+                    r.click(); out.mode = 'click:' + e.tagName;
+                  }
+                }
+              }
+              return JSON.stringify(out);"""
+            DATE_JS = r"""
+              var jq = window.$ || window.jQuery, ym = arguments[0], out = {dates: [], form: []};
+              var y = +ym.slice(0, 4), m = +ym.slice(4, 6), d = new Date(y, m - 1, 1), txt = ym.slice(0, 4) + '-' + ym.slice(4, 6);
+              var ds = jq ? jq('.jqx-datetimeinput').filter(function () { return jq(this).is(':visible'); }) : [];
+              for (var i = 0; i < ds.length; i++) { try { jq(ds[i]).jqxDateTimeInput('setDate', d); out.dates.push(jq(ds[i]).jqxDateTimeInput('getText')); } catch (e) { out.dates.push('err ' + e); } }
+              if (!ds.length) document.querySelectorAll('input[type=month], input').forEach(function (e) {
+                if ((e.offsetParent) && /^\d{4}-\d{2}$/.test(e.value || '')) { e.value = txt; e.dispatchEvent(new Event('change', {bubbles: true})); out.dates.push('input:' + e.id); } });
+              // 진단용: 검색 조건 영역의 라벨·입력 목록
+              document.querySelectorAll('label, input, .jqx-dropdownlist, .jqx-datetimeinput').forEach(function (e) {
+                if (out.form.length < 60 && (e.offsetParent || e.getClientRects().length)) out.form.push(e.tagName + '#' + e.id + ':' + String(e.textContent || e.value || '').replace(/\s+/g, ' ').trim().slice(0, 30)); });
+              return JSON.stringify(out);"""
+            months = []
+            cur = datetime.date(today.year, today.month, 1)
+            for k in range(a.stock_months - 1, -1, -1):                 # 최근 N개월(이번 달 포함)
+                yy, mm = cur.year, cur.month - k
+                while mm <= 0:
+                    yy, mm = yy - 1, mm + 12
+                months.append(f'{yy}{mm:02d}')
+            print(f'▶ snap_stock (재고현황 SMKTF1030, 기준월 {months[0]}~{months[-1]}, 분석용)')
             stock_diag = []
-            for plant, name in (('도금', 'snap_stock_g'), ('컬러', 'snap_stock_c')):
-                print(f'▶ {name} (제품재고현황 {plant}, 분석용)')
-                try:
-                    diag = stock_diag
-                    already = frame_with("//*[contains(normalize-space(text()), '입고일자')]") is not None   # 도금 때 연 화면이면 그대로 사용
+            try:
+                if frame_with("//*[contains(normalize-space(.), '기준월') or contains(normalize-space(.), '조회기준')]") is None:
                     driver.switch_to.default_content()
+                    open_by_search_popup('재고현황', 'SMKTF1030', stock_diag)
+                merged = None
+                for ym in months:
+                    if frame_with("//*[contains(normalize-space(.), '조회기준') or contains(normalize-space(.), '기준월')]") is None:
+                        raise RuntimeError('재고현황 화면의 조회 조건을 찾지 못함')
+                    r1 = json.loads(driver.execute_script(MONTH_JS, ym))
+                    time.sleep(1.5)
+                    r2 = json.loads(driver.execute_script(DATE_JS, ym))
+                    stock_diag.append([f'month {ym}', json.dumps({'mode': r1.get('mode'), 'dates': r2.get('dates'), 'form': r2.get('form')}, ensure_ascii=False)[:2500]])
+                    if not r1.get('mode') or not r2.get('dates'):
+                        raise RuntimeError(f"조회기준(기준월)·월 입력칸을 못 찾음 (조회기준 {r1.get('mode')}, 월칸 {r2.get('dates')})")
                     try:
-                        if already:
-                            raise StopIteration
-                        # 검색 '제품재고 현황' → 팝업: 출하관리 > 제품재고 > [SSHPC4025] 제품재고 현황(첫 번째)
-                        open_by_search_popup('제품재고 현황', 'SSHPC4025', diag)
-                        print("    메뉴 열림: [SSHPC4025] 제품재고 현황")
-                    except StopIteration:
-                        print('    이미 열린 제품재고 현황 화면 사용')
-                    finally:
-                        save_diag(diag)                             # 성공·실패 과정 기록(Claude 확인용)
-                    if frame_with("//*[contains(normalize-space(text()), '입고일자')]") is None:
-                        raise RuntimeError(f"화면을 찾지 못함(열린 iframe {len(driver.find_elements(By.TAG_NAME, 'iframe'))}개)")
-                    merged = None
-                    for r0, r1 in ranges:
-                        try:
-                            driver.execute_script(CLEAR_JS, None)
-                        except Exception:
-                            pass
-                        got = driver.execute_script(STOCK_JS, plant, r0, r1)
-                        if not got or not got.get('plant') or len(got.get('dates') or []) < 2 or None in got['dates']:
-                            raise RuntimeError(f'공장구분·입고일자 칸을 찾지 못함 ({got})')
-                        btn = driver.find_elements(By.XPATH, '//*[@id="mnuSearchBtn"]') or \
-                              [e for e in driver.find_elements(By.XPATH, "//*[self::button or self::a or self::span or self::div][normalize-space(.)='조회']") if e.is_displayed()]
-                        if not btn:
-                            raise RuntimeError('조회 버튼을 찾지 못함')
-                        driver.execute_script('arguments[0].click();', btn[0])
-                        n = wait_rows(None, 120)
-                        o = read(None) if n else None
-                        k = len(o['rows']) if o else 0
-                        print(f"    [{got['plant']}] {got['dates'][0]}~{got['dates'][1]}: {k}행" + ('  ⚠ 10,000행 — 잘렸을 수 있음' if k >= 10000 else ''))
-                        if o:
-                            if merged is None:
-                                merged = o
-                            elif o['columns'] == merged['columns']:
-                                merged['rows'] += o['rows']
-                    save(merged, name, xdir)
-                except Exception as e:
-                    print(f'  ⚠ 제품재고현황({plant}): 실패 — 건너뜀 ({str(e).splitlines()[0][:160]})')
+                        driver.execute_script(CLEAR_JS, None)
+                    except Exception:
+                        pass
+                    btn = driver.find_elements(By.XPATH, '//*[@id="mnuSearchBtn"]') or \
+                          [e for e in driver.find_elements(By.XPATH, "//*[self::button or self::a or self::span or self::div][normalize-space(.)='조회']") if e.is_displayed()]
+                    if not btn:
+                        raise RuntimeError('조회 버튼을 찾지 못함')
+                    driver.execute_script('arguments[0].click();', btn[0])
+                    n = wait_rows(None, 180)
+                    o = read(None) if n else None
+                    k = len(o['rows']) if o else 0
+                    print(f"    기준월 {r2['dates'][0] if r2['dates'] else ym}: {k}행" + ('  ⚠ 10,000행 — 잘렸을 수 있음' if k >= 10000 else ''))
+                    if o:
+                        o = {'columns': ['_기준월'] + o['columns'], 'rows': [[ym] + r for r in o['rows']]}
+                        if merged is None:
+                            merged = o
+                        elif o['columns'] == merged['columns']:
+                            merged['rows'] += o['rows']
+                save(merged, 'snap_stock', xdir)
+            except Exception as e:
+                print(f'  ⚠ 재고현황: 실패 — 건너뜀 ({str(e).splitlines()[0][:200] if str(e) else type(e).__name__})')
+            finally:
+                save_diag(stock_diag)
         # ⑥ 컬러 소재 재고 목록(현재 시점 스냅샷, 분석용)
         if not a.no_extra:
             print('▶ snap_mat_stock_cc (소재재고List(CC), 분석용)')
