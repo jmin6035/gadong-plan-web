@@ -342,11 +342,19 @@ def main():
         box = WebDriverWait(driver, 10).until(EC.visibility_of_element_located((By.XPATH, '//*[@id="SEARCH_VAL"]')))
         box.send_keys(Keys.CONTROL + 'a', Keys.BACKSPACE, query, Keys.ENTER)
         time.sleep(3)
-        cand = [e for e in driver.find_elements(By.XPATH, f"//*[contains(normalize-space(text()), '{keyword}') or contains(normalize-space(text()), '{query}')]")
-                if e.is_displayed() and e.get_attribute('id') != 'SEARCH_VAL']
+        cand = []
+        for _ in range(5):                                  # 결과 목록이 늦게 뜨는 경우 대비
+            # 글자가 여러 태그로 쪼개져 있어도 찾도록, 그 글자를 품은 가장 안쪽 요소
+            xp = (f"//*[(contains(normalize-space(.), '{keyword}') or contains(normalize-space(.), '{query}')) and "
+                  f"not(*[contains(normalize-space(.), '{keyword}') or contains(normalize-space(.), '{query}')])]")
+            cand = [e for e in driver.find_elements(By.XPATH, xp)
+                    if e.is_displayed() and e.get_attribute('id') != 'SEARCH_VAL' and e.tag_name.lower() not in ('script', 'style', 'title', 'option')]
+            if cand:
+                break
+            time.sleep(1)
         if not cand:
             raise RuntimeError(f"'{query}' 검색 결과를 찾지 못함")
-        print(f"    검색 결과: {[(x.text or '').strip()[:25] for x in cand[:4]]}")
+        print(f"    검색 결과: {[(x.tag_name, (x.text or '').strip()[:25]) for x in cand[:4]]}")
         n0 = len(driver.find_elements(By.TAG_NAME, 'iframe'))
         for e in cand[:4]:
             for how in ('js', 'mouse'):
