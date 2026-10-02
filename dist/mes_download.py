@@ -293,14 +293,33 @@ def main():
         save(merged, name, out)
         return True
 
+    def menu_panel(diag=None):
+        """좌측 메뉴 패널을 연 상태로 만들고 검색창을 돌려줌. collapseButton 은 열기/닫기 토글이라
+        검색창이 이미 보이면 누르지 않고, 안 보일 때만 눌러 열림을 확인(최대 2번)"""
+        driver.switch_to.default_content()
+        for k in range(3):
+            els = driver.find_elements(By.ID, 'SEARCH_VAL')
+            if els and els[0].is_displayed():
+                if diag is not None:
+                    diag.append(['menu_panel', f'검색창 보임(토글 {k}번)'])
+                return els[0]
+            if k == 2:
+                break
+            try:
+                driver.execute_script('arguments[0].click();', driver.find_element(By.ID, 'collapseButton'))
+            except Exception as e:
+                if diag is not None:
+                    diag.append(['collapse', type(e).__name__])
+            for _ in range(5):
+                time.sleep(1)
+                els = driver.find_elements(By.ID, 'SEARCH_VAL')
+                if els and els[0].is_displayed():
+                    break
+        raise RuntimeError('좌측 메뉴 검색창이 열리지 않음')
+
     def menu(name, exact=False):
         driver.switch_to.default_content()
-        try:
-            driver.execute_script('arguments[0].click();', WebDriverWait(driver, 5).until(EC.element_to_be_clickable((By.XPATH, '//*[@id="collapseButton"]'))))
-            time.sleep(1)
-        except Exception:
-            pass
-        box = WebDriverWait(driver, 10).until(EC.visibility_of_element_located((By.XPATH, '//*[@id="SEARCH_VAL"]')))
+        box = menu_panel()
         box.send_keys(Keys.CONTROL + 'a', Keys.BACKSPACE, name, Keys.ENTER)
         time.sleep(2)
         # 이름이 정확히 같은 메뉴 우선(예: '제품재고 현황' vs '통합 제품재고 현황'), 없으면 포함하는 메뉴
@@ -362,16 +381,7 @@ def main():
         """좌측 메뉴(jsTree)에서 이름(mnu_nm) 또는 화면ID(obj_id)가 맞는 메뉴를 찾아 화면이 열릴 때까지 여러 방법으로 열기"""
         driver.switch_to.default_content()
         diag.append(['start', f"url={driver.current_url[:80]} iframes={len(driver.find_elements(By.TAG_NAME, 'iframe'))}"])
-        try:
-            driver.execute_script('arguments[0].click();', WebDriverWait(driver, 5).until(EC.element_to_be_clickable((By.XPATH, '//*[@id="collapseButton"]'))))
-            time.sleep(1)
-        except Exception as e:
-            diag.append(['collapse', str(e).splitlines()[0][:150] if str(e) else type(e).__name__])
-        try:
-            box = WebDriverWait(driver, 15).until(EC.visibility_of_element_located((By.XPATH, '//*[@id="SEARCH_VAL"]')))
-        except Exception as e:
-            diag.append(['search_box', f'검색창 안 보임 {type(e).__name__}'])
-            box = driver.find_element(By.ID, 'SEARCH_VAL')
+        box = menu_panel(diag)
         n0 = len(driver.find_elements(By.TAG_NAME, 'iframe'))
         found = None
         # 사용자가 하는 방식 그대로: 검색창에 '제품재고현황' 입력 후 Enter → 안 되면 찾기 버튼·띄어쓰기·화면ID 순
@@ -445,12 +455,7 @@ def main():
     def open_by_id(query, keyword):
         """메뉴 검색창에 query 입력 → 결과 중 문서 순서상 첫 번째(keyword 포함) 메뉴를 눌러 화면이 열리는지 확인"""
         driver.switch_to.default_content()
-        try:
-            driver.execute_script('arguments[0].click();', WebDriverWait(driver, 5).until(EC.element_to_be_clickable((By.XPATH, '//*[@id="collapseButton"]'))))
-            time.sleep(1)
-        except Exception:
-            pass
-        box = WebDriverWait(driver, 10).until(EC.visibility_of_element_located((By.XPATH, '//*[@id="SEARCH_VAL"]')))
+        box = menu_panel()
         box.send_keys(Keys.CONTROL + 'a', Keys.BACKSPACE, query, Keys.ENTER)
         time.sleep(3)
         cand = []
