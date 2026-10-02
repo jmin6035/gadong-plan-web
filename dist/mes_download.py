@@ -380,14 +380,15 @@ def main():
 
     DOC_JS = r"""
       var norm = function (v) { return String(v || '').replace(/\s+/g, ''); }, name = norm(arguments[0]), out = [];
+      var excl = (arguments[1] || []).map(norm), hit = function (t) { return t.indexOf(name) !== -1 && !excl.some(function (x) { return x && t.indexOf(x) !== -1; }); };
       document.querySelectorAll('[data-cgl-cand]').forEach(function (e) { e.removeAttribute('data-cgl-cand'); });
       var all = document.querySelectorAll('body *');
       for (var i = 0; i < all.length; i++) {
         var e = all[i], tg = e.tagName;
         if (e.id === 'SEARCH_VAL' || tg === 'SCRIPT' || tg === 'STYLE' || tg === 'OPTION' || tg === 'TITLE') continue;
-        if (norm(e.textContent) !== name) continue;
+        if (!hit(norm(e.textContent))) continue;
         var leaf = true;
-        for (var j = 0; j < e.children.length; j++) if (norm(e.children[j].textContent) === name) { leaf = false; break; }
+        for (var j = 0; j < e.children.length; j++) if (hit(norm(e.children[j].textContent))) { leaf = false; break; }
         if (!leaf) continue;
         var vis = !!(e.offsetParent || e.getClientRects().length);
         e.setAttribute('data-cgl-cand', String(out.length));
@@ -428,7 +429,7 @@ def main():
         found = None
         # 사용자가 하는 방식 그대로: 검색창에 '제품재고현황' 입력 후 Enter → 안 되면 찾기 버튼·띄어쓰기·화면ID 순
         nospace = name.replace(' ', '')
-        for query, how in ((nospace, 'enter'), (nospace, 'find'), (name, 'enter'), (name, 'find'), (oid, 'find')):
+        for query, how in (('4025', 'enter'), ('4025', 'find'), (nospace, 'enter'), (nospace, 'find'), (name, 'enter'), (name, 'find'), (oid, 'find')):
             try:
                 box.send_keys(Keys.CONTROL + 'a', Keys.BACKSPACE, query)
             except Exception as e:                          # 입력이 막히면 JS로 값 넣기
@@ -453,12 +454,12 @@ def main():
                 break
             # 트리 밖(검색 결과 목록 등)에 이름이 정확히 같은 요소 — 다른 메뉴들이 열리던 방식
             try:
-                docs = json.loads(driver.execute_script(DOC_JS, name))
+                docs = json.loads(driver.execute_script(DOC_JS, name, ['통합']))
             except Exception as e:
                 docs = []
                 diag.append([f'doc {query}/{how}', 'error ' + str(e)[:150]])
             diag.append([f'doc {query}/{how}', json.dumps(docs, ensure_ascii=False)[:2500]])
-            for d in sorted(docs, key=lambda d: not d['vis'])[:4]:
+            for d in sorted(docs, key=lambda d: (not d['vis'], d['k']))[:4]:
                 try:
                     el = driver.find_element(By.CSS_SELECTOR, f'[data-cgl-cand="{d["k"]}"]')
                 except Exception:
