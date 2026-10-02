@@ -334,6 +334,7 @@ def main():
 
     OPEN_JS = r"""
       var name = arguments[0], oid = arguments[1], jq = window.$ || window.jQuery, out = {cand: [], log: []};
+      try {
       var norm = function (v) { return String(v || '').replace(/\s+/g, ' ').trim(); };
       var tree = jq ? jq('#tree-left') : null, inst = null;
       try { inst = tree && tree.jstree ? tree.jstree(true) : null; } catch (e) { out.log.push('jstree 없음 ' + e); }
@@ -353,21 +354,31 @@ def main():
           if (!out.cand.some(function (c) { return c.id === (li && li.id); })) out.cand.push({id: li ? li.id : '', text: t, obj_id: o, mnu_id: a.getAttribute('mnu_id') || '', src: 'dom'});
         }
       });
+      } catch (err) { out.log.push('JS 오류: ' + err); }
       return JSON.stringify(out);"""
 
     def open_menu(name, oid, diag):
         """좌측 메뉴(jsTree)에서 이름(mnu_nm) 또는 화면ID(obj_id)가 맞는 메뉴를 찾아 화면이 열릴 때까지 여러 방법으로 열기"""
         driver.switch_to.default_content()
+        diag.append(['start', f"url={driver.current_url[:80]} iframes={len(driver.find_elements(By.TAG_NAME, 'iframe'))}"])
         try:
             driver.execute_script('arguments[0].click();', WebDriverWait(driver, 5).until(EC.element_to_be_clickable((By.XPATH, '//*[@id="collapseButton"]'))))
             time.sleep(1)
-        except Exception:
-            pass
-        box = WebDriverWait(driver, 10).until(EC.visibility_of_element_located((By.XPATH, '//*[@id="SEARCH_VAL"]')))
+        except Exception as e:
+            diag.append(['collapse', str(e).splitlines()[0][:150] if str(e) else type(e).__name__])
+        try:
+            box = WebDriverWait(driver, 15).until(EC.visibility_of_element_located((By.XPATH, '//*[@id="SEARCH_VAL"]')))
+        except Exception as e:
+            diag.append(['search_box', f'검색창 안 보임 {type(e).__name__}'])
+            box = driver.find_element(By.ID, 'SEARCH_VAL')
         n0 = len(driver.find_elements(By.TAG_NAME, 'iframe'))
         found = None
         for query, how in ((name, 'find'), (oid, 'find'), (name, 'enter')):
-            box.send_keys(Keys.CONTROL + 'a', Keys.BACKSPACE, query)
+            try:
+                box.send_keys(Keys.CONTROL + 'a', Keys.BACKSPACE, query)
+            except Exception as e:                          # 입력이 막히면 JS로 값 넣기
+                diag.append(['type', type(e).__name__])
+                driver.execute_script("var b=document.getElementById('SEARCH_VAL'); b.value=arguments[0]; b.dispatchEvent(new Event('input')); b.dispatchEvent(new Event('change'));", query)
             if how == 'find':
                 try:
                     driver.execute_script('arguments[0].click();', driver.find_element(By.ID, 'FIND_BTN'))
@@ -376,7 +387,11 @@ def main():
             else:
                 box.send_keys(Keys.ENTER)
             time.sleep(3)
-            info = json.loads(driver.execute_script(OPEN_JS, name, oid))
+            try:
+                info = json.loads(driver.execute_script(OPEN_JS, name, oid))
+            except Exception as e:
+                diag.append([f'search {query}/{how}', 'execute 오류 ' + (str(e).splitlines()[0][:200] if str(e) else type(e).__name__)])
+                continue
             diag.append([f'search {query}/{how}', json.dumps(info, ensure_ascii=False)[:1500]])
             if info['cand']:
                 found = info['cand']
