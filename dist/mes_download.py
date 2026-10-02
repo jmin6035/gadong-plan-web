@@ -377,6 +377,47 @@ def main():
       } catch (err) { out.log.push('JS 오류: ' + err); }
       return JSON.stringify(out);"""
 
+    DOC_JS = r"""
+      var norm = function (v) { return String(v || '').replace(/\s+/g, ''); }, name = norm(arguments[0]), out = [];
+      document.querySelectorAll('[data-cgl-cand]').forEach(function (e) { e.removeAttribute('data-cgl-cand'); });
+      var all = document.querySelectorAll('body *');
+      for (var i = 0; i < all.length; i++) {
+        var e = all[i], tg = e.tagName;
+        if (e.id === 'SEARCH_VAL' || tg === 'SCRIPT' || tg === 'STYLE' || tg === 'OPTION' || tg === 'TITLE') continue;
+        if (norm(e.textContent) !== name) continue;
+        var leaf = true;
+        for (var j = 0; j < e.children.length; j++) if (norm(e.children[j].textContent) === name) { leaf = false; break; }
+        if (!leaf) continue;
+        var vis = !!(e.offsetParent || e.getClientRects().length);
+        e.setAttribute('data-cgl-cand', String(out.length));
+        out.push({k: out.length, tag: tg, id: e.id, cls: String(e.className).slice(0, 60), vis: vis,
+                  parent: (e.parentElement ? e.parentElement.outerHTML : '').slice(0, 500)});
+      }
+      return JSON.stringify(out);"""
+
+    def click_until_frame(el, diag, label, n0):
+        """요소를 JS 클릭 → 안 열리면 마우스 클릭 → 더블클릭. 화면(iframe)이 늘면 True"""
+        for how in ('js', 'mouse', 'dbl'):
+            try:
+                if how == 'js':
+                    driver.execute_script('arguments[0].click();', el)
+                elif how == 'mouse':
+                    driver.execute_script("arguments[0].scrollIntoView({block:'center'});", el)
+                    ActionChains(driver).move_to_element(el).click().perform()
+                else:
+                    ActionChains(driver).move_to_element(el).double_click().perform()
+            except Exception as e:
+                diag.append([f'{label} {how}', 'error ' + (str(e).splitlines()[0][:120] if str(e) else type(e).__name__)])
+                continue
+            for _ in range(6):
+                time.sleep(1)
+                if len(driver.find_elements(By.TAG_NAME, 'iframe')) > n0:
+                    diag.append([f'{label} {how}', '성공'])
+                    time.sleep(4)
+                    return True
+            diag.append([f'{label} {how}', '화면 안 열림'])
+        return False
+
     def open_menu(name, oid, diag):
         """좌측 메뉴(jsTree)에서 이름(mnu_nm) 또는 화면ID(obj_id)가 맞는 메뉴를 찾아 화면이 열릴 때까지 여러 방법으로 열기"""
         driver.switch_to.default_content()
@@ -409,6 +450,21 @@ def main():
             if info['cand']:
                 found = info['cand']
                 break
+            # 트리 밖(검색 결과 목록 등)에 이름이 정확히 같은 요소 — 다른 메뉴들이 열리던 방식
+            try:
+                docs = json.loads(driver.execute_script(DOC_JS, name))
+            except Exception as e:
+                docs = []
+                diag.append([f'doc {query}/{how}', 'error ' + str(e)[:150]])
+            diag.append([f'doc {query}/{how}', json.dumps(docs, ensure_ascii=False)[:2500]])
+            for d in sorted(docs, key=lambda d: not d['vis'])[:4]:
+                try:
+                    el = driver.find_element(By.CSS_SELECTOR, f'[data-cgl-cand="{d["k"]}"]')
+                except Exception:
+                    continue
+                if click_until_frame(el, diag, f"doc {d['tag']}#{d['k']}", n0):
+                    print(f"    메뉴 열림: 검색 결과 {d['tag']} '{name}'")
+                    return
         if not found:
             raise RuntimeError(f"메뉴 '{name}'({oid}) 를 트리에서 찾지 못함")
         # 화면ID가 맞는 것 우선
