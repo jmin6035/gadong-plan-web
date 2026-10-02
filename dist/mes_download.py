@@ -415,6 +415,25 @@ def main():
       }
       return JSON.stringify(out);"""
 
+    def open_by_search_popup(search, code, diag):
+        """메뉴 검색 → 팝업 결과 목록에서 '[화면ID] 이름' 항목 중 첫 번째를 클릭(예: [SSHPC4025] 제품재고 현황)"""
+        box = menu_panel(diag)
+        n0 = len(driver.find_elements(By.TAG_NAME, 'iframe'))
+        box.send_keys(Keys.CONTROL + 'a', Keys.BACKSPACE, search, Keys.ENTER)
+        docs = []
+        for _ in range(6):                                  # 팝업이 뜰 때까지
+            time.sleep(1)
+            docs = json.loads(driver.execute_script(DOC_JS, code, []))
+            if any(d['vis'] for d in docs):
+                break
+        diag.append([f'popup {code}', json.dumps(docs, ensure_ascii=False)[:2000]])
+        vis = sorted([d for d in docs if d['vis']], key=lambda d: d['k'])
+        if not vis:
+            raise RuntimeError(f"검색 팝업에서 [{code}] 항목을 못 찾음({len(docs)}개, 보이는 것 0)")
+        el = driver.find_element(By.CSS_SELECTOR, f'[data-cgl-cand="{vis[0]["k"]}"]')
+        if not click_until_frame(el, diag, f'popup {code} 첫 번째', n0):
+            raise RuntimeError(f"[{code}] 를 눌러도 화면이 안 열림")
+
     def open_by_path(path, diag, search=None):
         """좌측 메뉴를 사람이 누르듯 단계별로(예: 출하관리 → 제품재고 → 제품재고 현황). 글자는 띄어쓰기까지 정확히 일치.
         마지막 단계에서 화면(iframe)이 열리면 성공"""
@@ -806,13 +825,9 @@ def main():
                     try:
                         if already:
                             raise StopIteration
-                        # '제품재고현황'(붙여 씀)과 '제품재고 현황'(띄어 씀)은 다른 메뉴 — 출하관리 → 제품재고 → 제품재고 현황(띄어 씀)
-                        try:
-                            open_by_path(['출하관리', '제품재고', '제품재고 현황'], diag, search='제품재고 현황')
-                        except Exception as e1:
-                            diag.append(['path 검색후 실패', str(e1)[:200]])
-                            open_by_path(['출하관리', '제품재고', '제품재고 현황'], diag)
-                        print("    메뉴 열림: 출하관리 → 제품재고 → 제품재고 현황")
+                        # 검색 '제품재고 현황' → 팝업: 출하관리 > 제품재고 > [SSHPC4025] 제품재고 현황(첫 번째)
+                        open_by_search_popup('제품재고 현황', 'SSHPC4025', diag)
+                        print("    메뉴 열림: [SSHPC4025] 제품재고 현황")
                     except StopIteration:
                         print('    이미 열린 제품재고 현황 화면 사용')
                     finally:
