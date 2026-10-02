@@ -107,6 +107,7 @@ def main():
     ap.add_argument('--no-extra', action='store_true', help='컬러·출하·재고(분석용) 내려받기 생략')
     ap.add_argument('--stock-only', action='store_true', help='제품재고·소재재고만 받기(도금 실적은 건너뜀)')
     ap.add_argument('--probe', help='메뉴 검색어를 넣고 검색 결과 화면 구조를 기록(진단용, 예: 4025)')
+    ap.add_argument('--stock-manual', action='store_true', help='제품재고: 화면 이동·조회는 사람이 하고, 표 읽기만 자동')
     a = ap.parse_args()
     today = datetime.date.today()
     d1 = a.d1 or (today - datetime.timedelta(days=1)).strftime('%Y%m%d')
@@ -632,6 +633,25 @@ def main():
         driver.find_element(By.XPATH, '//*[@id="password_input"]').send_keys(pw)
         driver.find_element(By.XPATH, '//*[@id="loginsubmit"]').click()
         time.sleep(8)
+        if a.stock_manual:                                  # 사람이 화면을 열고 조회 → 엔터 → 표를 읽어 저장
+            for plant, name in (('도금', 'snap_stock_g'), ('컬러', 'snap_stock_c')):
+                input(f"\n[{plant}] 열린 Edge 창에서 '제품재고 현황'을 열고, 공장구분={plant}, 입고일자 2000-01-01 ~ 오늘로 조회한 뒤 여기서 Enter ")
+                o = None
+                for fr in [None] + list(reversed(driver.find_elements(By.TAG_NAME, 'iframe'))):
+                    try:
+                        driver.switch_to.default_content()
+                        if fr is not None:
+                            driver.switch_to.frame(fr)
+                        o = read(None)
+                        if o and o['rows']:
+                            break
+                    except Exception:
+                        o = None
+                driver.switch_to.default_content()
+                k = len(o['rows']) if o else 0
+                print(f"  {plant}: {k}행" + ('  ⚠ 10,000행 — 잘렸을 수 있음(입고일자를 나눠 두 번 조회 필요)' if k >= 10000 else ''))
+                save(o, name, xdir)
+            a.stock_only = a.no_extra = True
         if a.probe:                                         # 진단만 하고 나머지 내려받기는 건너뜀
             diag = []
             try:
@@ -777,7 +797,7 @@ def main():
         driver.quit()
         shutil.rmtree(dl, ignore_errors=True)
     print('받은 파일:', ok_files, '/ 분석용:', extra_files)
-    if len(ok_files) < 3 and not a.stock_only and not a.probe:
+    if len(ok_files) < 3 and not a.stock_only and not a.probe and not a.stock_manual:
         print('⚠ 일부 파일을 받지 못했습니다 — 자동 실행기는 받은 파일로만 돕니다(누적 저장소에 이전 자료가 있으면 그대로 유지)')
     if not a.no_auto and (ok_files or extra_files or a.probe):
         sys.exit(subprocess.call([sys.executable, '-m', 'cglplan', 'auto', '--config', os.path.join(HERE, 'auto_config.json')], cwd=HERE))
