@@ -97,7 +97,10 @@
       const r = await fetch('published/weekly_report.enc.json', { cache: 'no-store' }); if (!r.ok) return;
       const o = await GP.decryptJSON(await r.json(), pw);
       $('a-wr-meta').textContent = `— ${o.title || ''} · ${new Date(o.createdAt).toLocaleString('ko-KR')}`;
-      $('a-wr-body').innerHTML = md2html(o.md || '');
+      if (o.version === 2) {                                   // 임원 보고 형식 → 요약 + 보고서 화면 링크
+        $('a-wr-body').innerHTML = '<ul>' + ((o.notes && o.notes.headline) || []).map((t) => `<li>${esc(t)}</li>`).join('') + '</ul>' +
+          '<p><a class="btnlike primary" href="report.html">주간 보고서 열기(표·추이 그래프)</a></p>';
+      } else $('a-wr-body').innerHTML = md2html(o.md || '');
       $('a-weekly-report').hidden = false;
     } catch (e) { /* 보고서 없음 또는 암호 다름 */ }
   }

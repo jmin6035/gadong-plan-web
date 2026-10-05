@@ -1,0 +1,130 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>주간 실적 보고</title>
+<meta name="description" content="도금 1·2CGL·컬러 1~4CCL 주간 실적 — 요약 지표, 라인별 표, 13주 추이(임원 보고용)">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='6' fill='%231f3864'/><polyline points='5,24 12,15 18,19 27,7' fill='none' stroke='%23fff' stroke-width='3'/></svg>">
+<style>
+:root {
+  color-scheme: light;
+  --bg: #f4f5f7; --surface: #ffffff; --surface-2: #f7f7f5; --line: #e3e3df; --grid: #ececea;
+  --ink: #0b0b0b; --ink-2: #52514e; --ink-3: #8a8984; --brand: #1f3864;
+  --s1: #2a78d6; --s2: #eb6834; --s3: #1baf7a; --s4: #eda100;
+  --up: #1c7c3c; --down: #c0362c; --plan: #8a8984;
+}
+@media (prefers-color-scheme: dark) {
+  :root:where(:not([data-theme="light"])) {
+    color-scheme: dark;
+    --bg: #111110; --surface: #1a1a19; --surface-2: #222220; --line: #33332f; --grid: #2a2a27;
+    --ink: #ffffff; --ink-2: #c3c2b7; --ink-3: #8e8d85; --brand: #9fb8e6;
+    --s1: #3987e5; --s2: #d95926; --s3: #199e70; --s4: #c98500;
+    --up: #5cc27f; --down: #ff7a6e; --plan: #8e8d85;
+  }
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --bg: #111110; --surface: #1a1a19; --surface-2: #222220; --line: #33332f; --grid: #2a2a27;
+  --ink: #ffffff; --ink-2: #c3c2b7; --ink-3: #8e8d85; --brand: #9fb8e6;
+  --s1: #3987e5; --s2: #d95926; --s3: #199e70; --s4: #c98500;
+  --up: #5cc27f; --down: #ff7a6e; --plan: #8e8d85;
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--ink); font: 14px/1.55 "Malgun Gothic", "Apple SD Gothic Neo", "Noto Sans KR", system-ui, sans-serif; }
+.wrap { max-width: 1120px; margin: 0 auto; padding: 0 16px; }
+header.top { background: #1f3864; color: #fff; padding: 18px 0 16px; }
+header.top h1 { margin: 0; font-size: 22px; letter-spacing: -.3px; }
+header.top .sub { margin: 4px 0 0; opacity: .85; font-size: 13px; }
+.top-row { display: flex; justify-content: space-between; align-items: flex-end; gap: 12px; flex-wrap: wrap; }
+.top-actions a, .top-actions button { color: #fff; background: rgba(255,255,255,.14); border: 1px solid rgba(255,255,255,.35); border-radius: 6px; padding: 6px 12px; font: inherit; font-size: 13px; text-decoration: none; cursor: pointer; }
+main { padding: 18px 0 40px; }
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 18px 20px; margin-bottom: 16px; }
+.card h2 { margin: 0 0 12px; font-size: 17px; display: flex; align-items: baseline; gap: 8px; }
+.card h2 .n { color: var(--brand); font-variant-numeric: tabular-nums; }
+.card h2 small { font-size: 12px; color: var(--ink-3); font-weight: normal; }
+.card h3 { font-size: 14px; margin: 16px 0 8px; color: var(--ink-2); }
+.headline { margin: 0; padding-left: 18px; }
+.headline li { margin: 4px 0; }
+.kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; margin-top: 14px; }
+.kpi { border: 1px solid var(--line); border-radius: 8px; padding: 12px 14px; background: var(--surface-2); }
+.kpi .l { font-size: 12px; color: var(--ink-2); }
+.kpi .v { font-size: 26px; font-weight: 700; font-variant-numeric: tabular-nums; letter-spacing: -.5px; }
+.kpi .v small { font-size: 13px; font-weight: normal; color: var(--ink-2); margin-left: 2px; }
+.kpi .b { font-size: 12px; color: var(--ink-3); }
+.delta { font-weight: 700; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.delta.up { color: var(--up); } .delta.down { color: var(--down); } .delta.flat { color: var(--ink-3); }
+.grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+.grid2 > * { min-width: 0; }
+@media (max-width: 860px) { .grid2 { grid-template-columns: 1fr; } }
+.scroll { overflow-x: auto; }
+table.t { width: 100%; border-collapse: collapse; font-size: 13px; font-variant-numeric: tabular-nums; }
+table.t th { text-align: center; font-weight: 600; color: var(--ink-2); background: var(--surface-2); border-bottom: 1px solid var(--line); padding: 7px 8px; white-space: nowrap; }
+table.t td { padding: 7px 8px; border-bottom: 1px solid var(--grid); text-align: right; white-space: nowrap; }
+table.t td.l { text-align: left; }
+table.t tr:last-child td { border-bottom: 0; }
+table.t .muted { color: var(--ink-3); }
+.sw { display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin-right: 6px; vertical-align: -1px; }
+.chart { position: relative; }
+.chart svg { display: block; width: 100%; height: auto; overflow: visible; }
+.chart .ttl { font-size: 13px; color: var(--ink-2); margin: 0 0 4px; }
+.legend { display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: 12px; color: var(--ink-2); margin: 2px 0 6px; }
+.legend span { display: inline-flex; align-items: center; }
+.legend i { display: inline-block; width: 14px; height: 3px; border-radius: 2px; margin-right: 6px; }
+.legend i.dash { background: none !important; border-top: 2px dashed var(--plan); height: 0; }
+.legend i.box { height: 10px; width: 10px; border-radius: 3px; }
+.tip { position: absolute; pointer-events: none; background: var(--surface); color: var(--ink); border: 1px solid var(--line); border-radius: 6px; padding: 6px 9px; font-size: 12px; box-shadow: 0 4px 14px rgba(0,0,0,.12); white-space: nowrap; z-index: 5; display: none; }
+.tip b { font-variant-numeric: tabular-nums; }
+.notes { margin: 10px 0 0; padding-left: 18px; color: var(--ink); }
+.notes li { margin: 3px 0; }
+.actions { margin: 0; padding-left: 20px; }
+.actions li { margin: 5px 0; }
+.issue { border-left: 3px solid var(--s2); padding: 6px 10px; background: var(--surface-2); border-radius: 0 6px 6px 0; margin: 6px 0; }
+.empty { text-align: center; padding: 40px 20px; }
+.unlock { display: flex; gap: 8px; justify-content: center; margin-top: 12px; flex-wrap: wrap; }
+.unlock input { padding: 8px 10px; border: 1px solid var(--line); border-radius: 6px; background: var(--surface); color: var(--ink); font: inherit; min-width: 200px; }
+.unlock button { padding: 8px 16px; border: 0; border-radius: 6px; background: #1f3864; color: #fff; font: inherit; cursor: pointer; }
+.hint { color: var(--ink-3); font-size: 12px; }
+.stale { background: #fff3e0; color: #7a3b00; border: 1px solid #f2c78a; border-radius: 8px; padding: 8px 12px; margin-bottom: 12px; }
+:root[data-theme="dark"] .stale { background: #3a2a12; color: #ffd9a8; border-color: #6b4a1c; }
+footer { color: var(--ink-3); font-size: 12px; padding: 0 0 30px; }
+@media print {
+  @page { size: A4; margin: 12mm; }
+  body { background: #fff; font-size: 12px; }
+  header.top { background: none; color: #000; padding: 0 0 8px; border-bottom: 2px solid #1f3864; }
+  header.top .sub { opacity: 1; color: #333; }
+  .top-actions, .unlock, footer, .noprint { display: none !important; }
+  .card { border: 0; padding: 8px 0; break-inside: avoid; }
+  .wrap { max-width: none; padding: 0; }
+}
+</style>
+</head>
+<body>
+<header class="top">
+  <div class="wrap top-row">
+    <div>
+      <h1 id="r-title">도금·컬러 주간 실적 보고</h1>
+      <p class="sub" id="r-sub">포스코스틸리온 도금 1·2CGL · 컬러 1~4CCL</p>
+    </div>
+    <div class="top-actions noprint">
+      <button type="button" onclick="window.print()">인쇄 / PDF</button>
+      <a href="analysis.html">분석</a>
+      <a href="./">대시보드</a>
+    </div>
+  </div>
+</header>
+<main class="wrap" id="r-main">
+  <section class="card empty" id="r-lock">
+    <h2 style="justify-content:center">주간 보고서 불러오는 중…</h2>
+    <form class="unlock" id="r-form" hidden>
+      <input type="password" id="r-pw" placeholder="분석 암호" autocomplete="current-password" aria-label="분석 암호">
+      <button type="submit">열기</button>
+    </form>
+    <p class="hint" id="r-msg"></p>
+  </section>
+</main>
+<footer class="wrap">숫자는 MES 원자료(도금 코일·휴지, 컬러 코일·휴지, 출하)에서 매주 다시 계산한 값입니다. 비교 기준 = 보고 주 직전 12주 평균.</footer>
+<script src="engine/crypto.js"></script>
+<script src="report.js"></script>
+</body>
+</html>
