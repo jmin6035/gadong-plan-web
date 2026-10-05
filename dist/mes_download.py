@@ -21,6 +21,7 @@ import time
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 MES_URL = 'https://intra-mes.poscosteeleon.com:8443/SCOM/main.do'
+SALES_RPT_URL = 'https://intra-mes.poscosteeleon.com:8443/SMKT/pages/NewYnc/jRdProdSalesDetail_2016_SSO.jsp'   # 판매생산속보
 
 
 def q_prod(d0, d1):
@@ -810,6 +811,45 @@ def main():
                 driver.execute_script('arguments[0].click();', WebDriverWait(driver, 10).until(EC.element_to_be_clickable((By.XPATH, '//*[@id="mnuSearchBtn"]/span'))))
             if run_chunks('screen_prod', None, run_screen, 10) is None:
                 export("//div[contains(@class, 'jqx-grid-cell')]", 'screen_prod.xlsx')
+        # ⑤-0 판매생산속보(실시간 재고·생산·판매 요약표) — 주소로 바로 열어 표를 그대로 읽음(사용자 안내 2026-10-06)
+        if not a.no_extra:
+            print('▶ snap_salesrpt (판매생산속보, 분석용)')
+            TABLES_JS = r"""
+              var out = [], ts = document.querySelectorAll('table');
+              for (var i = 0; i < ts.length; i++) {
+                var rs = ts[i].rows; if (!rs || rs.length < 2) continue;
+                var cap = '', p = ts[i];
+                for (var k = 0; k < 4 && p && !cap; k++) { var prev = p.previousElementSibling; while (prev && !cap) { var tx = (prev.textContent || '').trim(); if (tx && tx.length < 80) cap = tx; prev = prev.previousElementSibling; } p = p.parentElement; }
+                for (var r = 0; r < rs.length; r++) {
+                  var cs = [];
+                  for (var c = 0; c < rs[r].cells.length; c++) { var cell = rs[r].cells[c]; cs.push((cell.textContent || '').replace(/\s+/g, ' ').trim() + (cell.colSpan > 1 ? '{c' + cell.colSpan + '}' : '') + (cell.rowSpan > 1 ? '{r' + cell.rowSpan + '}' : '')); }
+                  out.push([i, cap.slice(0, 60), r, cs.join(' | ')]);
+                }
+              }
+              return JSON.stringify(out);"""
+            try:
+                driver.switch_to.default_content()
+                driver.get(SALES_RPT_URL)
+                time.sleep(12)
+                rows_ = []
+                for fr in [None] + driver.find_elements(By.TAG_NAME, 'iframe'):          # 표가 iframe 안에 있을 수도
+                    try:
+                        driver.switch_to.default_content()
+                        if fr is not None:
+                            driver.switch_to.frame(fr)
+                        rows_ += json.loads(driver.execute_script(TABLES_JS))
+                    except Exception:
+                        pass
+                driver.switch_to.default_content()
+                save({'columns': ['표', '제목', '행', '칸'], 'rows': rows_} if rows_ else None, 'snap_salesrpt', xdir)
+            except Exception as e:
+                print(f'  ⚠ 판매생산속보: 실패 — 건너뜀 ({str(e).splitlines()[0][:160] if str(e) else type(e).__name__})')
+            finally:
+                try:
+                    driver.get(mes_url)                     # MES 메인으로 돌아가 다음 화면 작업
+                    time.sleep(6)
+                except Exception:
+                    pass
         # ⑤ 재고현황 [SMKTF1030] — 조회기준 '기준월', 월별로 조회해 합침(사용자 안내 2026-10-02)
         if not a.no_extra:
             MONTH_JS = r"""
