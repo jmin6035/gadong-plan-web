@@ -214,12 +214,24 @@ def main():
       for (var r = 0; r < rows.length; r++) { var a = []; for (var k = 0; k < keep.length; k++) { var v = rows[r][keep[k]]; a.push(v === undefined ? null : (v instanceof Date ? v.toISOString() : v)); } out.push(a); }
       return JSON.stringify({columns: head, rows: out});'''
 
+    def close_alert():
+        """브라우저 알림창(예: '조회된 데이터가 없습니다')이 떠 있으면 닫고 그 글자를 돌려줌"""
+        try:
+            al = driver.switch_to.alert
+            txt = al.text
+            al.accept()
+            return txt or '(알림)'
+        except Exception:
+            return None
+
     def wait_rows(grid_id, timeout=120):
         """조회 버튼을 누른 뒤 표 건수가 0보다 크고 두 번 연속 같아질 때까지 기다림. 끝내 0이면 0"""
         last, t = -1, 0
         while t < timeout:
             time.sleep(3)
             t += 3
+            if close_alert() is not None:                   # '데이터 없음' 알림 → 0건
+                return 0
             try:
                 n = driver.execute_script(COUNT_JS, grid_id)
             except Exception:
@@ -691,6 +703,7 @@ def main():
         print('  진단 기록 저장: mes/extra/snap_probe.json, probe.png')
 
     def frame_with(xpath, visible=False):
+        driver.switch_to.default_content()                  # 화면(iframe) 안에 들어가 있으면 바깥에서 다시 찾기
         for fr in reversed(driver.find_elements(By.TAG_NAME, 'iframe')):
             try:
                 driver.switch_to.default_content()
@@ -847,6 +860,9 @@ def main():
                     open_by_search_popup('재고현황', 'SMKTF1030', stock_diag)
                 merged = None
                 for ym in months:
+                    al = close_alert()
+                    if al:
+                        stock_diag.append([f'alert before {ym}', al[:200]])
                     if frame_with("//*[@id='LBL_CAL_CLS' or @id='CAL_CLS']") is None:   # 조회기준 라벨(id 확인됨)
                         raise RuntimeError('재고현황 화면의 조회 조건을 찾지 못함')
                     r1 = json.loads(driver.execute_script(MONTH_JS, ym))
@@ -865,9 +881,11 @@ def main():
                         raise RuntimeError('조회 버튼을 찾지 못함')
                     driver.execute_script('arguments[0].click();', btn[0])
                     n = wait_rows(None, 180)
+                    al = close_alert()
                     o = read(None) if n else None
                     k = len(o['rows']) if o else 0
-                    print(f"    기준월 {r2['dates'][0] if r2['dates'] else ym}: {k}행" + ('  ⚠ 10,000행 — 잘렸을 수 있음' if k >= 10000 else ''))
+                    stock_diag.append([f'result {ym}', f'{k}행' + (f' / 알림: {al[:150]}' if al else '')])
+                    print(f"    기준월 {r2['dates'][0] if r2['dates'] else ym}: {k}행" + (' (자료 없음)' if not k else '') + ('  ⚠ 10,000행 — 잘렸을 수 있음' if k >= 10000 else ''))
                     if o:
                         o = {'columns': ['_기준월'] + o['columns'], 'rows': [[ym] + r for r in o['rows']]}
                         if merged is None:
