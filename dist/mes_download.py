@@ -838,15 +838,16 @@ def main():
                 while mm <= 0:
                     yy, mm = yy - 1, mm + 12
                 months.append(f'{yy}{mm:02d}')
-            print(f'▶ snap_stock (재고현황 SMKTF1030, 기준월 {months[0]}~{months[-1]}, 분석용)')
+            months.reverse()                                            # 최신 달부터(이번 달·지난달이 가장 중요)
+            print(f'▶ snap_stock (재고현황 SMKTF1030, 기준월 {months[-1]}~{months[0]}, 최신부터, 분석용)')
             stock_diag = []
             try:
-                if frame_with("//*[contains(normalize-space(.), '기준월') or contains(normalize-space(.), '조회기준')]") is None:
+                if frame_with("//*[@id='LBL_CAL_CLS' or @id='CAL_CLS']") is None:
                     driver.switch_to.default_content()
                     open_by_search_popup('재고현황', 'SMKTF1030', stock_diag)
                 merged = None
                 for ym in months:
-                    if frame_with("//*[contains(normalize-space(.), '조회기준') or contains(normalize-space(.), '기준월')]") is None:
+                    if frame_with("//*[@id='LBL_CAL_CLS' or @id='CAL_CLS']") is None:   # 조회기준 라벨(id 확인됨)
                         raise RuntimeError('재고현황 화면의 조회 조건을 찾지 못함')
                     r1 = json.loads(driver.execute_script(MONTH_JS, ym))
                     time.sleep(1.5)
@@ -873,7 +874,7 @@ def main():
                             merged = o
                         elif o['columns'] == merged['columns']:
                             merged['rows'] += o['rows']
-                save(merged, 'snap_stock', xdir)
+                        save(merged, 'snap_stock', xdir)            # 달마다 저장(중간에 실패해도 받은 달은 남김)
             except Exception as e:
                 print(f'  ⚠ 재고현황: 실패 — 건너뜀 ({str(e).splitlines()[0][:200] if str(e) else type(e).__name__})')
             finally:
