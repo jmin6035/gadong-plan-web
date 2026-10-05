@@ -87,6 +87,14 @@ def q_stock_trend(d0, d1):
             f"from smkt.os_gc_compr_prompt_rpt_9 where wrk_dt between '{d0}' and '{d1}') group by wrk_dt, kind order by 1, 2")
 
 
+def q_rpt(n):
+    """판매생산속보 원천 표 그대로(모든 열) — 사외 창고·자가재·임가공까지 속보와 같은 정의로 일별 재고 추이 재현용"""
+    return lambda d0, d1: f"select * from smkt.os_gc_compr_prompt_rpt_{n} where wrk_dt between '{d0}' and '{d1}' order by wrk_dt"
+
+
+STOCK_RPT = [('stock_rpt7', q_rpt(7), 30), ('stock_rpt8', q_rpt(8), 30), ('stock_rpt9', q_rpt(9), 30)]
+
+
 def creds():
     cfg = {}
     p = os.path.join(HERE, 'auto_config.json')
@@ -112,6 +120,7 @@ def main():
     ap.add_argument('--stock-months', type=int, default=6, help='재고현황 기준월 몇 달치(이번 달 포함, 기본 6)')
     a = ap.parse_args()
     today = datetime.date.today()
+    months = []                                          # 재고현황 조회 달(⑤에서 채움)
     d1 = a.d1 or (today - datetime.timedelta(days=1)).strftime('%Y%m%d')
     d0 = a.d0 or (today - datetime.timedelta(days=a.days)).strftime('%Y%m%d')
     fmt = lambda s: f'{s[:4]}-{s[4:6]}-{s[6:]}'
@@ -246,9 +255,10 @@ def main():
         txt = driver.execute_script(GRID_JS, grid_id)
         return json.loads(txt) if txt else None
 
-    def chunks(step=10):
+    def chunks(step=10, rng=None):
         """조회 기간을 step일 단위로 나눔(쿼리 화면 10,000행 제한 회피)"""
-        f, t = datetime.datetime.strptime(d0, '%Y%m%d').date(), datetime.datetime.strptime(d1, '%Y%m%d').date()
+        r0, r1 = rng or (d0, d1)
+        f, t = datetime.datetime.strptime(r0, '%Y%m%d').date(), datetime.datetime.strptime(r1, '%Y%m%d').date()
         while f <= t:
             e = min(f + datetime.timedelta(days=step - 1), t)
             yield f.strftime('%Y%m%d'), e.strftime('%Y%m%d')
@@ -272,10 +282,10 @@ def main():
             print(f'  ⚠ {name}: 저장 실패 ({e})')
             return False
 
-    def run_chunks(name, grid_id, run_one, step, out=None):
+    def run_chunks(name, grid_id, run_one, step, out=None, rng=None):
         """기간을 나눠 조회한 결과를 하나로 합쳐 저장. 표 직접 읽기가 안 되면 None"""
         merged = None
-        for c0, c1 in chunks(step):
+        for c0, c1 in chunks(step, rng):
             try:
                 driver.execute_script(CLEAR_JS, grid_id)
             except Exception:
@@ -773,7 +783,7 @@ def main():
                     export('//*[@id="row0gridQueryRslt"]/div[1]', name)
             # ④ 분석용 추가 자료(컬러 생산·휴지, 출하, 재고 추이) — 실패해도 도금 자동 실행에는 영향 없음
             if not a.no_extra:
-                for name, mk, step in [('color_prod', q_color, 7), ('color_brk', q_color_brk, 7), ('ship', q_ship, 7), ('stock_trend', q_stock_trend, 100)]:
+                for name, mk, step in [('color_prod', q_color, 7), ('color_brk', q_color_brk, 7), ('ship', q_ship, 7), ('stock_trend', q_stock_trend, 100)] + STOCK_RPT:
                     print(f'▶ {name} (분석용)')
                     try:
                         if run_chunks(name, 'gridQueryRslt', lambda c0, c1: run_sql(mk(c0, c1)), step, xdir) is None:
@@ -953,6 +963,33 @@ def main():
                 save(read(None) if n else None, 'snap_mat_stock_cc', xdir)
             except Exception as e:
                 print(f'  ⚠ 소재재고List(CC): 실패 — 건너뜀 ({str(e).splitlines()[0][:120]})')
+        # ⑦ 일별 재고 원자료(판매생산속보의 원천 표 rpt_7·8·9, 전 창고) — --stock-only 일 때 재고현황과 같은 기간으로 한 번에
+        if a.stock_only and not a.probe and not a.stock_manual:
+            r0 = f"{months[-1]}01" if months else (today - datetime.timedelta(days=150)).strftime('%Y%m%d')
+            r1 = (today - datetime.timedelta(days=1)).strftime('%Y%m%d')
+            print(f'▶ 일별 재고 원자료 {r0}~{r1} (판매생산속보 원천, 분석용)')
+            try:
+                driver.switch_to.default_content()
+                driver.get(mes_url)
+                time.sleep(6)
+                menu('쿼리')
+                box = frame_with('//*[@id="QUERY_CONTTextArea"]')
+                if box is None:
+                    raise RuntimeError('쿼리 입력창을 찾지 못함')
+                def run_sql2(sql):
+                    box.send_keys(Keys.CONTROL + 'a', Keys.BACKSPACE)
+                    time.sleep(0.5)
+                    box.send_keys(sql)
+                    driver.execute_script('arguments[0].click();', driver.find_element(By.XPATH, '//*[@id="mnuCust1Btn"]/span'))
+                for name, mk, step in STOCK_RPT:
+                    print(f'▶ {name}')
+                    try:
+                        if run_chunks(name, 'gridQueryRslt', lambda c0, c1: run_sql2(mk(c0, c1)), step, xdir, (r0, r1)) is None:
+                            print(f'  ⚠ {name}: 표 직접 읽기 실패 — 건너뜀')
+                    except Exception as e:
+                        print(f'  ⚠ {name}: 실패 — 건너뜀 ({str(e).splitlines()[0][:120]})')
+            except Exception as e:
+                print(f'  ⚠ 일별 재고 원자료: 실패 — 건너뜀 ({str(e).splitlines()[0][:160] if str(e) else type(e).__name__})')
     finally:
         driver.quit()
         shutil.rmtree(dl, ignore_errors=True)

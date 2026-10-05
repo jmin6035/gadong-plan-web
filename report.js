@@ -1,5 +1,7 @@
-/* 임원 보고용 주간 보고서: published/weekly_report.enc.json(분석 암호) → 요약 지표·표·13주 추이 그래프.
-   데이터는 tools/weekly_build.py(cgl-weekly v2). 구형(v1, 마크다운)은 분석 화면에서 표시. */
+/* 임원 보고용 주간 보고서: published/weekly_report.enc.json(분석 암호).
+   구성: ① 한 장 요약(구분별 상태·핵심 수치·판단·조치) + 결정 필요 사항
+         ② 도금 ③ 컬러 ④ 출하 ⑤ 재고 — 각 절은 "결론 한 줄 → 핵심 그래프 2개 → 상세(접힘)"
+   데이터는 tools/weekly_build.py(cgl-weekly v2), 해설은 notes(summary·decisions·plating·color·ship·stock·ops). */
 (function () {
   'use strict';
   const $ = (id) => document.getElementById(id);
@@ -8,199 +10,286 @@
   const n0 = (v) => (v == null || isNaN(v) ? '-' : Math.round(v).toLocaleString('ko-KR'));
   const n1 = (v) => (v == null || isNaN(v) ? '-' : (Math.round(v * 10) / 10).toLocaleString('ko-KR', { minimumFractionDigits: 1, maximumFractionDigits: 1 }));
   const n3 = (v) => (v == null || isNaN(v) ? '-' : v.toFixed(3));
+  const kt = (v) => (v == null || isNaN(v) ? '-' : (Math.round(v / 100) / 10).toLocaleString('ko-KR', { minimumFractionDigits: 1, maximumFractionDigits: 1 }) + '천t');
   const pct = (a, b) => (b ? (a / b - 1) * 100 : null);
-  const delta = (d, goodUp = true, unit = '%') => {
+  const rate = (a, b) => (b ? Math.round((a / b) * 100) : null);
+  const sgn = (v, f = n0) => (v == null || isNaN(v) ? '-' : (v > 0 ? '+' : v < 0 ? '−' : '') + f(Math.abs(v)));
+  const delta = (d, goodUp = true) => {
     if (d == null || isNaN(d)) return '<span class="delta flat">-</span>';
     const flat = Math.abs(d) < 0.5, cls = flat ? 'flat' : ((d > 0) === goodUp ? 'up' : 'down');
-    return `<span class="delta ${cls}">${flat ? '보합' : (d > 0 ? '▲ ' : '▼ ') + Math.abs(d).toFixed(1) + unit}</span>`;
+    return `<span class="delta ${cls}">${flat ? '보합' : (d > 0 ? '▲ ' : '▼ ') + Math.abs(d).toFixed(1) + '%'}</span>`;
   };
-  const md = (s) => { const d = new Date(s + 'T00:00:00'); return `${d.getMonth() + 1}/${d.getDate()}`; };
-  const css = (v) => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
+  const md = (s) => { const d = new Date(String(s).slice(0, 10) + 'T00:00:00'); return `${d.getMonth() + 1}/${d.getDate()}`; };
   const SER = ['--s1', '--s2', '--s3', '--s4'];
+  const ST = { good: '양호', warn: '주의', bad: '조치 필요' };
+  const chip = (s) => (s && ST[s] ? `<span class="st ${s}">${ST[s]}</span>` : '');
 
-  // ---------- 그래프(인라인 SVG): 선 그래프 · 누적 막대 ----------
-  function lineChart(el, { x, series, unit = '', fmt = n0, yMin }) {
-    const W = 520, H = 230, L = 48, R = 64, T = 10, B = 26;
-    const vals = series.flatMap((s) => s.v.filter((v) => v != null));
+  // ---------- 그래프(인라인 SVG) ----------
+  function niceStep(raw) {
+    if (!(raw > 0)) return 1;
+    const p = Math.pow(10, Math.floor(Math.log10(raw))), m = raw / p;
+    return (m <= 1 ? 1 : m <= 2 ? 2 : m <= 2.5 ? 2.5 : m <= 5 ? 5 : 10) * p;
+  }
+  function legend(series) {
+    return `<div class="legend">${series.map((s, k) => `<span><i class="${s.box ? 'box' : ''} ${s.dash ? 'dash' : ''}" style="background:${s.color || `var(${SER[k]})`}"></i>${esc(s.name)}</span>`).join('')}</div>`;
+  }
+  function attachTip(el, svg, W, xs, html) {
+    const tip = el.querySelector('.tip');
+    svg.querySelectorAll('.hb').forEach((b) => {
+      b.addEventListener('mousemove', () => {
+        const i = +b.dataset.i, r = svg.getBoundingClientRect();
+        tip.innerHTML = html(i); tip.style.display = 'block';
+        tip.style.left = Math.max(0, Math.min((xs(i) / W) * r.width + 12, r.width - tip.offsetWidth - 4)) + 'px'; tip.style.top = '24px';
+      });
+      b.addEventListener('mouseleave', () => { tip.style.display = 'none'; });
+    });
+  }
+  // 선 그래프: refs = 기준선(목표 등), 마지막 점 라벨
+  function lineChart(el, { x, series, unit = '', fmt = n0, yMin, H = 230, refs = [], legendOn = true }) {
+    const W = 520, L = 48, R = 70, T = 12, B = 26;
+    const vals = series.flatMap((s) => s.v.filter((v) => v != null)).concat(refs.map((r) => r.v));
     let lo = yMin != null ? yMin : Math.min(...vals), hi = Math.max(...vals);
-    if (yMin == null) { const pad = (hi - lo) * 0.15 || hi * 0.1 || 1; lo = Math.max(0, lo - pad); hi += pad; } else hi *= 1.08;
+    if (yMin == null) { const pad = (hi - lo) * 0.15 || hi * 0.1 || 1; lo = Math.max(0, lo - pad); hi += pad; } else hi *= 1.1;
     const step = niceStep((hi - lo) / 4); lo = Math.floor(lo / step) * step; hi = Math.ceil(hi / step) * step;
-    const X = (i) => L + (x.length === 1 ? 0 : (i * (W - L - R)) / (x.length - 1));
+    const X = (i) => L + (x.length === 1 ? (W - L - R) / 2 : (i * (W - L - R)) / (x.length - 1));
     const Y = (v) => T + (H - T - B) * (1 - (v - lo) / (hi - lo || 1));
     let g = '';
     for (let v = lo; v <= hi + 1e-9; v += step) g += `<line x1="${L}" x2="${W - R}" y1="${Y(v)}" y2="${Y(v)}" stroke="var(--grid)"/><text x="${L - 6}" y="${Y(v) + 4}" text-anchor="end" font-size="11" fill="var(--ink-3)">${fmt(v)}</text>`;
     const every = Math.ceil(x.length / 7);
     x.forEach((d, i) => { if (i % every === 0 || i === x.length - 1) g += `<text x="${X(i)}" y="${H - 6}" text-anchor="middle" font-size="11" fill="var(--ink-3)">${esc(d)}</text>`; });
-    // 끝 라벨 겹침 방지
+    refs.forEach((r) => {
+      g += `<line x1="${L}" x2="${W - R}" y1="${Y(r.v)}" y2="${Y(r.v)}" stroke="${r.color || 'var(--down)'}" stroke-width="1.5" stroke-dasharray="6 4"/>`;
+      g += `<text x="${L + 4}" y="${Y(r.v) - 5}" font-size="11" fill="${r.color || 'var(--down)'}">${esc(r.name)} ${fmt(r.v)}</text>`;
+    });
     const ends = series.map((s, k) => { let j = s.v.length - 1; while (j >= 0 && s.v[j] == null) j--; return { k, j, y: j >= 0 ? Y(s.v[j]) : null }; }).filter((e) => e.y != null).sort((a, b) => a.y - b.y);
     for (let i = 1; i < ends.length; i++) if (ends[i].y - ends[i - 1].y < 13) ends[i].y = ends[i - 1].y + 13;
     series.forEach((s, k) => {
       const col = s.color || `var(${SER[k]})`;
       let d = '', pen = false;
       s.v.forEach((v, i) => { if (v == null) { pen = false; return; } d += `${pen ? 'L' : 'M'}${X(i).toFixed(1)},${Y(v).toFixed(1)}`; pen = true; });
-      g += `<path d="${d}" fill="none" stroke="${col}" stroke-width="2" ${s.dash ? 'stroke-dasharray="5 4"' : ''} stroke-linejoin="round" stroke-linecap="round"/>`;
+      g += `<path d="${d}" fill="none" stroke="${col}" stroke-width="2.2" ${s.dash ? 'stroke-dasharray="5 4"' : ''} stroke-linejoin="round" stroke-linecap="round"/>`;
+      if (s.dots) s.v.forEach((v, i) => { if (v != null) g += `<circle cx="${X(i)}" cy="${Y(v)}" r="2.6" fill="${col}"/>`; });
       const e = ends.find((z) => z.k === k);
       if (e) {
-        g += `<circle cx="${X(e.j)}" cy="${Y(s.v[e.j])}" r="4" fill="${col}" stroke="var(--surface)" stroke-width="2"/>`;
-        g += `<text x="${X(e.j) + 8}" y="${e.y + 4}" font-size="11" fill="var(--ink-2)">${esc(s.name)} ${fmt(s.v[e.j])}</text>`;
+        g += `<circle cx="${X(e.j)}" cy="${Y(s.v[e.j])}" r="4.2" fill="${col}" stroke="var(--surface)" stroke-width="2"/>`;
+        g += `<text x="${X(e.j) + 8}" y="${e.y + 4}" font-size="11" font-weight="600" fill="var(--ink)">${legendOn ? '' : esc(s.name) + ' '}${fmt(s.v[e.j])}</text>`;
       }
     });
-    g += `<line class="xh" x1="0" x2="0" y1="${T}" y2="${H - B}" stroke="var(--ink-3)" stroke-dasharray="3 3" visibility="hidden"/>`;
-    el.innerHTML = legend(series) + `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="${esc(series.map((s) => s.name).join(', '))} 추이">${g}<rect x="${L}" y="${T}" width="${W - L - R}" height="${H - T - B}" fill="transparent" class="hit"/></svg><div class="tip"></div>`;
-    const svg = el.querySelector('svg'), tip = el.querySelector('.tip'), xh = el.querySelector('.xh');
-    const move = (ev) => {
-      const r = svg.getBoundingClientRect(), px = ((ev.clientX - r.left) / r.width) * W;
-      const i = Math.max(0, Math.min(x.length - 1, Math.round(((px - L) / (W - L - R)) * (x.length - 1))));
-      xh.setAttribute('x1', X(i)); xh.setAttribute('x2', X(i)); xh.setAttribute('visibility', 'visible');
-      tip.innerHTML = `<div class="muted">${esc(x[i])}</div>` + series.map((s, k) => `<div><span class="sw" style="background:${s.color || `var(${SER[k]})`}"></span>${esc(s.name)} <b>${fmt(s.v[i])}</b> ${unit}</div>`).join('');
-      tip.style.display = 'block';
-      const left = ((X(i) / W) * r.width) + 12; tip.style.left = Math.min(left, r.width - tip.offsetWidth - 4) + 'px'; tip.style.top = '24px';
-    };
-    svg.addEventListener('mousemove', move); svg.addEventListener('mouseleave', () => { tip.style.display = 'none'; xh.setAttribute('visibility', 'hidden'); });
+    x.forEach((_, i) => { const w = (W - L - R) / Math.max(1, x.length - 1); g += `<rect class="hb" data-i="${i}" x="${X(i) - w / 2}" y="${T}" width="${w}" height="${H - T - B}" fill="transparent"/>`; });
+    el.innerHTML = (legendOn ? legend(series) : '') + `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="${esc(series.map((s) => s.name).join(', '))} 추이">${g}</svg><div class="tip"></div>`;
+    attachTip(el, el.querySelector('svg'), W, X, (i) => `<div class="muted">${esc(x[i])}</div>` + series.map((s, k) => `<div><span class="sw" style="background:${s.color || `var(${SER[k]})`}"></span>${esc(s.name)} <b>${fmt(s.v[i])}</b> ${unit}</div>`).join(''));
   }
-  function stackChart(el, { x, cats, data, unit = '', fmt = n1 }) {
-    const W = 520, H = 230, L = 40, R = 10, T = 10, B = 26;
+  // 누적 막대: 막대 위에 합계 표시, hi = 강조할 막대 번호
+  function stackChart(el, { x, cats, data, unit = '', fmt = n0, totalFmt, H = 230, hi = [] }) {
+    const W = 520, L = 44, R = 10, T = 16, B = 26;
     const tot = data.map((row) => cats.reduce((a, c) => a + (row[c] || 0), 0));
-    const step = niceStep(Math.max(...tot) / 4), hi = Math.ceil(Math.max(...tot) / step) * step || 1;
-    const bw = Math.min(26, ((W - L - R) / x.length) * 0.62);
+    const step = niceStep(Math.max(...tot, 1) / 4), top = Math.ceil(Math.max(...tot, 1) / step) * step || 1;
+    const bw = Math.min(30, ((W - L - R) / x.length) * 0.64);
     const X = (i) => L + ((i + 0.5) * (W - L - R)) / x.length;
-    const Y = (v) => T + (H - T - B) * (1 - v / hi);
+    const Y = (v) => T + (H - T - B) * (1 - v / top);
     let g = '';
-    for (let v = 0; v <= hi + 1e-9; v += step) g += `<line x1="${L}" x2="${W - R}" y1="${Y(v)}" y2="${Y(v)}" stroke="var(--grid)"/><text x="${L - 6}" y="${Y(v) + 4}" text-anchor="end" font-size="11" fill="var(--ink-3)">${fmt(v)}</text>`;
-    const every = Math.ceil(x.length / 7);
+    for (let v = 0; v <= top + 1e-9; v += step) g += `<line x1="${L}" x2="${W - R}" y1="${Y(v)}" y2="${Y(v)}" stroke="var(--grid)"/><text x="${L - 6}" y="${Y(v) + 4}" text-anchor="end" font-size="11" fill="var(--ink-3)">${fmt(v)}</text>`;
+    const every = Math.ceil(x.length / 8);
     data.forEach((row, i) => {
       let acc = 0;
       cats.forEach((c, k) => {
         const v = row[c] || 0; if (v <= 0) return;
         const y0 = Y(acc), y1 = Y(acc + v); acc += v;
-        g += `<rect x="${X(i) - bw / 2}" y="${y1 + 1}" width="${bw}" height="${Math.max(0, y0 - y1 - 2)}" rx="2" fill="var(${SER[k]})"/>`;
+        g += `<rect x="${X(i) - bw / 2}" y="${y1 + 0.5}" width="${bw}" height="${Math.max(0, y0 - y1 - 1)}" fill="var(${SER[k]})"/>`;
       });
+      const show = x.length <= 14 || hi.includes(i) || i === x.length - 1;
+      if (show && tot[i] > 0) g += `<text x="${X(i)}" y="${Y(tot[i]) - 4}" text-anchor="middle" font-size="10.5" ${hi.includes(i) ? 'font-weight="700" fill="var(--ink)"' : 'fill="var(--ink-2)"'}>${(totalFmt || fmt)(tot[i])}</text>`;
+      if (i % every === 0 || i === x.length - 1 || hi.includes(i)) g += `<text x="${X(i)}" y="${H - 6}" text-anchor="middle" font-size="11" fill="var(--ink-3)">${esc(x[i])}</text>`;
       g += `<rect class="hb" data-i="${i}" x="${X(i) - (W - L - R) / x.length / 2}" y="${T}" width="${(W - L - R) / x.length}" height="${H - T - B}" fill="transparent"/>`;
-      if (i % every === 0 || i === x.length - 1) g += `<text x="${X(i)}" y="${H - 6}" text-anchor="middle" font-size="11" fill="var(--ink-3)">${esc(x[i])}</text>`;
     });
     el.innerHTML = legend(cats.map((c) => ({ name: c, box: true }))) + `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="${esc(cats.join(', '))} 누적">${g}</svg><div class="tip"></div>`;
-    const svg = el.querySelector('svg'), tip = el.querySelector('.tip');
-    svg.querySelectorAll('.hb').forEach((b) => {
-      b.addEventListener('mousemove', () => {
-        const i = +b.dataset.i, r = svg.getBoundingClientRect();
-        tip.innerHTML = `<div class="muted">${esc(x[i])} · 합계 <b>${fmt(tot[i])}</b> ${unit}</div>` + cats.map((c, k) => `<div><span class="sw" style="background:var(${SER[k]})"></span>${esc(c)} <b>${fmt(data[i][c] || 0)}</b></div>`).join('');
-        tip.style.display = 'block'; tip.style.left = Math.min((X(i) / W) * r.width + 12, r.width - tip.offsetWidth - 4) + 'px'; tip.style.top = '24px';
-      });
-      b.addEventListener('mouseleave', () => { tip.style.display = 'none'; });
-    });
+    attachTip(el, el.querySelector('svg'), W, X, (i) => `<div class="muted">${esc(x[i])} · 합계 <b>${fmt(tot[i])}</b> ${unit}</div>` + cats.map((c, k) => `<div><span class="sw" style="background:var(${SER[k]})"></span>${esc(c)} <b>${fmt(data[i][c] || 0)}</b></div>`).join(''));
   }
-  function legend(series) {
-    return `<div class="legend">${series.map((s, k) => `<span><i class="${s.box ? 'box' : ''} ${s.dash ? 'dash' : ''}" style="background:${s.color || `var(${SER[k]})`}"></i>${esc(s.name)}</span>`).join('')}</div>`;
-  }
-  function niceStep(raw) {
-    if (!(raw > 0)) return 1;
-    const p = Math.pow(10, Math.floor(Math.log10(raw))), m = raw / p;
-    return (m <= 1 ? 1 : m <= 2 ? 2 : m <= 2.5 ? 2.5 : m <= 5 ? 5 : 10) * p;
+  // 진도 막대(HTML): 막대 = 실적/현재, 세로선 = 기준(일정누계·목표), 옅은 막대 = 월 전체 계획
+  function bullets(rows, { mode }) {
+    const max = Math.max(...rows.map((r) => Math.max(r.v || 0, (r.ref || 0) * (mode === 'stock' ? 1 : 1.25)))) * 1.05 || 1;
+    return `<div class="bul">${rows.map((r) => {
+      const w = (v) => Math.max(0, Math.min(100, ((v || 0) / max) * 100)).toFixed(1);
+      const rt = r.ref ? (r.v / r.ref) * 100 : null;
+      let cls = 'ok';
+      if (rt != null) cls = mode === 'stock' ? (rt > 130 ? 'bad' : rt > 110 || rt < 80 ? 'warn' : 'ok') : (rt < 90 ? 'bad' : rt < 98 ? 'warn' : 'ok');
+      if (r.ref == null) cls = 'na';
+      const right = mode === 'stock'
+        ? (r.ref == null ? `<b>${n0(r.v)}</b>t <span class="muted">목표 없음</span>` : `<b>${n0(r.v)}</b>t <span class="muted">/ 목표 ${n0(r.ref)}</span> <span class="pc ${cls}">${Math.round(rt)}%</span>`)
+        : `<b>${n0(r.v)}</b>t <span class="muted">/ 일정 ${n0(r.ref)}</span> <span class="pc ${cls}">${rt == null ? '-' : Math.round(rt) + '%'}</span>`;
+      return `<div class="bul-row${r.total ? ' total' : ''}"><div class="bul-l">${esc(r.name)}</div><div class="bul-track">` +
+        (r.full ? `<div class="bul-full" style="width:${w(r.full)}%"></div>` : '') +
+        `<div class="bul-bar ${cls}" style="width:${w(r.v)}%"></div>` +
+        (r.ref != null ? `<div class="bul-ref" style="left:${w(r.ref)}%"></div>` : '') +
+        `</div><div class="bul-r">${right}</div></div>`;
+    }).join('')}</div>`;
   }
 
   // ---------- 화면 ----------
-  function card(num, title, sub, body) {
-    return `<section class="card"><h2><span class="n">${num}</span>${esc(title)}${sub ? ` <small>${esc(sub)}</small>` : ''}</h2>${body}</section>`;
-  }
   const notes = (arr) => (arr && arr.length ? `<ul class="notes">${arr.map((t) => `<li>${esc(t)}</li>`).join('')}</ul>` : '');
+  const box = (id, title, sub) => `<div class="chart" id="${id}"><p class="ttl">${esc(title)}${sub ? ` <span class="muted">${esc(sub)}</span>` : ''}</p><div class="cv"></div></div>`;
+  const draw = (id, f) => { const el = $(id); if (el) f(el.querySelector('.cv')); };
+  const more = (title, body) => `<details class="more"><summary>${esc(title)}</summary><div class="more-b">${body}</div></details>`;
+  function section(num, title, sm, body) {
+    return `<section class="card"><h2><span class="n">${num}</span>${esc(title)} ${chip(sm && sm.status)}</h2>` +
+      (sm && sm.msg ? `<p class="lead">${esc(sm.msg)}</p>` : '') + body + '</section>';
+  }
 
   function render(o) {
     const P = o.period, N = o.notes || {}, S = o.sections;
-    const w1 = `${md(P.w1[0])}~${md(P.w1[1])}`, w0 = `${md(P.w0[0])}~${md(P.w0[1])}`;
-    $('r-title').textContent = `도금·컬러 주간 실적 보고 — ${o.title || w1}`;
-    document.title = `주간 실적 보고 ${o.title || w1}`;
-    $('r-sub').textContent = `보고 주 ${w1} · 비교 기준 직전 12주(${w0}) 평균 · MES 실적 ~${md(P.to)} · 작성 ${new Date(o.createdAt).toLocaleString('ko-KR')}`;
+    const M = S.month, ST_ = S.stock, pl = S.plating, pa = S.plan, co = S.color, sh = S.ship;
+    const w1 = `${md(P.w1[0])}~${md(P.w1[1])}`;
+    const asOf = (M && M.asOf) || (ST_ && ST_.asOf);
+    const asOfS = asOf ? md(asOf) : md(P.to);
+    $('r-title').textContent = `도금·컬러 주간 보고 — ${o.title || w1}`;
+    document.title = `주간 보고 ${o.title || w1}`;
+    $('r-sub').textContent = `주간 실적 ${w1} · 월 진도·재고 ${asOfS} 기준 · 작성 ${new Date(o.createdAt).toLocaleDateString('ko-KR', { timeZone: 'Asia/Seoul' })}`;
+    const sm = {}; (N.summary || []).forEach((x) => { sm[x.area] = x; });
+    const prod = (name) => M && M.prod.find((x) => x.line === name);
+    const shipT = M && M.ship.find((x) => x.name === '합계');
+    const stk = (name) => ST_ && ST_.now && ST_.now.find((x) => x.name === name);
+    const sumC = (rows, k) => rows.reduce((a, r) => a + r[k].tpd, 0);
+
+    // 상태 기본값(해설이 없을 때): 진도·목표 대비 비율로
+    const auto = (r, lo1, lo2) => (r == null ? null : r >= lo1 ? 'good' : r >= lo2 ? 'warn' : 'bad');
+    const pG = prod('도금 계'), pC = prod('컬러 계');
+    const cp = stk('컬러 제품'), gm = stk('도금 소재(F/H)');
+    const K = {
+      plating: { name: '도금 생산', key: [pG ? `10월 누계 <b>${n0(pG.actual)}</b>t · 일정 대비 <b>${rate(pG.actual, pG.sched)}%</b>` : '', pa ? `4분기 누적 계획 대비 <b>${sgn(pa.actualT - pa.planT)}</b>t` : ''], st: auto(pG && pG.actual / pG.sched * 100, 98, 90) },
+      color: { name: '컬러 생산', key: [pC ? `10월 누계 <b>${n0(pC.actual)}</b>t · 일정 대비 <b>${rate(pC.actual, pC.sched)}%</b>` : '', co ? `지난주 ${n0(sumC(co.rows, 'w1'))}t/일 (12주 평균 대비 ${sgn(pct(sumC(co.rows, 'w1'), sumC(co.rows, 'w0')), n1)}%)` : ''], st: auto(pC && pC.actual / pC.sched * 100, 98, 90) },
+      ship: { name: '출하', key: [shipT ? `10월 누계 <b>${n0(shipT.actual)}</b>t · 일정 대비 <b>${rate(shipT.actual, shipT.sched)}%</b>` : '', (() => { const m = sh && sh.monthly && sh.monthly[sh.monthly.length - 1]; return m ? `${+m.month.slice(5)}월 말일 출하 ${n0(m.lastDay)}t (월의 ${rate(m.lastDay, m.total)}%)` : ''; })()], st: auto(shipT && shipT.actual / shipT.sched * 100, 95, 80) },
+      stock: { name: '재고', key: [cp ? `컬러 제품 <b>${n0(cp.current)}</b>t · 목표의 <b>${rate(cp.current, cp.target)}%</b>` : '', gm ? `도금 소재 ${n0(gm.current)}t · 목표의 ${rate(gm.current, gm.target)}%` : ''], st: ST_ && ST_.now ? (ST_.now.some((x) => x.target && x.current / x.target > 1.3) ? 'bad' : ST_.now.some((x) => x.target && x.current / x.target > 1.1) ? 'warn' : 'good') : null },
+    };
     let h = '';
     if (o.status && o.status.stale) h += `<div class="stale">⚠ 사내 PC 자동 실행이 하루 넘게 멈춰 있습니다(마지막 자료 ${new Date(o.status.savedAt).toLocaleString('ko-KR')}).</div>`;
 
-    // 1. 요약
-    const kp = (o.kpis || []).map((k) => {
-      const isPlan = k.mode === 'plan';
-      return `<div class="kpi"><div class="l">${esc(k.label)}</div><div class="v">${n0(k.v)}<small>${esc(k.unit)}</small></div>
-        <div class="b">${isPlan ? `계획 ${n0(k.base)}t · ${k.base ? Math.round((k.v / k.base) * 100) : '-'}%` : `12주 평균 ${n0(k.base)}`} ${delta(k.d)}</div></div>`;
-    }).join('');
-    h += card('1', '핵심 요약', w1, `${notes(N.headline).replace('class="notes"', 'class="headline"')}<div class="kpis">${kp}</div>`);
-
-    // 2. 도금
-    const pl = S.plating;
-    let t = `<div class="scroll"><table class="t"><thead><tr><th>라인</th><th>생산 t/일<br><span class="muted">12주 → 보고 주</span></th><th>증감</th><th>속도 t/hr</th><th>평균 두께 mm</th><th>휴지 h/일</th><th>강종전환<br>회/주</th></tr></thead><tbody>`;
-    pl.rows.forEach((r, k) => {
-      t += `<tr><td class="l"><span class="sw" style="background:var(${SER[k]})"></span>${r.line}</td><td>${n0(r.w0.tpd)} → <b>${n0(r.w1.tpd)}</b></td><td>${delta(r.dTpd)}</td>
-        <td>${n1(r.w0.tph)} → ${n1(r.w1.tph)}</td><td>${n3(r.w0.thick)} → ${n3(r.w1.thick)}</td><td>${n1(r.w0.stopH)} → ${n1(r.w1.stopH)}</td><td>${n1(r.w0.mc)} → ${n0(r.w1.mc)}</td></tr>`;
+    // ① 한 장 요약
+    let t = '<div class="scroll"><table class="t sum"><thead><tr><th>구분</th><th>상태</th><th>핵심 수치</th><th>판단</th><th>조치</th></tr></thead><tbody>';
+    ['plating', 'color', 'ship', 'stock'].forEach((a) => {
+      const k = K[a], s = sm[a] || {};
+      t += `<tr><td class="l nm">${k.name} <span class="m-chip">${chip(s.status || k.st)}</span></td><td class="c d-chip">${chip(s.status || k.st) || '-'}</td><td class="l key">${k.key.filter(Boolean).join('<br>')}</td><td class="l wrap" data-l="판단">${esc(s.msg || '')}</td><td class="l wrap" data-l="조치">${esc(s.action || '')}</td></tr>`;
     });
-    const sumW0 = pl.rows.reduce((a, r) => a + r.w0.tpd, 0), sumW1 = pl.rows.reduce((a, r) => a + r.w1.tpd, 0);
-    t += `<tr><td class="l"><b>합계</b></td><td>${n0(sumW0)} → <b>${n0(sumW1)}</b></td><td>${delta(pct(sumW1, sumW0))}</td><td colspan="4"></td></tr></tbody></table></div>`;
-    let body = t + '<div class="grid2" style="margin-top:14px"><div class="chart" id="c-pl-trend"></div><div class="chart" id="c-pl-plan"></div></div>';
-    const pa = S.plan;
-    if (pa) {
-      body += '<div class="grid2" style="margin-top:6px"><div><h3>4분기 부서별 계획 대비 실적 (~' + md(pa.t0) + ')</h3><div class="scroll"><table class="t"><thead><tr><th>부서</th><th>계획 t</th><th>실적 t</th><th>달성률</th></tr></thead><tbody>' +
-        pa.byDept.filter((d) => d[1] || d[2]).map((d) => `<tr><td class="l">${esc(d[0])}</td><td>${n0(d[1])}</td><td><b>${n0(d[2])}</b></td><td>${d[1] ? Math.round((d[2] / d[1]) * 100) + '%' : '-'}</td></tr>`).join('') +
-        `<tr><td class="l"><b>합계</b></td><td>${n0(pa.planT)}</td><td><b>${n0(pa.actualT)}</b></td><td>${pa.planT ? Math.round((pa.actualT / pa.planT) * 100) + '%' : '-'}</td></tr></tbody></table></div>` +
-        `<p class="hint">재계획 결과: 지연 ${n0(pa.late)}t·결품 ${pa.short.length ? pa.short.length + '건' : '0'} · 남은 기간 강종전환 ${pa.remainMC}회${pa.optimal ? ' · 최적해' : ''}</p></div>` +
-        '<div><h3>강종전환 일정</h3><div class="scroll"><table class="t"><thead><tr><th>일자</th><th>라인</th><th>전환</th></tr></thead><tbody>' +
-        pa.upcomingMC.map((m) => `<tr><td class="l">${md(m.day)}</td><td class="l">${m.line}</td><td class="l">${esc(m.from)} → ${esc(m.to)}</td></tr>`).join('') + '</tbody></table></div></div></div>';
-    }
+    t += '</tbody></table></div>';
+    if (N.decisions && N.decisions.length) t += `<div class="decide"><h3>결정이 필요한 사항</h3><ol>${N.decisions.map((x) => `<li>${esc(x)}</li>`).join('')}</ol></div>`;
+    else if (N.headline) t += notes(N.headline);
+    h += `<section class="card"><h2><span class="n">요약</span>${esc(o.title || w1)}</h2>${t}</section>`;
+
+    // ② 도금
+    let b = '<div class="grid2">';
+    if (M) b += `<div><p class="ttl">10월 진도 <span class="muted">MES 월차계획 · ${asOfS} 기준</span></p>` +
+      bullets(M.prod.filter((x) => x.plant === '도금').map((x) => ({ name: x.line, v: x.actual, ref: x.sched, total: /계$/.test(x.line) })), { mode: 'prod' }) +
+      `<p class="hint">막대 = 실적 누계 · 세로선 = ${asOfS}까지 일정 · 10월 계획 ${n0(pG && pG.month)}t</p></div>`;
+    if (pa) b += box('c-pl-plan', '4분기 누적 생산 — 계획 vs 실적', 't');
+    b += '</div>';
+    let d = '<div class="scroll"><table class="t"><thead><tr><th>라인</th><th>12주 평균 t/일</th><th>보고 주 t/일</th><th>증감</th><th>속도 t/hr</th><th>평균 두께 mm</th><th>휴지 h/일</th></tr></thead><tbody>' +
+      pl.rows.map((r, k) => `<tr><td class="l"><span class="sw" style="background:var(${SER[k]})"></span>${r.line}</td><td>${n0(r.w0.tpd)}</td><td><b>${n0(r.w1.tpd)}</b></td><td>${delta(r.dTpd)}</td><td>${n1(r.w0.tph)} → ${n1(r.w1.tph)}</td><td>${n3(r.w0.thick)} → ${n3(r.w1.thick)}</td><td>${n1(r.w0.stopH)} → ${n1(r.w1.stopH)}</td></tr>`).join('') + '</tbody></table></div>';
+    d += '<div class="grid2" style="margin-top:12px">' + box('c-pl-trend', '주별 생산량', 't/일') + '<div>';
+    if (pa) d += '<p class="ttl">강종전환 일정</p><div class="scroll"><table class="t"><thead><tr><th>일자</th><th>라인</th><th>전환</th></tr></thead><tbody>' +
+      pa.upcomingMC.map((m) => `<tr><td class="l">${md(m.day)}</td><td class="l">${m.line}</td><td class="l">${esc(m.from)} → ${esc(m.to)}</td></tr>`).join('') + '</tbody></table></div>' +
+      `<p class="hint">재계획: 지연 ${n0(pa.late)}t · 결품 ${pa.short.length ? pa.short.length + '건' : '0'} · 남은 강종전환 ${pa.remainMC}회</p>`;
+    d += '</div></div>';
+    if (pa) d += '<p class="ttl" style="margin-top:12px">4분기 부서별 계획 대비 실적</p><div class="scroll"><table class="t"><thead><tr><th>부서</th><th>계획 t</th><th>실적 t</th><th>달성률</th></tr></thead><tbody>' +
+      pa.byDept.filter((x) => x[1] || x[2]).map((x) => `<tr><td class="l">${esc(x[0])}</td><td>${n0(x[1])}</td><td><b>${n0(x[2])}</b></td><td>${x[1] ? rate(x[2], x[1]) + '%' : '-'}</td></tr>`).join('') + '</tbody></table></div>';
     const pr = pl.params;
-    body += '<h3>계획 조건 vs 13주 실적</h3><div class="scroll"><table class="t"><thead><tr><th>항목</th>' + Object.keys(pr).map((l) => `<th>${l} 현재 조건</th><th>${l} 실적</th>`).join('') + '</tr></thead><tbody>' +
+    d += '<p class="ttl" style="margin-top:12px">계획 조건 vs 13주 실적</p><div class="scroll"><table class="t"><thead><tr><th>항목</th>' + Object.keys(pr).map((l) => `<th>${l} 현재 조건</th><th>${l} 실적</th>`).join('') + '</tr></thead><tbody>' +
       [['강종전환 손실 (분/회)', 'mc'], ['설비정지 (분/일)', 'equipDown'], ['비강종 더미 (분/일)', 'dummy']].map(([nm, k]) =>
         `<tr><td class="l">${nm}</td>` + Object.keys(pr).map((l) => `<td>${n1(pr[l].cur && pr[l].cur[k])}</td><td><b>${n1(pr[l][k])}</b></td>`).join('') + '</tr>').join('') + '</tbody></table></div>';
-    body += notes(N.plating);
-    h += card('2', '도금 1·2CGL', w1, body);
+    b += notes(N.plating) + more('상세 — 라인별 실적·강종전환 일정·부서별·계획 조건', d);
+    h += section('1', '도금 생산 (1·2CGL)', sm.plating || { status: K.plating.st }, b);
 
-    // 3. 컬러
-    const co = S.color;
+    // ③ 컬러
     if (co) {
-      let ct = `<div class="scroll"><table class="t"><thead><tr><th>라인</th><th>생산 t/일<br><span class="muted">12주 → 보고 주</span></th><th>증감</th><th>가동일</th><th>속도 t/hr<br><span class="muted">휴지 포함</span></th><th>가동일당 휴지 h</th><th>보고 주 주요 품목 (t)</th></tr></thead><tbody>`;
-      co.rows.forEach((r, k) => {
-        ct += `<tr><td class="l"><span class="sw" style="background:var(${SER[k]})"></span>${r.line}</td><td>${n0(r.w0.tpd)} → <b>${n0(r.w1.tpd)}</b></td><td>${delta(r.dTpd)}</td><td>${r.w1.days}/7</td>
-          <td>${n1(r.w0.tph)} → ${n1(r.w1.tph)}</td><td>${n1(r.w0.stopH)} → ${n1(r.w1.stopH)}</td><td class="l">${r.top.map((x) => `${esc(x[0])} ${n0(x[1])}`).join(' · ')}</td></tr>`;
-      });
-      const c0 = co.rows.reduce((a, r) => a + r.w0.tpd, 0), c1 = co.rows.reduce((a, r) => a + r.w1.tpd, 0);
-      ct += `<tr><td class="l"><b>합계</b></td><td>${n0(c0)} → <b>${n0(c1)}</b></td><td>${delta(pct(c1, c0))}</td><td colspan="4"></td></tr></tbody></table></div>`;
-      ct += '<div class="grid2" style="margin-top:14px"><div class="chart" id="c-co-trend"></div><div class="chart" id="c-co-stop"></div></div>';
-      ct += '<h3>휴지 구성 (4라인 합, 시간/일)</h3><div class="scroll"><table class="t"><thead><tr><th>구분</th><th>12주 평균</th><th>보고 주</th><th>증감</th></tr></thead><tbody>' +
-        co.stops.map((s, k) => `<tr><td class="l"><span class="sw" style="background:var(${SER[k]})"></span>${esc(s.cat)}</td><td>${n1(s.w0)}</td><td><b>${n1(s.w1)}</b></td><td>${delta(pct(s.w1, s.w0), false)}</td></tr>`).join('') + '</tbody></table></div>';
-      ct += notes(N.color);
-      h += card('3', '컬러 1~4CCL', w1, ct);
+      b = '<div class="grid2">';
+      if (M) b += `<div><p class="ttl">10월 진도 <span class="muted">MES 월차계획 · ${asOfS} 기준</span></p>` +
+        bullets(M.prod.filter((x) => x.plant === '컬러').map((x) => ({ name: x.line, v: x.actual, ref: x.sched, total: /계$/.test(x.line) })), { mode: 'prod' }) + '</div>';
+      b += box('c-co-week', '주별 생산량 (라인 누적)', 't/일') + '</div>';
+      d = '<div class="scroll"><table class="t"><thead><tr><th>라인</th><th>12주 평균 t/일</th><th>보고 주 t/일</th><th>증감</th><th>가동일</th><th>속도 t/hr<br><span class="muted">휴지 포함</span></th><th>가동일당 휴지 h</th><th>주요 품목 (t)</th></tr></thead><tbody>' +
+        co.rows.map((r, k) => `<tr><td class="l"><span class="sw" style="background:var(${SER[k]})"></span>${r.line}</td><td>${n0(r.w0.tpd)}</td><td><b>${n0(r.w1.tpd)}</b></td><td>${delta(r.dTpd)}</td><td>${r.w1.days}/7</td><td>${n1(r.w0.tph)} → ${n1(r.w1.tph)}</td><td>${n1(r.w0.stopH)} → ${n1(r.w1.stopH)}</td><td class="l">${r.top.map((x) => `${esc(x[0])} ${n0(x[1])}`).join(' · ')}</td></tr>`).join('') + '</tbody></table></div>';
+      d += '<div class="grid2" style="margin-top:12px">' + box('c-co-stop', '주별 휴지 구성 (4라인 합)', '시간/일') + '<div><p class="ttl">휴지 구성 (4라인 합, 시간/일)</p><div class="scroll"><table class="t"><thead><tr><th>구분</th><th>12주 평균</th><th>보고 주</th><th>증감</th></tr></thead><tbody>' +
+        co.stops.map((s, k) => `<tr><td class="l"><span class="sw" style="background:var(${SER[k]})"></span>${esc(s.cat)}</td><td>${n1(s.w0)}</td><td><b>${n1(s.w1)}</b></td><td>${delta(pct(s.w1, s.w0), false)}</td></tr>`).join('') + '</tbody></table></div></div></div>';
+      b += notes(N.color) + more('상세 — 라인별 실적·휴지 구성', d);
+      h += section('2', '컬러 생산 (1~4CCL)', sm.color || { status: K.color.st }, b);
     }
 
-    // 4. 출하
-    const sh = S.ship;
-    if (sh) {
-      let st = '<div class="grid2"><div><div class="scroll"><table class="t"><thead><tr><th>구분</th><th>12주 평균 t/일</th><th>보고 주 t/일</th><th>증감</th></tr></thead><tbody>' +
-        sh.rows.map((r, k) => `<tr><td class="l"><span class="sw" style="background:var(${SER[k]})"></span>${esc(r.kind)}</td><td>${n0(r.w0)}</td><td><b>${n0(r.w1)}</b></td><td>${delta(r.d)}</td></tr>`).join('') +
-        `</tbody></table></div>${notes(N.ship)}</div><div class="chart" id="c-ship"></div></div>`;
-      h += card('4', '출하', w1, st);
+    // ④ 출하
+    if (sh || M) {
+      b = '<div class="grid2">';
+      if (M) b += `<div><p class="ttl">10월 출하 진도 <span class="muted">MES 월차계획 · ${asOfS} 기준</span></p>` +
+        bullets(M.ship.filter((x) => x.month).map((x) => ({ name: x.name, v: x.actual, ref: x.sched, total: x.name === '합계' })), { mode: 'prod' }) + '</div>';
+      if (sh && sh.daily) b += box('c-ship-day', '최근 4주 일별 판매 출하', 't/일');
+      b += '</div>';
+      d = '';
+      if (sh && sh.monthly && sh.monthly.length) d += '<p class="ttl">월별 판매 출하와 월말 몰림</p><div class="scroll"><table class="t"><thead><tr><th>월</th><th>판매 출하 t</th><th>1~5일</th><th>말일 하루</th><th>말일 비중</th></tr></thead><tbody>' +
+        sh.monthly.map((m) => `<tr><td class="l">${+m.month.slice(5)}월</td><td>${n0(m.total)}</td><td>${n0(m.first5)}</td><td><b>${n0(m.lastDay)}</b></td><td><b>${rate(m.lastDay, m.total)}%</b></td></tr>`).join('') + '</tbody></table></div>';
+      if (sh) d += '<div class="grid2" style="margin-top:12px">' + box('c-ship', '주별 출하', 't/일') + '<div><div class="scroll"><table class="t"><thead><tr><th>구분</th><th>12주 평균 t/일</th><th>보고 주 t/일</th><th>증감</th></tr></thead><tbody>' +
+        sh.rows.map((r, k) => `<tr><td class="l"><span class="sw" style="background:var(${SER[k]})"></span>${esc(r.kind)}</td><td>${n0(r.w0)}</td><td><b>${n0(r.w1)}</b></td><td>${delta(r.d)}</td></tr>`).join('') + '</tbody></table></div></div></div>';
+      b += notes(N.ship) + (d ? more('상세 — 월별 몰림·주별 추이', d) : '');
+      h += section('3', '출하', sm.ship || { status: K.ship.st }, b);
     }
 
-    // 5. 이슈·할 일
-    let ia = '';
-    if (N.issues && N.issues.length) ia += '<h3 style="margin-top:0">이슈</h3>' + N.issues.map((t) => `<div class="issue">${esc(t)}</div>`).join('');
-    if (N.actions && N.actions.length) ia += '<h3>결정·조치 필요</h3><ol class="actions">' + N.actions.map((t) => `<li>${esc(t)}</li>`).join('') + '</ol>';
-    if (ia) h += card('5', '이슈 및 조치', '', ia);
+    // ⑤ 재고
+    if (ST_ && (ST_.now || ST_.monthly)) {
+      b = '';
+      if (ST_.now) {
+        b += `<p class="ttl">현재 재고 vs 목표 <span class="muted">판매생산속보 ${asOfS} 기준</span></p>` +
+          bullets(ST_.now.map((x) => ({ name: x.name, v: x.current, ref: x.target })), { mode: 'stock' }) +
+          '<p class="hint">막대 = 현재 재고 · 세로선 = 목표 재고 · 빨강 = 목표의 130% 초과, 주황 = 110% 초과 또는 80% 미만</p>';
+        if (ST_.longTerm) b += `<p class="hint">장기재고(3개월 이상) <b>${n0(ST_.longTerm.total)}</b>t — 컬러 ${n0(ST_.longTerm['컬러'])}t · 도금 ${n0(ST_.longTerm['도금'])}t (전월 대비 제품 ${sgn(ST_.longTerm.momProduct)}t)</p>`;
+      }
+      if (ST_.monthly && ST_.monthly.length) {
+        b += '<p class="ttl" style="margin-top:14px">재고 추이 <span class="muted">월말 재고 + 현재, 점선 = 목표</span></p><div class="minis">' +
+          ['컬러 제품', '도금 소재(F/H)', '컬러 소재', '도금 제품'].map((nm, i) => box('c-stk-' + i, nm, '')).join('') + '</div>';
+      }
+      if (ST_.now) {
+        d = '<div class="scroll"><table class="t"><thead><tr><th>구분</th><th>세부</th><th>목표 t</th><th>현재 t</th><th>차이 t</th></tr></thead><tbody>' +
+          ST_.now.map((x) => [`<tr><td class="l"><b>${esc(x.name)}</b></td><td class="l">계</td><td>${n0(x.target)}</td><td><b>${n0(x.current)}</b></td><td>${sgn(x.diff)}</td></tr>`]
+            .concat((x.sub || []).map((s) => `<tr><td></td><td class="l">${esc(s.name)}</td><td>${n0(s.target)}</td><td>${n0(s.current)}</td><td>${sgn(s.diff)}</td></tr>`)).join('')).join('') + '</tbody></table></div>';
+        b += notes(N.stock) + more('상세 — 강종·부서별 재고', d);
+      } else b += notes(N.stock);
+      h += section('4', '재고', sm.stock || { status: K.stock.st }, b);
+    }
+
+    if (N.ops && N.ops.length) h += `<section class="card ops"><h2><span class="n">참고</span>운영 메모</h2>${notes(N.ops)}</section>`;
     $('r-main').innerHTML = h;
 
-    // 그래프
+    // ---------- 그래프 ----------
     const wl = (arr) => arr.map((x) => md(x.week));
-    const tp = pl.trend, tl = Object.keys(tp);
-    $('c-pl-trend').insertAdjacentHTML('beforebegin', '');
-    chartBox('c-pl-trend', '도금 주별 생산량 (t/일)', (el) => lineChart(el, { x: wl(tp[tl[0]]), unit: 't/일', series: tl.map((l) => ({ name: l, v: tp[l].map((x) => x.tpd) })) }));
     if (pa) {
       const days = [...new Set(Object.values(pa.cum).flat().map((x) => x.day))].sort();
-      const sumBy = (key) => days.map((d) => Object.values(pa.cum).reduce((a, arr) => { const e = arr.filter((x) => x.day <= d).pop(); return a + (e ? e[key] : 0); }, 0));
-      chartBox('c-pl-plan', '4분기 누적 생산 — 계획 vs 실적 (t)', (el) => lineChart(el, { x: days.map(md), unit: 't', yMin: 0, series: [{ name: '계획', v: sumBy('plan'), color: 'var(--plan)', dash: true }, { name: '실적', v: sumBy('actual'), color: 'var(--s1)' }] }));
+      const sumBy = (key) => days.map((dd) => Object.values(pa.cum).reduce((a, arr) => { const e = arr.filter((x) => x.day <= dd).pop(); return a + (e ? e[key] : 0); }, 0));
+      draw('c-pl-plan', (el) => lineChart(el, { x: days.map(md), unit: 't', yMin: 0, series: [{ name: '계획', v: sumBy('plan'), color: 'var(--plan)', dash: true }, { name: '실적', v: sumBy('actual'), color: 'var(--s1)' }] }));
     }
+    const tp = pl.trend, tl = Object.keys(tp);
+    draw('c-pl-trend', (el) => lineChart(el, { x: wl(tp[tl[0]]), unit: 't/일', series: tl.map((l) => ({ name: l, v: tp[l].map((x) => x.tpd) })) }));
     if (co) {
       const ctp = co.trend, cl = Object.keys(ctp);
-      chartBox('c-co-trend', '컬러 주별 생산량 (t/일)', (el) => lineChart(el, { x: wl(ctp[cl[0]]), unit: 't/일', yMin: 0, series: cl.map((l) => ({ name: l, v: ctp[l].map((x) => x.tpd) })) }));
-      chartBox('c-co-stop', '컬러 주별 휴지 구성 (4라인 합, 시간/일)', (el) => stackChart(el, { x: wl(co.stopTrend), unit: 'h/일', cats: co.stops.map((s) => s.cat), data: co.stopTrend }));
+      draw('c-co-week', (el) => stackChart(el, { x: wl(ctp[cl[0]]), unit: 't/일', cats: cl, data: ctp[cl[0]].map((_, i) => Object.fromEntries(cl.map((l) => [l, ctp[l][i].tpd]))), hi: [ctp[cl[0]].length - 1] }));
+      draw('c-co-stop', (el) => stackChart(el, { x: wl(co.stopTrend), unit: 'h/일', fmt: n1, cats: co.stops.map((s) => s.cat), data: co.stopTrend }));
     }
-    if (sh) chartBox('c-ship', '주별 출하 (t/일)', (el) => lineChart(el, { x: wl(sh.trend), unit: 't/일', yMin: 0, series: sh.rows.map((r) => ({ name: r.kind, v: sh.trend.map((x) => x[r.kind]) })) }));
+    if (sh) {
+      if (sh.daily) {
+        const cats = ['도금 판매', '컬러 판매'];
+        const top = sh.daily.map((x, i) => [i, cats.reduce((a, c) => a + (x[c] || 0), 0)]).sort((a, z) => z[1] - a[1]).slice(0, 1).map((x) => x[0]);
+        draw('c-ship-day', (el) => stackChart(el, { x: sh.daily.map((x) => md(x.day)), unit: 't', cats, data: sh.daily, hi: top, totalFmt: n0 }));
+      }
+      draw('c-ship', (el) => lineChart(el, { x: wl(sh.trend), unit: 't/일', yMin: 0, series: sh.rows.map((r) => ({ name: r.kind, v: sh.trend.map((x) => x[r.kind]) })) }));
+    }
+    if (ST_ && ST_.monthly && ST_.monthly.length) {
+      const ms = ST_.monthly, xs = ms.map((m) => `${+m.month.slice(4)}월말`);
+      const now = (nm) => ST_.now && ST_.now.find((x) => x.name === nm);
+      const withNow = ST_.now ? xs.concat([asOfS]) : xs;
+      const ser = (key, nowName) => ms.map((m) => m[key] ?? null).concat(ST_.now ? [now(nowName) ? now(nowName).current : null] : []);
+      const ref = (nm) => { const x = now(nm); return x && x.target ? [{ v: x.target, name: '목표' }] : []; };
+      draw('c-stk-0', (el) => lineChart(el, { x: withNow, H: 170, unit: 't', yMin: 0, legendOn: false, refs: ref('컬러 제품'), series: [{ name: '컬러 제품', v: ser('컬러 제품', '컬러 제품'), dots: true }] }));
+      draw('c-stk-1', (el) => lineChart(el, { x: withNow, H: 170, unit: 't', yMin: 0, legendOn: false, refs: ref('도금 소재(F/H)'), series: [{ name: '도금 소재', v: ser('도금 소재(F/H)', '도금 소재(F/H)'), dots: true }] }));
+      draw('c-stk-2', (el) => lineChart(el, { x: withNow, H: 170, unit: 't', yMin: 0, legendOn: false, refs: ref('컬러 소재'), series: [{ name: '컬러 소재', v: ser('컬러 소재', '컬러 소재'), dots: true, color: 'var(--s3)' }] }));
+      draw('c-stk-3', (el) => lineChart(el, { x: withNow, H: 170, unit: 't', yMin: 0, refs: ref('도금 제품(판매재)'), series: [{ name: '판매재', v: ser('도금 제품(판매재)', '도금 제품(판매재)'), dots: true }, { name: '자가재', v: ser('도금 제품(자가재)', '도금 제품(자가재)'), dots: true, color: 'var(--s4)' }] }));
+    }
   }
-  function chartBox(id, title, draw) {
-    const el = $(id); if (!el) return;
-    const holder = document.createElement('div'); el.innerHTML = `<p class="ttl">${esc(title)}</p>`; el.appendChild(holder); draw(holder);
-  }
+
+  // 인쇄할 때는 접힌 상세도 펼침
+  window.addEventListener('beforeprint', () => document.querySelectorAll('details.more').forEach((x) => { x.dataset.was = x.open ? '1' : ''; x.open = true; }));
+  window.addEventListener('afterprint', () => document.querySelectorAll('details.more').forEach((x) => { x.open = x.dataset.was === '1'; }));
 
   // ---------- 열기 ----------
   let env = null;
