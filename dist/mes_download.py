@@ -340,6 +340,22 @@ def main():
                 els = driver.find_elements(By.ID, 'SEARCH_VAL')
                 if els and els[0].is_displayed():
                     break
+        if not getattr(menu_panel, 'reloaded', False):            # 판매생산속보(별도 페이지) 뒤 등 메인 화면이 덜 떴을 때: 메인을 다시 열고 한 번 더
+            menu_panel.reloaded = True
+            try:
+                close_alert()
+            except Exception:
+                pass
+            driver.get(mes_url)
+            for _ in range(30):
+                time.sleep(1)
+                if driver.find_elements(By.ID, 'SEARCH_VAL') or driver.find_elements(By.ID, 'collapseButton'):
+                    break
+            time.sleep(2)
+            try:
+                return menu_panel(diag)
+            finally:
+                menu_panel.reloaded = False
         raise RuntimeError('좌측 메뉴 검색창이 열리지 않음')
 
     def menu(name, exact=False):
