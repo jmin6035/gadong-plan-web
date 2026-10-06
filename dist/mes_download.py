@@ -837,53 +837,6 @@ def main():
                 driver.execute_script('arguments[0].click();', WebDriverWait(driver, 10).until(EC.element_to_be_clickable((By.XPATH, '//*[@id="mnuSearchBtn"]/span'))))
             if run_chunks('screen_prod', None, run_screen, 10) is None:
                 export("//div[contains(@class, 'jqx-grid-cell')]", 'screen_prod.xlsx')
-        # ⑤-0 판매생산속보(실시간 재고·생산·판매 요약표) — 주소로 바로 열어 표를 그대로 읽음(사용자 안내 2026-10-06)
-        if not a.no_extra:
-            print('▶ snap_salesrpt (판매생산속보, 분석용)')
-            TABLES_JS = r"""
-              var out = [], ts = document.querySelectorAll('table');
-              for (var i = 0; i < ts.length; i++) {
-                var rs = ts[i].rows; if (!rs || rs.length < 2) continue;
-                var cap = '', p = ts[i];
-                for (var k = 0; k < 4 && p && !cap; k++) { var prev = p.previousElementSibling; while (prev && !cap) { var tx = (prev.textContent || '').trim(); if (tx && tx.length < 80) cap = tx; prev = prev.previousElementSibling; } p = p.parentElement; }
-                for (var r = 0; r < rs.length; r++) {
-                  var cs = [];
-                  for (var c = 0; c < rs[r].cells.length; c++) { var cell = rs[r].cells[c]; cs.push((cell.textContent || '').replace(/\s+/g, ' ').trim() + (cell.colSpan > 1 ? '{c' + cell.colSpan + '}' : '') + (cell.rowSpan > 1 ? '{r' + cell.rowSpan + '}' : '')); }
-                  out.push([i, cap.slice(0, 60), r, cs.join(' | ')]);
-                }
-              }
-              return JSON.stringify(out);"""
-            main_win = driver.current_window_handle
-            try:
-                driver.switch_to.default_content()
-                driver.switch_to.new_window('tab')          # 속보는 새 탭에서(같은 창에서 열면 MES 메인 메뉴가 안 돌아와 뒤 화면들이 실패함)
-                driver.get(SALES_RPT_URL)
-                time.sleep(12)
-                rows_ = []
-                for fr in [None] + driver.find_elements(By.TAG_NAME, 'iframe'):          # 표가 iframe 안에 있을 수도
-                    try:
-                        driver.switch_to.default_content()
-                        if fr is not None:
-                            driver.switch_to.frame(fr)
-                        rows_ += json.loads(driver.execute_script(TABLES_JS))
-                    except Exception:
-                        pass
-                driver.switch_to.default_content()
-                save({'columns': ['표', '제목', '행', '칸'], 'rows': rows_} if rows_ else None, 'snap_salesrpt', xdir)
-            except Exception as e:
-                print(f'  ⚠ 판매생산속보: 실패 — 건너뜀 ({str(e).splitlines()[0][:160] if str(e) else type(e).__name__})')
-            finally:
-                try:
-                    if driver.current_window_handle != main_win:
-                        driver.close()                      # 속보 탭 닫고 MES 메인 창으로
-                except Exception:
-                    pass
-                try:
-                    driver.switch_to.window(main_win)
-                    driver.switch_to.default_content()
-                except Exception:
-                    driver.get(mes_url)
-                    time.sleep(6)
         # ⑤ 재고현황 [SMKTF1030] — 조회기준 '기준월', 월별로 조회해 합침(사용자 안내 2026-10-02)
         if not a.no_extra:
             MONTH_JS = r"""
@@ -1014,6 +967,53 @@ def main():
                         print(f'  ⚠ {name}: 실패 — 건너뜀 ({str(e).splitlines()[0][:120]})')
             except Exception as e:
                 print(f'  ⚠ 일별 재고 원자료: 실패 — 건너뜀 ({str(e).splitlines()[0][:160] if str(e) else type(e).__name__})')
+        # ⑧ 판매생산속보(실시간 재고·생산·판매 요약표) — 맨 마지막에(이 페이지를 연 뒤로는 MES 메인 메뉴가 안 돌아와 뒤 화면들이 실패했음, 2026-10-07)
+        if not a.no_extra:
+            print('▶ snap_salesrpt (판매생산속보, 분석용)')
+            TABLES_JS = r"""
+              var out = [], ts = document.querySelectorAll('table');
+              for (var i = 0; i < ts.length; i++) {
+                var rs = ts[i].rows; if (!rs || rs.length < 2) continue;
+                var cap = '', p = ts[i];
+                for (var k = 0; k < 4 && p && !cap; k++) { var prev = p.previousElementSibling; while (prev && !cap) { var tx = (prev.textContent || '').trim(); if (tx && tx.length < 80) cap = tx; prev = prev.previousElementSibling; } p = p.parentElement; }
+                for (var r = 0; r < rs.length; r++) {
+                  var cs = [];
+                  for (var c = 0; c < rs[r].cells.length; c++) { var cell = rs[r].cells[c]; cs.push((cell.textContent || '').replace(/\s+/g, ' ').trim() + (cell.colSpan > 1 ? '{c' + cell.colSpan + '}' : '') + (cell.rowSpan > 1 ? '{r' + cell.rowSpan + '}' : '')); }
+                  out.push([i, cap.slice(0, 60), r, cs.join(' | ')]);
+                }
+              }
+              return JSON.stringify(out);"""
+            main_win = driver.current_window_handle
+            try:
+                driver.switch_to.default_content()
+                driver.switch_to.new_window('tab')          # 속보는 새 탭에서(같은 창에서 열면 MES 메인 메뉴가 안 돌아와 뒤 화면들이 실패함)
+                driver.get(SALES_RPT_URL)
+                time.sleep(12)
+                rows_ = []
+                for fr in [None] + driver.find_elements(By.TAG_NAME, 'iframe'):          # 표가 iframe 안에 있을 수도
+                    try:
+                        driver.switch_to.default_content()
+                        if fr is not None:
+                            driver.switch_to.frame(fr)
+                        rows_ += json.loads(driver.execute_script(TABLES_JS))
+                    except Exception:
+                        pass
+                driver.switch_to.default_content()
+                save({'columns': ['표', '제목', '행', '칸'], 'rows': rows_} if rows_ else None, 'snap_salesrpt', xdir)
+            except Exception as e:
+                print(f'  ⚠ 판매생산속보: 실패 — 건너뜀 ({str(e).splitlines()[0][:160] if str(e) else type(e).__name__})')
+            finally:
+                try:
+                    if driver.current_window_handle != main_win:
+                        driver.close()                      # 속보 탭 닫고 MES 메인 창으로
+                except Exception:
+                    pass
+                try:
+                    driver.switch_to.window(main_win)
+                    driver.switch_to.default_content()
+                except Exception:
+                    driver.get(mes_url)
+                    time.sleep(6)
     finally:
         driver.quit()
         shutil.rmtree(dl, ignore_errors=True)
