@@ -853,8 +853,10 @@ def main():
                 }
               }
               return JSON.stringify(out);"""
+            main_win = driver.current_window_handle
             try:
                 driver.switch_to.default_content()
+                driver.switch_to.new_window('tab')          # 속보는 새 탭에서(같은 창에서 열면 MES 메인 메뉴가 안 돌아와 뒤 화면들이 실패함)
                 driver.get(SALES_RPT_URL)
                 time.sleep(12)
                 rows_ = []
@@ -872,10 +874,16 @@ def main():
                 print(f'  ⚠ 판매생산속보: 실패 — 건너뜀 ({str(e).splitlines()[0][:160] if str(e) else type(e).__name__})')
             finally:
                 try:
-                    driver.get(mes_url)                     # MES 메인으로 돌아가 다음 화면 작업
-                    time.sleep(6)
+                    if driver.current_window_handle != main_win:
+                        driver.close()                      # 속보 탭 닫고 MES 메인 창으로
                 except Exception:
                     pass
+                try:
+                    driver.switch_to.window(main_win)
+                    driver.switch_to.default_content()
+                except Exception:
+                    driver.get(mes_url)
+                    time.sleep(6)
         # ⑤ 재고현황 [SMKTF1030] — 조회기준 '기준월', 월별로 조회해 합침(사용자 안내 2026-10-02)
         if not a.no_extra:
             MONTH_JS = r"""
