@@ -340,22 +340,6 @@ def main():
                 els = driver.find_elements(By.ID, 'SEARCH_VAL')
                 if els and els[0].is_displayed():
                     break
-        if not getattr(menu_panel, 'reloaded', False):            # 판매생산속보(별도 페이지) 뒤 등 메인 화면이 덜 떴을 때: 메인을 다시 열고 한 번 더
-            menu_panel.reloaded = True
-            try:
-                close_alert()
-            except Exception:
-                pass
-            driver.get(mes_url)
-            for _ in range(30):
-                time.sleep(1)
-                if driver.find_elements(By.ID, 'SEARCH_VAL') or driver.find_elements(By.ID, 'collapseButton'):
-                    break
-            time.sleep(2)
-            try:
-                return menu_panel(diag)
-            finally:
-                menu_panel.reloaded = False
         raise RuntimeError('좌측 메뉴 검색창이 열리지 않음')
 
     def menu(name, exact=False):
@@ -912,7 +896,7 @@ def main():
                     o = read(None) if n else None
                     k = len(o['rows']) if o else 0
                     stock_diag.append([f'result {ym}', f'{k}행' + (f' / 알림: {al[:150]}' if al else '')])
-                    print(f"    기준월 {r2['dates'][0] if r2['dates'] else ym}: {k}행" + (' (자료 없음)' if not k else '') + ('  ⚠ 10,000행 — 잘렸을 수 있음' if k >= 10000 else ''))
+                    print(f"    기준월 {r2['dates'][0] if r2['dates'] else ym}: {k}행" + (' (자료 없음)' if not k else '') + ('  ⚠ 10,000행 — 잘렸을 수 있음' if k == 10000 else ''))
                     if o:
                         o = {'columns': ['_기준월'] + o['columns'], 'rows': [[ym] + r for r in o['rows']]}
                         if merged is None:
@@ -946,9 +930,7 @@ def main():
             r1 = (today - datetime.timedelta(days=1)).strftime('%Y%m%d')
             print(f'▶ 일별 재고 원자료 {r0}~{r1} (판매생산속보 원천, 분석용)')
             try:
-                driver.switch_to.default_content()
-                driver.get(mes_url)
-                time.sleep(6)
+                driver.switch_to.default_content()            # 메인을 다시 열면(driver.get) 좌측 메뉴가 안 돌아옴 → 지금 화면에서 바로 메뉴 사용
                 menu('쿼리')
                 box = frame_with('//*[@id="QUERY_CONTTextArea"]')
                 if box is None:
