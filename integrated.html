@@ -3,15 +3,15 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>주간 실적 보고</title>
-<meta name="description" content="도금·컬러 주간 보고 — 한 장 요약(상태·핵심 수치·조치), 생산·출하 진도, 재고 vs 목표와 추이">
-<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='6' fill='%231f3864'/><polyline points='5,24 12,15 18,19 27,7' fill='none' stroke='%23fff' stroke-width='3'/></svg>">
+<title>4분기 통합 가동계획</title>
+<meta name="description" content="컬러·도금·소재 2026년 4분기 통합 일별 가동계획 — 자가재 기준 두 안(V1 계산값 / V2 자가재계획) 비교, 배정 근거">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='6' fill='%231f3864'/><rect x='6' y='8' width='9' height='5' fill='%23fff'/><rect x='12' y='15' width='14' height='5' fill='%23fff'/><rect x='6' y='22' width='12' height='5' fill='%23fff'/></svg>">
 <style>
 :root {
   color-scheme: light;
   --bg: #f4f5f7; --surface: #ffffff; --surface-2: #f7f7f5; --line: #e3e3df; --grid: #ececea;
   --ink: #0b0b0b; --ink-2: #52514e; --ink-3: #8a8984; --brand: #1f3864;
-  --s1: #2a78d6; --s2: #eb6834; --s3: #1baf7a; --s4: #eda100;
+  --s1: #2a78d6; --s2: #eb6834; --s3: #1baf7a; --s4: #eda100; --s5: #e87ba4; --s6: #008300;
   --up: #1c7c3c; --down: #c0362c; --plan: #8a8984;
   --good: #1c7c3c; --good-bg: #e3f3e8; --warn: #a35c00; --warn-bg: #fdf0d9; --bad: #c0362c; --bad-bg: #fbe4e1;
 }
@@ -20,7 +20,7 @@
     color-scheme: dark;
     --bg: #111110; --surface: #1a1a19; --surface-2: #222220; --line: #33332f; --grid: #2a2a27;
     --ink: #ffffff; --ink-2: #c3c2b7; --ink-3: #8e8d85; --brand: #9fb8e6;
-    --s1: #3987e5; --s2: #d95926; --s3: #199e70; --s4: #c98500;
+    --s1: #3987e5; --s2: #d95926; --s3: #199e70; --s4: #c98500; --s5: #d55181; --s6: #008300;
     --up: #5cc27f; --down: #ff7a6e; --plan: #8e8d85;
     --good: #5cc27f; --good-bg: #17331f; --warn: #f0b04a; --warn-bg: #3a2a12; --bad: #ff7a6e; --bad-bg: #3d1a17;
   }
@@ -29,7 +29,7 @@
   color-scheme: dark;
   --bg: #111110; --surface: #1a1a19; --surface-2: #222220; --line: #33332f; --grid: #2a2a27;
   --ink: #ffffff; --ink-2: #c3c2b7; --ink-3: #8e8d85; --brand: #9fb8e6;
-  --s1: #3987e5; --s2: #d95926; --s3: #199e70; --s4: #c98500;
+  --s1: #3987e5; --s2: #d95926; --s3: #199e70; --s4: #c98500; --s5: #d55181; --s6: #008300;
   --up: #5cc27f; --down: #ff7a6e; --plan: #8e8d85;
   --good: #5cc27f; --good-bg: #17331f; --warn: #f0b04a; --warn-bg: #3a2a12; --bad: #ff7a6e; --bad-bg: #3d1a17;
 }
@@ -142,34 +142,70 @@ footer { color: var(--ink-3); font-size: 12px; padding: 0 0 30px; }
   .wrap { max-width: none; padding: 0; }
 }
 </style>
+<style>
+.seg { display: inline-flex; border: 1px solid rgba(255,255,255,.45); border-radius: 8px; overflow: hidden; }
+.seg button { background: transparent; color: #fff; border: 0; padding: 7px 14px; font: inherit; font-size: 13px; cursor: pointer; }
+.seg button[aria-pressed="true"] { background: #fff; color: #1f3864; font-weight: 700; }
+.tabs { display: inline-flex; gap: 4px; margin: 0 0 10px; }
+.tabs button { border: 1px solid var(--line); background: var(--surface-2); color: var(--ink-2); border-radius: 6px; padding: 4px 12px; font: inherit; font-size: 13px; cursor: pointer; }
+.tabs button[aria-pressed="true"] { background: var(--brand); color: var(--surface); border-color: var(--brand); font-weight: 700; }
+.vs { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+@media (max-width: 700px) { .vs { grid-template-columns: 1fr; } }
+.vcol { border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; background: var(--surface-2); }
+.vcol.on { border: 2px solid var(--brand); }
+.vcol h3 { margin: 0 0 6px; color: var(--ink); font-size: 15px; }
+.vcol ul { margin: 0; padding-left: 18px; } .vcol li { margin: 3px 0; }
+.gantt { overflow-x: auto; padding-bottom: 4px; }
+.grow { display: grid; grid-template-columns: 54px repeat(var(--n), minmax(14px, 1fr)); align-items: end; gap: 0 2px; min-width: calc(54px + var(--n) * 16px); }
+.grow .ln { font-size: 12px; font-weight: 700; color: var(--ink-2); align-self: stretch; display: flex; align-items: center; position: sticky; left: 0; background: var(--surface); z-index: 2; }
+.day { height: 64px; display: flex; flex-direction: column-reverse; cursor: pointer; border-radius: 3px; position: relative; background: var(--surface-2); }
+.day:hover, .day.sel { outline: 2px solid var(--ink); outline-offset: 1px; }
+.day i { display: block; width: 100%; }
+.day i:first-child { border-radius: 0 0 3px 3px; }
+.day.act { opacity: .45; }
+.day .ev { position: absolute; top: -2px; left: 50%; transform: translateX(-50%); font-size: 10px; line-height: 1; color: var(--ink); }
+.day.sd { background: repeating-linear-gradient(45deg, var(--surface-2) 0 3px, var(--line) 3px 6px); }
+.camp { height: 8px; border-radius: 2px; margin-bottom: 2px; }
+.dlab { font-size: 10px; color: var(--ink-3); text-align: center; }
+.dlab.we { color: var(--down); }
+.detail { margin-top: 12px; border-top: 1px solid var(--line); padding-top: 10px; }
+.detail h3 { margin: 0 0 6px; color: var(--ink); }
+table.t td.why, .why { color: var(--ink-2); font-size: 12px; white-space: normal; text-align: left; min-width: 260px; }
+.small { font-size: 12px; color: var(--ink-3); }
+.rule { margin: 0; padding-left: 18px; } .rule li { margin: 4px 0; }
+.rule b { color: var(--ink); }
+.neg { color: var(--bad); font-weight: 700; }
+</style>
 </head>
 <body>
 <header class="top">
   <div class="wrap top-row">
     <div>
-      <h1 id="r-title">도금·컬러 주간 실적 보고</h1>
-      <p class="sub" id="r-sub">포스코스틸리온 도금 1·2CGL · 컬러 1~4CCL</p>
+      <h1>4분기 통합 가동계획</h1>
+      <p class="sub" id="g-sub">컬러 1~4CCL · 도금 1·2CGL · 소재 — 2026년 10~12월</p>
     </div>
-    <div class="top-actions noprint">
-      <button type="button" onclick="window.print()">인쇄 / PDF</button>
-      <a href="integrated.html">통합 계획</a>
-      <a href="analysis.html">분석</a>
+    <div class="top-actions noprint" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+      <div class="seg" role="group" aria-label="자가재 기준">
+        <button type="button" data-v="V1" aria-pressed="true">V1 자가재 계산값</button>
+        <button type="button" data-v="V2" aria-pressed="false">V2 자가재계획 유지</button>
+      </div>
+      <a href="report.html">주간 보고</a>
       <a href="./">대시보드</a>
     </div>
   </div>
 </header>
-<main class="wrap" id="r-main">
-  <section class="card empty" id="r-lock">
-    <h2 style="justify-content:center">주간 보고서 불러오는 중…</h2>
-    <form class="unlock" id="r-form" hidden>
-      <input type="password" id="r-pw" placeholder="분석 암호" autocomplete="current-password" aria-label="분석 암호">
+<main class="wrap" id="g-main">
+  <section class="card empty" id="g-lock">
+    <h2 style="justify-content:center">통합 계획 불러오는 중…</h2>
+    <form class="unlock" id="g-form" hidden>
+      <input type="password" id="g-pw" placeholder="분석 암호" autocomplete="current-password" aria-label="분석 암호">
       <button type="submit">열기</button>
     </form>
-    <p class="hint" id="r-msg"></p>
+    <p class="hint" id="g-msg"></p>
   </section>
 </main>
-<footer class="wrap">주간 실적은 MES 원자료(도금·컬러 코일·휴지, 출하)에서 다시 계산, 월 진도·재고·목표는 MES 판매생산속보, 월말 재고는 재고현황(SMKTF1030). 비교 기준 = 보고 주 직전 12주 평균.</footer>
+<footer class="wrap">계산: tools/master_plan.py(월 물량 LP) → cglplan.color_full(컬러 일별) → cglplan MILP(도금 일별) → tools/integrated_plan.py(자가재·소재). 기초재고 = 9월말 재고현황, 컬러 10/1~5는 실적.</footer>
 <script src="engine/crypto.js"></script>
-<script src="report.js"></script>
+<script src="integrated.js"></script>
 </body>
 </html>
