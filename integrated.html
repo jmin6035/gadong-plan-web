@@ -175,6 +175,34 @@ table.t td.why, .why { color: var(--ink-2); font-size: 12px; white-space: normal
 .rule { margin: 0; padding-left: 18px; } .rule li { margin: 4px 0; }
 .rule b { color: var(--ink); }
 .neg { color: var(--bad); font-weight: 700; }
+
+table.cmp th.rec, table.cmp td.rec { background: var(--good-bg); }
+table.cmp td.best { color: var(--good); font-weight: 700; }
+table.cmp td { text-align: center; }
+table.heat td, table.heat th { text-align: center; padding: 6px 6px; }
+table.heat td.nm, table.calt td.nm { font-weight: 700; white-space: nowrap; }
+.h-ok { background: color-mix(in srgb, var(--good) 14%, transparent); }
+.h-warn { background: var(--warn-bg); color: var(--warn); font-weight: 700; }
+.h-bad { background: var(--bad-bg); color: var(--bad); font-weight: 700; }
+.h-over { background: color-mix(in srgb, var(--ink-3) 22%, transparent); }
+.legend i.box.h-ok, .legend i.box.h-warn, .legend i.box.h-bad, .legend i.box.h-over { border: 1px solid var(--line); }
+tr.sep td { border-top: 2px solid var(--line); }
+table.calt { font-size: 11px; }
+table.calt th, table.calt td { padding: 4px 2px; min-width: 34px; text-align: center; }
+table.calt th.we { color: var(--down); }
+table.calt .stick { position: sticky; left: 0; background: var(--surface); z-index: 2; min-width: 64px; text-align: left; padding-left: 6px; }
+table.calt td.cell { background: color-mix(in srgb, var(--c) 30%, var(--surface)); cursor: pointer; font-variant-numeric: tabular-nums; }
+table.calt td.cell.act { background: var(--surface-2); color: var(--ink-3); }
+table.calt td.mc { box-shadow: inset 0 0 0 2px var(--ink); }
+table.calt td.off { color: var(--ink-3); cursor: pointer; }
+table.calt td.sd { background: repeating-linear-gradient(45deg, var(--surface-2) 0 3px, var(--line) 3px 6px); color: var(--ink-2); }
+table.calt td.camp { background: color-mix(in srgb, var(--c) 55%, var(--surface)); color: var(--ink); font-weight: 700; font-size: 11px; border-left: 2px solid var(--surface); }
+table.calt td.sum { font-weight: 700; }
+table.calt td.selc { outline: 2px solid var(--ink); outline-offset: -2px; }
+table.rules td.wrap, table.sum td.wrap { white-space: normal; }
+.flow { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin: 0 0 12px; font-size: 13px; }
+.flow span { border: 1px solid var(--line); background: var(--surface-2); border-radius: 6px; padding: 5px 9px; }
+.flow i { color: var(--ink-3); font-style: normal; }
 </style>
 </head>
 <body>
@@ -186,8 +214,7 @@ table.t td.why, .why { color: var(--ink-2); font-size: 12px; white-space: normal
     </div>
     <div class="top-actions noprint" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
       <div class="seg" role="group" aria-label="자가재 기준">
-        <button type="button" data-v="V1" aria-pressed="true">V1 자가재 계산값</button>
-        <button type="button" data-v="V2" aria-pressed="false">V2 자가재계획 유지</button>
+
       </div>
       <a href="report.html">주간 보고</a>
       <a href="./">대시보드</a>
