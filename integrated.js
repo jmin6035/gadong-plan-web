@@ -210,25 +210,50 @@
     return { html: card('s-rule', '④', '일별 배치 기준', '', `<div class="scroll"><table class="t rules"><thead><tr><th>구분</th><th>단계</th><th>기준</th></tr></thead><tbody>${R.map((r) => `<tr><td class="l nm">${r[0]}</td><td class="l">${r[1]}</td><td class="l wrap">${r[2]}</td></tr>`).join('')}</tbody></table></div>`) };
   }
 
-  // ---------- ⑤ 주간 재계획 ----------
+  // ---------- ⑤ 매일 감시·재계획 ----------
   function secRoll() {
-    const flow = ['월 07:40 MES 자동 수집', '실적 반영(코일·출하)', '지금 재고 재추정', '도금 재계획(앞 3일 고정)', '컬러 재편성(속보 기준일~)', '게시 + 변경 기록'];
-    const fl = `<div class="flow">${flow.map((s, i) => `<span>${i + 1}. ${s}</span>`).join('<i>→</i>')}</div>`;
-    const rs = (O.rolls || []).filter((r) => r.variant === V || true);
-    if (!rs.length) return { html: card('s-roll', '⑤', '주간 재계획', '', fl + '<p class="small">아직 기록 없음</p>') };
-    const r = rs[rs.length - 1];
-    const gap = r.actualT - r.planToDateT;
-    const st = Object.entries(r.stock).filter(([g]) => g !== 'C수요').map(([g, v]) => `<tr><td class="l">${esc(GN[g] || (g === 'G자가재' ? '도금 자가재' : g))}</td><td>${n0(v.begin)}</td><td>+${n0(v.prod)}</td><td>−${n0(v.ship)}</td><td><b>${n0(v.now)}</b></td><td>${v.plan == null ? '-' : n0(v.plan)}</td><td class="${v.plan != null && Math.abs(v.now - v.plan) > 0.1 * Math.max(1, v.plan) ? 'neg' : ''}">${v.plan == null ? '-' : (v.now - v.plan > 0 ? '+' : '') + n0(v.now - v.plan)}</td></tr>`).join('');
-    const lm = Object.entries(r.lineMonth).filter(([k, [a, b]]) => Math.abs(b - a) >= 50).map(([k, [a, b]]) => `<tr><td class="l">${k.replace('|', ' ')}월</td><td>${n0(a)}</td><td>${n0(b)}</td><td class="${b - a < 0 ? 'neg' : ''}">${(b - a > 0 ? '+' : '') + n0(b - a)}</td></tr>`).join('');
-    const dept = r.byDept.map((x) => `<tr><td class="l">${esc(x[0])}</td><td>${n0(x[1])}</td><td>${n0(x[2])}</td><td class="${x[2] - x[1] < -50 ? 'neg' : ''}">${(x[2] - x[1] > 0 ? '+' : '') + n0(x[2] - x[1])}</td></tr>`).join('');
-    const warn = r.optimal === false ? `<div class="issue"><b>시험 실행 결과 해석 주의</b> — 기준 계획(${esc(r.variant)})은 10/1부터 새로 짠 안이라, 실제 10/1~5 가동(1CGL 이미 AZ, 자가재 ${n0(r.byDept.find((x) => x[0] === '자가재')[2])}t)과 출발점이 달라 재계획이 시간 제한(10분) 안에 최적을 못 찾음(남은 기간 M/C ${r.mcLeft}회, 지연 ${n0(r.late)}톤·일). 실제 운영 첫 주에는 '지금 강종·실적'에서 출발하는 계획을 기준으로 다시 깔고, 그 뒤 매주 차이만 반영.</div>` : '';
-    return { html: card('s-roll', '⑤', '주간 재계획 — 이번 주 무엇이 바뀌었나', `${r.variant} · 기준일 ${r.asOf}`, fl + warn + `
-      <div class="kpis"><div class="kpi"><div class="l">도금 실적 vs 계획 (10/1~${md(r.asOf)})</div><div class="v">${n0(r.actualT)}<small>t</small></div><div class="b">계획 ${n0(r.planToDateT)}t, 차이 <b class="${gap < 0 ? 'neg' : ''}">${(gap > 0 ? '+' : '') + n0(gap)}t</b></div></div>
-      <div class="kpi"><div class="l">M/C 일정 변경</div><div class="v">−${r.mcRemoved.length} / +${r.mcAdded.length}</div><div class="b">${esc(r.mcRemoved.concat(r.mcAdded).slice(0, 3).join(', ')) || '변경 없음'}</div></div>
-      <div class="kpi"><div class="l">강종 고정</div><div class="v">~${md(r.freezeUntil || r.asOf)}</div><div class="b">앞 3일은 바꾸지 않음</div></div></div>
-      <div class="grid2"><div><h3>지금 재고 추정 (t)</h3><div class="scroll"><table class="t"><thead><tr><th>그룹</th><th>9월말</th><th>생산</th><th>출하</th><th>지금</th><th>계획상</th><th>차이</th></tr></thead><tbody>${st}</tbody></table></div><p class="small">출하 실적 ~${md(r.lastShip)}. 매주 이 차이를 다음 계획의 출발점으로 씀.</p></div>
-      <div><h3>구분별 실적 vs 계획 (t)</h3><table class="t"><thead><tr><th>구분</th><th>계획</th><th>실적</th><th>차이</th></tr></thead><tbody>${dept}</tbody></table>
-      <h3>남은 기간 라인·월 생산 변화 (t)</h3>${lm ? `<table class="t"><thead><tr><th>라인·월</th><th>이전</th><th>재계획</th><th>차이</th></tr></thead><tbody>${lm}</tbody></table>` : '<p class="small">변화 50t 미만</p>'}</div></div>`) };
+    const rs = (O.rolls || []).slice().sort((a, b) => (a.asOf < b.asOf ? -1 : 1));
+    const fl = `<div class="flow">${['매일 아침 MES 실적·출하 자동 수집', '계획 대비 점검(밀린 양·강종·재고)', '기준 넘으면 → 즉시 재계획(앞 2일 고정)', '아니면 → 월요일 정기 재계획', '월초 → 월 물량(LP) 재설정'].map((x, i) => `<span>${i + 1}. ${x}</span>`).join('<i>→</i>')}</div>`;
+    // 매일 기록: 그날 계획(전날 재계획 기준) vs 실적
+    let daily = '';
+    if (rs.length) {
+      const row = (r) => {
+        const v = r.vsPlan.filter((x) => x[0] === r.asOf);
+        const cell = (l) => { const x = v.find((z) => z[1] === l) || [0, 0, 0, 0]; const g = x[3] - x[2]; return `<td>${n0(x[2])}</td><td>${n0(x[3])}</td><td class="${Math.abs(g) > 0.25 * Math.max(1, x[2]) ? 'neg' : ''}">${(g > 0 ? '+' : '') + n0(g)}</td>`; };
+        return `<tr><td class="l">${md(r.asOf)}</td>${cell('1CGL')}${cell('2CGL')}<td>${n0(r.actualT)} / ${n0(r.planToDateT)}</td><td>−${r.mcRemoved.length} +${r.mcAdded.length}</td><td>${r.mcLeft ?? '-'}</td><td>${n0(r.late)}</td><td>${r.optimal === false ? '<span class="st warn">시간 제한</span>' : '<span class="st good">최적</span>'}</td></tr>`;
+      };
+      daily = `<h3>매일 재계획 기록 — 그날 계획(전날 재계획) vs 실적, 도금 (t)</h3><div class="scroll"><table class="t"><thead><tr><th rowspan="2">날짜</th><th colspan="3">1CGL</th><th colspan="3">2CGL</th><th rowspan="2">누계 실적 / 계획</th><th rowspan="2">M/C 변경</th><th rowspan="2">남은 M/C</th><th rowspan="2">지연(t·일)</th><th rowspan="2">풀이</th></tr><tr><th>계획</th><th>실적</th><th>차이</th><th>계획</th><th>실적</th><th>차이</th></tr></thead><tbody>${rs.map(row).join('')}</tbody></table></div>
+        ${(() => { const dif = (l) => rs.map((r) => { const x = r.vsPlan.find((z) => z[0] === r.asOf && z[1] === l); return x ? x[3] - x[2] : 0; }); const a = dif('1CGL'), b = dif('2CGL'); const same = (v) => v.every((x) => x > 0) || v.every((x) => x < 0); return same(a) || same(b) ? `<div class="issue"><b>매일 같은 방향으로 어긋남</b> — 1CGL 은 ${a.every((x) => x > 0) ? '매일 계획보다 많이' : '들쭉날쭉'}(평균 ${a.reduce((s, x) => s + x, 0) / a.length > 0 ? '+' : ''}${n0(a.reduce((s, x) => s + x, 0) / a.length)}t), 2CGL 은 ${b.every((x) => x < 0) ? '거의 매일 적게' : '들쭉날쭉'}(평균 ${n0(b.reduce((s, x) => s + x, 0) / b.length)}t). 우연한 흔들림이 아니라 계획 기준(라인 속도·강종 순서)이 현장과 다르다는 신호 → 재계획을 자주 하는 것으로는 안 고쳐지고, 속도 파라미터를 실적으로 보정해야 함(분석 화면의 '반영권장' 후보).</div>` : ''; })()}
+        <p class="small">10/1 계획은 10/1부터 새로 짠 ${esc(rs[0].variant)}. 실제 현장은 1CGL을 이미 AZ로 돌리고 있어(계획은 10/7 전환) 첫날 차이가 큼 → 매일 재계획이 실제 강종에서 다시 출발.</p>`;
+      const r = rs[rs.length - 1];
+      const st = Object.entries(r.stock).filter(([g]) => g !== 'C수요').map(([g, v]) => `<tr><td class="l">${esc(GN[g] || (g === 'G자가재' ? '도금 자가재' : g))}</td><td>${n0(v.begin)}</td><td>+${n0(v.prod)}</td><td>−${n0(v.ship)}</td><td><b>${n0(v.now)}</b></td><td>${v.plan == null ? '-' : n0(v.plan)}</td><td class="${v.plan != null && Math.abs(v.now - v.plan) > 0.1 * Math.max(1, v.plan) ? 'neg' : ''}">${v.plan == null ? '-' : (v.now - v.plan > 0 ? '+' : '') + n0(v.now - v.plan)}</td></tr>`).join('');
+      daily += `<h3>지금 재고 추정 (${md(r.asOf)} 말, t)</h3><div class="scroll"><table class="t"><thead><tr><th>그룹</th><th>9월말</th><th>생산</th><th>출하</th><th>지금</th><th>계획상</th><th>차이</th></tr></thead><tbody>${st}</tbody></table></div>`;
+    }
+    // 재계획 주기 비교(시뮬레이션)
+    let sim = '';
+    if (O.sim) {
+      const P = ['fixed', 'daily', 'weekly', 'event'], PN = { fixed: '고정(안 바꿈)', daily: '매일 재계획', weekly: '주 1회(월)', event: '매일 감시 + 기준 시' };
+      const rowsS = Object.entries(O.sim.lines).map(([l, x]) => {
+        const lates = P.map((p) => x.pol[p].late), best = Math.min(...lates.slice(1));
+        return `<tr><td class="l nm">${l}</td><td>${n1(x.cv * 100)}%</td>${P.map((p) => `<td class="${x.pol[p].late === best ? 'best' : ''}">${n0(x.pol[p].late)}</td>`).join('')}${['daily', 'weekly', 'event'].map((p) => `<td class="muted">${n0(x.pol[p].nerv)} · ${n0(x.pol[p].nre)}회</td>`).join('')}</tr>`;
+      }).join('');
+      sim = `<h3>재계획 주기 비교 — 13주 실적의 흔들림으로 4분기를 ${O.sim.n}번 모의 운영</h3><div class="scroll"><table class="t cmp"><thead><tr><th rowspan="2">라인</th><th rowspan="2">일 생산 흔들림</th><th colspan="4">납기 지연 (t·일, 작을수록 좋음)</th><th colspan="3">앞 7일 계획 흔들림 (t) · 재계획 횟수</th></tr><tr>${P.map((p) => `<th>${PN[p]}</th>`).join('')}<th>매일</th><th>주 1회</th><th>기준 시</th></tr></thead><tbody>${rowsS}</tbody></table></div>
+        <p class="small">'기준 시' = 밀린 양이 하루 생산을 넘으면 그날 재계획, 아니면 월요일. 흔들림 = 재계획 때마다 앞 7일 계획이 바뀐 톤의 합(현장 혼란). 3CCL 은 월차 한도가 꽉 차 여유가 없어 어떤 주기로도 못 따라잡음(월차 조정 필요).</p>`;
+    }
+    const verdict = `<table class="t sum"><thead><tr><th>공장</th><th>권장</th><th>근거</th></tr></thead><tbody>
+      <tr><td class="nm l">도금</td><td class="l"><b>매일 감시, 재계획은 주 1회 + 기준 시</b></td><td class="l wrap">일 생산 흔들림 20~27%로 작음. 주 1회 재계획이 매일 재계획과 지연이 같거나 더 적고(1CGL 76 vs 129 t·일), 계획 흔들림은 절반. 매일 바꾸면 우연한 흔들림까지 쫓아가 오히려 손해</td></tr>
+      <tr><td class="nm l">컬러</td><td class="l"><b>매일 감시 + 밀린 양 ½~1일분 넘으면 그날 재계획</b>(주 2회꼴)</td><td class="l wrap">흔들림 28~55%로 큼. 주 1회면 지연이 매일의 2배(1CCL 625 vs 323), 기준 시 재계획은 지연을 크게 줄이면서 흔들림은 매일의 절반</td></tr>
+      <tr><td class="nm l">월 물량</td><td class="l"><b>월 1회</b>(월말 재고 확정 후) + 재고가 목표 70% 미만·150% 초과면 월중 1회</td><td class="l wrap">판매·재고 변화는 주 단위로 느리게 움직임</td></tr></tbody></table>`;
+    const play = [
+      ['설비 정지·속도 저하', '밀린 양 > 하루 생산(도금 약 800t, 컬러 라인별 1일분) 또는 정지 ½일 이상', '그날 재계획: 동결 2일 뒤 여유일에 다시 넣고, 모자라면 납기 늦은 품목부터 미룸'],
+      ['현장 강종·순서 변경', '실제 강종 ≠ 계획 강종(10/1 1CGL AZ 사례)', '그날 재계획: 실제 강종에서 출발해 캠페인 다시 정함'],
+      ['선적·주문 변경', '배선 일정·긴급 주문이 3일 안 납기에 걸림', '그날 재계획, 그 밖은 월요일'],
+      ['재고 이탈', '그룹 재고 < 목표 70% 또는 > 150%', '월 물량 LP 다시(그 그룹 보충·감산)'],
+      ['소재 입고 지연', 'FH·컬러 소재 재고 < 7일분', '강종 순서 교환(입고된 소재 먼저), 구매에 입고 독촉'],
+      ['컬러 월차 진도', '라인 누계 진도 ±5% 이상', '2CCL 가동일 조정·라인 간 품목 이동'],
+    ];
+    const pl = `<h3>계획대로 안 될 때 — 감지 기준과 대응</h3><div class="scroll"><table class="t rules"><thead><tr><th>상황</th><th>감지 기준(매일 자동 점검)</th><th>대응</th></tr></thead><tbody>${play.map((r) => `<tr><td class="l nm">${r[0]}</td><td class="l wrap">${r[1]}</td><td class="l wrap">${r[2]}</td></tr>`).join('')}</tbody></table></div>`;
+    return { html: card('s-roll', '⑤', '매일 감시 · 재계획', rs.length ? `기준일 ${rs[rs.length - 1].asOf}` : '', fl + verdict + daily + sim + pl) };
   }
 
   // ---------- ⑥ 더 필요한 데이터 ----------
