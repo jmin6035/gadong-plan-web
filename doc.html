@@ -27,4 +27,5 @@ body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.6 "Malgun Gothic
   fetch('published/docs/'+name+'.enc.json',{cache:'no-store'}).then(r=>{if(!r.ok)throw 0;return r.json()}).then(e=>{env=e;let s=null;try{s=localStorage.getItem(KEY)}catch(x){} if(s)open(s)})
    .catch(()=>{document.getElementById('msg').textContent='자료를 찾을 수 없습니다'});
 })();
-</script></body></html>
+</script><script src="ui/home.js"></script>
+</body></html>
