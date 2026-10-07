@@ -51,6 +51,15 @@
 .tile span { font-size: 13px; color: var(--ink-2); line-height: 1.5; }
 .tile .new { display: inline-block; font-size: 10px; font-weight: 700; color: var(--brand-2); border: 1px solid var(--brand-2); border-radius: 4px; padding: 0 4px; margin-left: 6px; vertical-align: 1px; }
 #h-lock .unlock { margin-top: 6px; }
+.tile .only { position: absolute; right: 36px; top: 14px; font-size: 10.5px; font-weight: 700; color: var(--ink-3); border: 1px solid var(--line); border-radius: 4px; padding: 0 5px; }
+:root[data-scope="C"] .tile[data-only="G"] { filter: grayscale(1) opacity(.5); }
+.crow { display: grid; grid-template-columns: 54px repeat(4, 1fr); gap: 8px; align-items: center; font-size: 14px; margin: 8px 0; }
+.crow .m { font-weight: 700; color: var(--ink-2); }
+.cl { position: relative; height: 30px; border-radius: 6px; background: var(--grid); overflow: hidden; }
+.cl i { position: absolute; left: 0; top: 0; bottom: 0; background: var(--c2); transform-origin: left; animation: grow .9s var(--ease) both; animation-delay: calc(.1s + var(--i,0) * 60ms); }
+.cl i.short { background: var(--warn); }
+.cl span { position: absolute; inset: 0; display: grid; place-items: center; font-size: 12.5px; font-weight: 700; color: var(--ink); text-shadow: 0 0 3px var(--surface); }
+.crow.hd { font-size: 13px; color: var(--ink-3); font-weight: 700; margin-bottom: 0; } .crow.hd span { text-align: center; }
 #h-due table.t td.l { white-space: normal; }
 #h-due table.t { font-size: 14px; }
 </style>
@@ -73,7 +82,7 @@
   </section>
 
   <div class="grid2" id="h-detail" hidden>
-    <section class="card" id="h-load"></section>
+    <div><section class="card" id="h-load" data-pl="G"></section><section class="card" id="h-color" data-pl="C"></section><section class="card" id="h-rec"></section></div>
     <section class="card" id="h-due"></section>
   </div>
 

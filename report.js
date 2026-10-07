@@ -130,20 +130,23 @@
   const box = (id, title, sub) => `<div class="chart" id="${id}"><p class="ttl">${esc(title)}${sub ? ` <span class="muted">${esc(sub)}</span>` : ''}</p><div class="cv"></div></div>`;
   const draw = (id, f) => { const el = $(id); if (el) f(el.querySelector('.cv')); };
   const more = (title, body) => `<details class="more"><summary>${esc(title)}</summary><div class="more-b">${body}</div></details>`;
-  function section(num, title, sm, body) {
-    return `<section class="card"><h2><span class="n">${num}</span>${esc(title)} ${chip(sm && sm.status)}</h2>` +
+  function section(num, title, sm, body, pl) {
+    return `<section class="card"${pl ? ` data-pl="${pl}"` : ''}><h2><span class="n">${num}</span>${esc(title)} ${chip(sm && sm.status)}</h2>` +
       (sm && sm.msg ? `<p class="lead">${esc(sm.msg)}</p>` : '') + body + '</section>';
   }
 
+  const plN = (nm) => (/컬러/.test(nm) ? 'C' : /도금/.test(nm) ? 'G' : 'GC');
+  let lastO = null;
   function render(o) {
+    lastO = o;
     const P = o.period, N = o.notes || {}, S = o.sections;
     const M = S.month, ST_ = S.stock, pl = S.plating, pa = S.plan, co = S.color, sh = S.ship;
     const w1 = `${md(P.w1[0])}~${md(P.w1[1])}`;
     const asOf = (M && M.asOf) || (ST_ && ST_.asOf);
     const asOfS = asOf ? md(asOf) : md(P.to);
-    $('r-title').textContent = `도금·컬러 주간 보고 — ${o.title || w1}`;
+    const h1 = document.querySelector('.shell-head h1'); if (h1) h1.textContent = `주간 실적 보고 — ${o.title || w1}`;
     document.title = `주간 보고 ${o.title || w1}`;
-    $('r-sub').textContent = `주간 실적 ${w1} · 월 진도·재고 ${asOfS} 기준 · 작성 ${new Date(o.createdAt).toLocaleDateString('ko-KR', { timeZone: 'Asia/Seoul' })}`;
+    UI.sub(`주간 실적 ${w1} · 월 진도·재고 ${asOfS} 기준 · 작성 ${new Date(o.createdAt).toLocaleDateString('ko-KR', { timeZone: 'Asia/Seoul' })}`);
     const sm = {}; (N.summary || []).forEach((x) => { sm[x.area] = x; });
     const prod = (name) => M && M.prod.find((x) => x.line === name);
     const shipT = M && M.ship.find((x) => x.name === '합계');
@@ -167,7 +170,7 @@
     let t = '<div class="scroll"><table class="t sum"><thead><tr><th>구분</th><th>상태</th><th>핵심 수치</th><th>판단</th><th>조치</th></tr></thead><tbody>';
     ['plating', 'color', 'ship', 'stock'].forEach((a) => {
       const k = K[a], s = sm[a] || {};
-      t += `<tr><td class="l nm">${k.name} <span class="m-chip">${chip(s.status || k.st)}</span></td><td class="c d-chip">${chip(s.status || k.st) || '-'}</td><td class="l key">${k.key.filter(Boolean).join('<br>')}</td><td class="l wrap" data-l="판단">${esc(s.msg || '')}</td><td class="l wrap" data-l="조치">${esc(s.action || '')}</td></tr>`;
+      t += `<tr${a === 'plating' ? ' data-pl="G"' : a === 'color' ? ' data-pl="C"' : ''}><td class="l nm">${k.name} <span class="m-chip">${chip(s.status || k.st)}</span></td><td class="c d-chip">${chip(s.status || k.st) || '-'}</td><td class="l key">${k.key.filter(Boolean).join('<br>')}</td><td class="l wrap" data-l="판단">${esc(s.msg || '')}</td><td class="l wrap" data-l="조치">${esc(s.action || '')}</td></tr>`;
     });
     t += '</tbody></table></div>';
     if (N.decisions && N.decisions.length) t += `<div class="decide"><h3>결정이 필요한 사항</h3><ol>${N.decisions.map((x) => `<li>${esc(x)}</li>`).join('')}</ol></div>`;
@@ -195,7 +198,7 @@
       [['강종전환 손실 (분/회)', 'mc'], ['설비정지 (분/일)', 'equipDown'], ['비강종 더미 (분/일)', 'dummy']].map(([nm, k]) =>
         `<tr><td class="l">${nm}</td>` + Object.keys(pr).map((l) => `<td>${n1(pr[l].cur && pr[l].cur[k])}</td><td><b>${n1(pr[l][k])}</b></td>`).join('') + '</tr>').join('') + '</tbody></table></div>';
     b += notes(N.plating) + more('상세 — 라인별 실적·강종전환 일정·부서별·계획 조건', d);
-    h += section('1', '도금 생산 (1·2CGL)', sm.plating || { status: K.plating.st }, b);
+    h += section('1', '도금 생산 (1·2CGL)', sm.plating || { status: K.plating.st }, b, 'G');
 
     // ③ 컬러
     if (co) {
@@ -208,7 +211,7 @@
       d += '<div class="grid2" style="margin-top:12px">' + box('c-co-stop', '주별 휴지 구성 (4라인 합)', '시간/일') + '<div><p class="ttl">휴지 구성 (4라인 합, 시간/일)</p><div class="scroll"><table class="t"><thead><tr><th>구분</th><th>12주 평균</th><th>보고 주</th><th>증감</th></tr></thead><tbody>' +
         co.stops.map((s, k) => `<tr><td class="l"><span class="sw" style="background:var(${SER[k]})"></span>${esc(s.cat)}</td><td>${n1(s.w0)}</td><td><b>${n1(s.w1)}</b></td><td>${delta(pct(s.w1, s.w0), false)}</td></tr>`).join('') + '</tbody></table></div></div></div>';
       b += notes(N.color) + more('상세 — 라인별 실적·휴지 구성', d);
-      h += section('2', '컬러 생산 (1~4CCL)', sm.color || { status: K.color.st }, b);
+      h += section('2', '컬러 생산 (1~4CCL)', sm.color || { status: K.color.st }, b, 'C');
     }
 
     // ④ 출하
@@ -232,17 +235,17 @@
       b = '';
       if (ST_.now) {
         b += `<p class="ttl">현재 재고 vs 목표 <span class="muted">판매생산속보 ${asOfS} 기준</span></p>` +
-          bullets(ST_.now.map((x) => ({ name: x.name, v: x.current, ref: x.target })), { mode: 'stock' }) +
+          bullets(ST_.now.filter((x) => UI.inScope(plN(x.name))).map((x) => ({ name: x.name, v: x.current, ref: x.target })), { mode: 'stock' }) +
           '<p class="hint">막대 = 현재 재고 · 세로선 = 목표 재고 · 빨강 = 목표의 130% 초과, 주황 = 110% 초과 또는 80% 미만</p>';
         if (ST_.longTerm) b += `<p class="hint">장기재고(3개월 이상) <b>${n0(ST_.longTerm.total)}</b>t — 컬러 ${n0(ST_.longTerm['컬러'])}t · 도금 ${n0(ST_.longTerm['도금'])}t (전월 대비 제품 ${sgn(ST_.longTerm.momProduct)}t)</p>`;
       }
       if (ST_.monthly && ST_.monthly.length) {
         b += '<p class="ttl" style="margin-top:14px">재고 추이 <span class="muted">월말 재고 + 현재, 점선 = 목표</span></p><div class="minis">' +
-          ['컬러 제품', '도금 소재(F/H)', '컬러 소재', '도금 제품'].map((nm, i) => box('c-stk-' + i, nm, '')).join('') + '</div>';
+          ['컬러 제품', '도금 소재(F/H)', '컬러 소재', '도금 제품'].map((nm, i) => box('c-stk-' + i, nm, '').replace('<div class="chart"', `<div class="chart" data-pl="${plN(nm)}"`)).join('') + '</div>';
       }
       if (ST_.now) {
         d = '<div class="scroll"><table class="t"><thead><tr><th>구분</th><th>세부</th><th>목표 t</th><th>현재 t</th><th>차이 t</th></tr></thead><tbody>' +
-          ST_.now.map((x) => [`<tr><td class="l"><b>${esc(x.name)}</b></td><td class="l">계</td><td>${n0(x.target)}</td><td><b>${n0(x.current)}</b></td><td>${sgn(x.diff)}</td></tr>`]
+          ST_.now.filter((x) => UI.inScope(plN(x.name))).map((x) => [`<tr><td class="l"><b>${esc(x.name)}</b></td><td class="l">계</td><td>${n0(x.target)}</td><td><b>${n0(x.current)}</b></td><td>${sgn(x.diff)}</td></tr>`]
             .concat((x.sub || []).map((s) => `<tr><td></td><td class="l">${esc(s.name)}</td><td>${n0(s.target)}</td><td>${n0(s.current)}</td><td>${sgn(s.diff)}</td></tr>`)).join('')).join('') + '</tbody></table></div>';
         b += notes(N.stock) + more('상세 — 강종·부서별 재고', d);
       } else b += notes(N.stock);
@@ -251,6 +254,7 @@
 
     if (N.ops && N.ops.length) h += `<section class="card ops"><h2><span class="n">참고</span>운영 메모</h2>${notes(N.ops)}</section>`;
     $('r-main').innerHTML = h;
+    UI.reveal($('r-main'));
 
     // ---------- 그래프 ----------
     const wl = (arr) => arr.map((x) => md(x.week));
@@ -300,6 +304,7 @@
       if (o.version !== 2) { $('r-msg').innerHTML = '이 보고서는 이전 형식입니다. <a href="analysis.html">분석 화면</a>에서 보세요.'; return; }
       try { localStorage.setItem(PW_KEY, pw); } catch (e) { /* 저장 불가 */ }
       render(o);
+      UI.onScope(() => { const y = scrollY; render(lastO); scrollTo(0, y); });
     } catch (e) { $('r-msg').textContent = '⚠ ' + e.message; try { localStorage.removeItem(PW_KEY); } catch (x) { /* 무시 */ } $('r-form').hidden = false; }
   }
   $('r-form').onsubmit = (ev) => { ev.preventDefault(); open($('r-pw').value); };

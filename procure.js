@@ -90,7 +90,7 @@
   const matSel = (attr, cur) => `<select ${attr} aria-label="소재"><option value="">-</option>${Object.entries(D.matCode).sort((a, b) => (a[1] < b[1] ? -1 : 1)).map(([k, n]) => `<option value="${k}" ${k === cur ? 'selected' : ''}>${esc(n)}</option>`).join('')}</select>`;
 
   function board() {
-    const J = judge(), V0 = J.filter((j) => inPeriod(j) && (plantF === 'all' || j.plant === plantF)), V = V0;
+    const J = judge(), V0 = J.filter((j) => inPeriod(j) && UI.inScope(j.plant)), V = V0;
     const sum = (f) => V.filter(f).reduce((a, j) => a + j.short, 0);
     const cnt = (k) => V.filter((j) => j.kind === k).length;
     const near = J.filter((j) => j.deadline && j.short >= 1 && diff(j.deadline, S.today) >= 0 && diff(j.deadline, S.today) <= 14).sort((a, b) => (a.deadline < b.deadline ? -1 : 1));
@@ -103,7 +103,6 @@
       ${kpiBox(near.length ? 'warn' : 'good', '1순위 발주 시한 2주 안', near.length, '건', near[0] ? `가장 급한 시한 ${esc(codeNm(near[0].code))} ${md(near[0].first)} 필요분 · ${md(near[0].deadline)}` : '-', 'near')}</div>`;
     const ctl = `<div class="bar">
       <div class="tabs">${PERIODS.map(([k, n]) => `<button type="button" data-per="${k}" aria-pressed="${k === period}">${n}</button>`).join('')}</div>
-      <div class="tabs">${[['all', '전체'], ['C', '컬러'], ['G', '도금 FH']].map(([k, n]) => `<button type="button" data-pl="${k}" aria-pressed="${k === plantF}">${n}</button>`).join('')}</div>
       <label class="onlyshort"><input type="checkbox" id="p-only" ${onlyShort ? 'checked' : ''}> 발주 필요만 보기 <span class="muted">(${V.filter((j) => j.short >= 1).length}/${V.length})</span></label>
       <span class="sp"></span>
       <button type="button" class="btn primary" id="p-export">구매 요청서 내보내기(.xlsx)</button></div>`;
@@ -145,7 +144,7 @@
       <div class="bar"><button type="button" class="btn" data-add="arr">+ 줄 추가</button><label class="btn">엑셀 올리기<input type="file" accept=".xlsx" data-up="arr" hidden></label><span class="small">양식: 소재조달_양식_v0.xlsx '입고예정' 시트 (업체 · 소재 · 수량(t) · 입고예정일 · 발주번호 · 메모)</span></div>
       <div class="scroll"><table class="t ed"><thead><tr><th>업체</th><th>소재</th><th>수량(t)</th><th>입고예정일</th><th>발주번호</th><th>메모</th><th></th></tr></thead><tbody>${rows || '<tr><td colspan="7" class="c muted">없음 — 지금 판단은 재고만으로 충당</td></tr>'}</tbody></table></div>
       <h3>현재 재고(구매소재, 자가 제외)</h3><p class="small">${esc(D.stockNote)}</p>
-      <div class="chips">${Object.entries(D.stock).filter(([, t]) => t >= 1).sort((a, b) => b[1] - a[1]).map(([k, t]) => `<span class="chip">${PL[k[0]]} ${esc(codeNm(k.slice(2)))} <b>${n0(t)}t</b></span>`).join('')}</div>`);
+      <div class="chips">${Object.entries(D.stock).filter(([k, t]) => t >= 1 && UI.inScope(k[0])).sort((a, b) => b[1] - a[1]).map(([k, t]) => `<span class="chip">${PL[k[0]]} ${esc(codeNm(k.slice(2)))} <b>${n0(t)}t</b></span>`).join('')}</div>`);
   }
 
   function orders() {
@@ -161,7 +160,7 @@
   }
 
   function suppliers() {
-    const L = S.sup.map((s, i) => ({ s, i })).sort((a, b) => (a.s.plant + a.s.code + String(a.s.prio).padStart(3, '0') < b.s.plant + b.s.code + String(b.s.prio).padStart(3, '0') ? -1 : 1));
+    const L = S.sup.map((s, i) => ({ s, i })).filter(({ s }) => UI.inScope(s.plant)).sort((a, b) => (a.s.plant + a.s.code + String(a.s.prio).padStart(3, '0') < b.s.plant + b.s.code + String(b.s.prio).padStart(3, '0') ? -1 : 1));
     const rows = L.map(({ s, i }) => `<tr data-i="${i}"><td><input type="checkbox" data-s="on" ${s.on ? 'checked' : ''} aria-label="사용"></td><td>${PL[s.plant] || ''}</td><td>${matSel('data-s="code"', s.code)}</td>
       <td class="l"><input data-s="sup" value="${esc(s.sup)}" size="3" aria-label="업체코드"> <input data-s="name" value="${esc(s.name)}" aria-label="업체명"></td>
       <td><input data-s="prio" type="number" min="1" value="${esc(s.prio)}" style="width:52px" aria-label="우선순위"></td><td><input data-s="lt" type="number" min="0" value="${esc(s.lt)}" style="width:60px" aria-label="리드타임"></td>
@@ -232,7 +231,7 @@
   async function exportReq() {
     const J = judge().filter((j) => j.short >= 1);
     let L = J.filter((j) => j.dec.status === '요청');
-    if (!L.length) { L = J.filter((j) => inPeriod(j) && (plantF === 'all' || j.plant === plantF) && j.dec.status !== '보류' && j.dec.status !== '발주됨' && (j.dec.sup || j.rec)); if (!L.length) { alert('내보낼 줄이 없습니다'); return; } }
+    if (!L.length) { L = J.filter((j) => inPeriod(j) && UI.inScope(j.plant) && j.dec.status !== '보류' && j.dec.status !== '발주됨' && (j.dec.sup || j.rec)); if (!L.length) { alert('내보낼 줄이 없습니다'); return; } }
     const wb = new ExcelJS.Workbook(), ws = wb.addWorksheet('구매 요청서');
     ws.addRow([`소재 구매 요청서 — 작성 ${S.today} (상태 '요청' 줄, 없으면 보고 있는 기간 전체)`]).font = { bold: true, size: 13 };
     ws.addRow([]);
@@ -259,7 +258,6 @@
     const t = e.target; let b;
     if ((b = t.closest('[data-tab]'))) { tab = b.dataset.tab; render(); return; }
     if ((b = t.closest('[data-per]'))) { period = b.dataset.per; render(); return; }
-    if ((b = t.closest('[data-pl]'))) { plantF = b.dataset.pl; render(); return; }
     if ((b = t.closest('button.tg'))) { const k = b.closest('tr').dataset.k; open[k] = !open[k]; justOpened = open[k] ? k : null; render(); return; }
     if ((b = t.closest('[data-add]'))) { if (b.dataset.add === 'arr') S.arr.push({ sup: '', code: '', t: '', date: S.today, po: '', memo: '' }); else S.sup.push({ plant: 'C', code: '', sup: '', name: '', prio: 9, lt: 30, on: true, memo: '' }); save(); render(); return; }
     if ((b = t.closest('[data-del]'))) { S[b.dataset.del].splice(+b.dataset.i, 1); save(); render(); return; }
@@ -285,7 +283,7 @@
   let env = null;
   async function unlock(pw) {
     if (pw) { $('p-lockbox').hidden = true; $('p-skel').hidden = false; }
-    try { D = await GP.decryptJSON(env, pw); try { localStorage.setItem(PW_KEY, pw); } catch (e) { /* 무시 */ } S = load(); render(); }
+    try { D = await GP.decryptJSON(env, pw); try { localStorage.setItem(PW_KEY, pw); } catch (e) { /* 무시 */ } S = load(); render(); UI.onScope(() => render()); }
     catch (e) { $('p-lockbox').hidden = false; $('p-skel').hidden = true; $('p-form').hidden = false; $('p-msg').textContent = pw ? '암호가 맞지 않습니다' : ''; }
   }
   $('p-form').addEventListener('submit', (e) => { e.preventDefault(); unlock($('p-pw').value); });

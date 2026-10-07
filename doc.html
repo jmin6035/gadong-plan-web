@@ -1,18 +1,34 @@
 <!doctype html>
 <html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
 <title>회의 자료</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='7' fill='%230b3a75'/><rect x='10' y='10' width='12' height='12' rx='1.5' transform='rotate(45 16 16)' fill='none' stroke='%23fff' stroke-width='2.6'/></svg>">
+<link rel="stylesheet" href="ui/theme.css">
 <style>
-:root{--bg:#f5f7fa;--ink:#18212d;--line:#dfe4eb;--accent:#2f5d8a}
-@media (prefers-color-scheme: dark){:root{--bg:#11161d;--ink:#e8edf3;--line:#2b3542;--accent:#7fb0e0;color-scheme:dark}}
-body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.6 "Malgun Gothic","Apple SD Gothic Neo",system-ui,sans-serif}
-#lock{max-width:420px;margin:80px auto;padding:0 16px;text-align:center}
-#lock input{padding:8px 10px;border:1px solid var(--line);border-radius:6px;min-width:200px;font:inherit}
-#lock button{padding:8px 16px;border:0;border-radius:6px;background:var(--accent);color:#fff;font:inherit;cursor:pointer}
-#msg{color:#b3261e;font-size:13px;margin-top:8px}
-</style></head><body>
-<div id="lock"><h2>회의 자료 — 암호를 입력하세요</h2>
-<form id="f"><input type="password" id="pw" placeholder="분석 암호" aria-label="분석 암호"> <button>열기</button></form><p id="msg"></p></div>
-<div id="doc"></div>
+#doc { margin-top: 14px; }
+#doc .docwrap { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; box-shadow: var(--shadow); overflow: hidden; position: relative; }
+#doc .docwrap::before { content: ""; position: absolute; left: 0; right: 0; top: 0; height: 3px; background: linear-gradient(90deg, var(--brand), var(--brand-2) 55%, var(--brand-3)); z-index: 1; }
+#doc table { font-size: 14px; }
+</style>
+</head><body>
+<header id="shell" data-page="doc" data-crumb="자료" data-title="회의 자료" data-sub=""></header>
+<script>
+  (function () { // 문서 종류 → 메뉴 위치·제목
+    var d = (new URLSearchParams(location.search).get('d') || '');
+    var x = { conditions: ['conditions', '계획 조건식'], procure_guide: ['guide', '조달 판단 사용법'], requests: ['requests', '협조 요청 메일'], tf_review: ['doc', 'TF 계산구조 검토'], strategy: ['doc', '운영 전략'] }[d] || ['doc', '회의 자료'];
+    var h = document.getElementById('shell'); h.dataset.page = x[0]; h.dataset.title = x[1];
+  })();
+</script>
+<main class="wrap">
+  <section class="card lock" id="lock" style="margin-top:16px">
+    <div class="ic" aria-hidden="true">🔒</div>
+    <h2>자료 — 분석 암호를 입력하세요</h2>
+    <form class="unlock" id="f"><input type="password" id="pw" placeholder="분석 암호" aria-label="분석 암호"> <button>열기</button></form>
+    <p class="hint" id="msg"></p>
+  </section>
+  <div id="doc"></div>
+</main>
+<footer class="foot"><div class="wrap"><span>자료는 암호화되어 게시되며 이 브라우저 안에서만 풉니다</span><span>POSCO STEELEON 도금·컬러 가동계획</span></div></footer>
+<script src="ui/shell.js"></script>
 <script src="engine/crypto.js"></script>
 <script>
 (function(){
@@ -20,12 +36,13 @@ body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.6 "Malgun Gothic
   const KEY='cgl-analysis-pw'; let env=null;
   async function open(pw){
     try{const o=await GP.decryptJSON(env,pw);try{localStorage.setItem(KEY,pw)}catch(e){}
-      document.title=o.title||document.title;document.getElementById('lock').hidden=true;document.getElementById('doc').innerHTML=o.html;}
+      document.title=o.title||document.title;document.getElementById('lock').hidden=true;
+      const h1=document.querySelector('.shell-head h1'); if(h1&&o.title) h1.textContent=o.title;
+      document.getElementById('doc').innerHTML='<div class="docwrap rv">'+o.html+'</div>';}
     catch(e){document.getElementById('msg').textContent='암호가 맞지 않습니다';}
   }
   document.getElementById('f').onsubmit=e=>{e.preventDefault();open(document.getElementById('pw').value)};
   fetch('published/docs/'+name+'.enc.json',{cache:'no-store'}).then(r=>{if(!r.ok)throw 0;return r.json()}).then(e=>{env=e;let s=null;try{s=localStorage.getItem(KEY)}catch(x){} if(s)open(s)})
    .catch(()=>{document.getElementById('msg').textContent='자료를 찾을 수 없습니다'});
 })();
-</script><script src="ui/home.js"></script>
-</body></html>
+</script></body></html>

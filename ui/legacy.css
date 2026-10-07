@@ -1,0 +1,73 @@
+/* 예전 페이지 공용 클래스(디자인 개편 전 material/integrated/report 기본 CSS에서 theme.css가 다루지 않는 것만) — theme.css 앞에 불러옴 */
+.headline { margin: 0; padding-left: 18px; }
+.headline li { margin: 4px 0; }
+.delta { font-weight: 700; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.delta.up { color: var(--up); }
+.delta.down { color: var(--down); }
+.delta.flat { color: var(--ink-3); }
+.grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+.grid2 > * { min-width: 0; }
+@media (max-width: 860px) { .grid2 { grid-template-columns: 1fr; } }
+.sw { display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin-right: 6px; vertical-align: -1px; }
+.chart { position: relative; }
+.chart svg { display: block; width: 100%; height: auto; overflow: visible; }
+.chart .ttl { font-size: 13px; color: var(--ink-2); margin: 0 0 4px; }
+.legend { display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: 12px; color: var(--ink-2); margin: 2px 0 6px; }
+.legend span { display: inline-flex; align-items: center; }
+.legend i { display: inline-block; width: 14px; height: 3px; border-radius: 2px; margin-right: 6px; }
+.legend i.dash { background: none !important; border-top: 2px dashed var(--plan); height: 0; }
+.legend i.box { height: 10px; width: 10px; border-radius: 3px; }
+.tip { position: absolute; pointer-events: none; background: var(--surface); color: var(--ink); border: 1px solid var(--line); border-radius: 6px; padding: 6px 9px; font-size: 12px; box-shadow: 0 4px 14px rgba(0,0,0,.12); white-space: nowrap; z-index: 5; display: none; }
+.tip b { font-variant-numeric: tabular-nums; }
+.actions { margin: 0; padding-left: 20px; }
+.actions li { margin: 5px 0; }
+.issue { border-left: 3px solid var(--s2); padding: 6px 10px; background: var(--surface-2); border-radius: 0 6px 6px 0; margin: 6px 0; }
+table.sum td { vertical-align: top; padding: 10px 8px; }
+table.sum td.nm { font-weight: 700; }
+table.sum td.c { text-align: center; }
+table.sum td.key { line-height: 1.7; }
+table.sum td.wrap { white-space: normal; min-width: 200px; line-height: 1.5; }
+.m-chip { display: none; }
+@media (max-width: 640px) {
+  table.sum thead, table.sum td.d-chip { display: none; }
+  table.sum, table.sum tbody, table.sum tr, table.sum td { display: block; width: 100%; }
+  table.sum tr { border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; margin-bottom: 10px; }
+  table.sum td { border: 0 !important; padding: 3px 0; white-space: normal; min-width: 0 !important; }
+  table.sum td[data-l]::before { content: attr(data-l); display: block; font-size: 11px; color: var(--ink-3); margin-top: 4px; }
+  .m-chip { display: inline; margin-left: 4px; }
+}
+.decide { margin-top: 14px; border: 1px solid var(--line); border-left: 4px solid var(--brand); border-radius: 0 8px 8px 0; padding: 10px 14px; background: var(--surface-2); }
+.decide h3 { margin: 0 0 6px; color: var(--ink); font-size: 14px; }
+.decide ol { margin: 0; padding-left: 20px; }
+.decide li { margin: 4px 0; }
+.bul { display: flex; flex-direction: column; gap: 9px; margin: 4px 0 6px; }
+.bul-row { display: grid; grid-template-columns: 112px 1fr auto; gap: 10px; align-items: center; font-size: 13px; }
+.bul-row.total .bul-l { font-weight: 700; }
+.bul-l { color: var(--ink-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.bul-track { position: relative; height: 16px; background: var(--grid); border-radius: 4px; }
+.bul-full { position: absolute; left: 0; top: 0; bottom: 0; background: var(--line); border-radius: 4px; }
+.bul-bar { position: absolute; left: 0; top: 3px; bottom: 3px; border-radius: 3px; background: var(--s1); }
+.bul-bar.warn { background: var(--warn); }
+.bul-bar.bad { background: var(--bad); }
+.bul-bar.na { background: var(--ink-3); }
+.bul-ref { position: absolute; top: -3px; bottom: -3px; width: 2px; margin-left: -1px; background: var(--ink); }
+.bul-r { white-space: nowrap; font-variant-numeric: tabular-nums; text-align: right; min-width: 170px; }
+.pc { font-weight: 700; margin-left: 4px; }
+.pc.ok { color: var(--good); }
+.pc.warn { color: var(--warn); }
+.pc.bad { color: var(--bad); }
+@media (max-width: 560px) { .bul-row { grid-template-columns: 1fr auto; } .bul-track { grid-column: 1 / -1; grid-row: 2; } .bul-r { min-width: 0; } }
+.minis { display: grid; grid-template-columns: 1fr 1fr; gap: 6px 16px; }
+.minis > * { min-width: 0; }
+@media (max-width: 860px) { .minis { grid-template-columns: 1fr; } }
+details.more { margin-top: 14px; border-top: 1px solid var(--line); padding-top: 10px; }
+details.more summary { cursor: pointer; color: var(--brand); font-size: 13px; font-weight: 600; }
+details.more .more-b { margin-top: 10px; }
+.empty { text-align: center; padding: 40px 20px; }
+.empty h2 { justify-content: center; padding-left: 0 !important; } .empty h2::before { display: none; }
+.stale { background: var(--warn-bg); color: var(--warn); border: 1px solid color-mix(in srgb, var(--warn) 30%, transparent); border-radius: 10px; padding: 9px 13px; margin-bottom: 12px; }
+.card.ops { padding: 14px 22px; } .card.ops .notes { color: var(--ink-2); font-size: 14px; }
+.card > h2 .n { color: var(--brand-2); font-variant-numeric: tabular-nums; margin-right: 2px; }
+.legend { font-size: 13px; gap: 6px 16px; }
+.chart .ttl { font-size: 14px; font-weight: 600; color: var(--ink); }
+.issue { border-left-color: var(--brand-3) !important; background: var(--tint) !important; padding: 9px 13px !important; }

@@ -5,24 +5,15 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>CGL 실적 분석</title>
 <meta name="description" content="도금 1·2CGL MES 실적 분석 — 속도·M/C·손실 추이와 파라미터 후보(계획 담당자용)">
-<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='6' fill='%231f3864'/><polyline points='5,24 12,15 18,19 27,7' fill='none' stroke='%23fff36b' stroke-width='3'/></svg>">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='7' fill='%230b3a75'/><rect x='10' y='10' width='12' height='12' rx='1.5' transform='rotate(45 16 16)' fill='none' stroke='%23fff' stroke-width='2.6'/></svg>">
 <link rel="stylesheet" href="style.css">
 <link rel="stylesheet" href="dashboard.css">
+<link rel="stylesheet" href="ui/theme.css">
+<link rel="stylesheet" href="ui/bridge.css">
 </head>
 <body class="dash">
-<header class="top">
-  <div class="wrap top-row">
-    <div>
-      <h1>CGL 실적 분석 <small style="font-size:14px;font-weight:normal;opacity:.8">계획 담당자용</small></h1>
-      <p class="sub" id="a-meta">MES 실적으로 생산속도·M/C·손실을 다시 계산해 계획 조건과 비교합니다.</p>
-    </div>
-    <div class="top-actions">
-      <a class="btnlike light" href="report.html">주간 보고</a>
-      <a class="btnlike light" href="rolling.html">롤링(계획)</a>
-      <a class="btnlike light" href="status.html">가동 현황</a>
-    </div>
-  </div>
-</header>
+<header id="shell" data-page="analysis" data-crumb="실적 · 도금" data-title="실적 분석" data-sub="MES 실적으로 생산속도·M/C·손실을 다시 계산해 계획 조건과 비교 (계획 담당자용)"></header>
+<div class="wrap pagebar"><span class="small" id="a-meta">MES 실적으로 생산속도·M/C·손실을 다시 계산해 계획 조건과 비교합니다.</span></div>
 
 <main class="wrap">
   <section class="card empty" id="a-empty">
@@ -100,12 +91,12 @@
 </main>
 <footer class="wrap foot">계획 담당자용. 조회는 대시보드, 계획 계산·재계획·게시는 롤링 화면에서.</footer>
 
+<script src="ui/shell.js"></script>
 <script src="vendor/exceljs.min.js"></script>
 <script src="engine/params.js"></script>
 <script src="engine/util.js"></script>
 <script src="engine/mes.js"></script>
 <script src="engine/crypto.js"></script>
 <script src="analysis.js"></script>
-<script src="ui/home.js"></script>
 </body>
 </html>

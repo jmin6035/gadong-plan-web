@@ -5,22 +5,15 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>가동 현황</title>
 <meta name="description" content="도금 1·2CGL 가동계획 조회 전용 대시보드">
-<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='6' fill='%231f3864'/><rect x='6' y='16' width='4' height='10' fill='%23fff'/><rect x='14' y='10' width='4' height='16' fill='%23fff'/><rect x='22' y='6' width='4' height='20' fill='%23fff36b'/></svg>">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='7' fill='%230b3a75'/><rect x='10' y='10' width='12' height='12' rx='1.5' transform='rotate(45 16 16)' fill='none' stroke='%23fff' stroke-width='2.6'/></svg>">
 <link rel="stylesheet" href="style.css">
 <link rel="stylesheet" href="dashboard.css">
+<link rel="stylesheet" href="ui/theme.css">
+<link rel="stylesheet" href="ui/bridge.css">
 </head>
 <body class="dash">
-<header class="top">
-  <div class="wrap top-row">
-    <div>
-      <h1 id="d-title">CGL 가동 대시보드</h1>
-      <p class="sub" id="d-meta">계획 결과 파일을 열면 표시됩니다.</p>
-    </div>
-    <div class="top-actions">
-      <label class="btnlike light">결과 파일 열기<input type="file" id="d-file" accept=".json" hidden></label>
-    </div>
-  </div>
-</header>
+<header id="shell" data-page="status" data-crumb="가동계획 · 도금" data-title="가동 현황" data-sub="도금 1·2CGL 월별 간트 · 강종 전환 · 부서별 물량"></header>
+<div class="wrap pagebar"><b class="pt" id="d-title">CGL 가동계획</b><span class="small" id="d-meta">계획 결과 파일을 열면 표시됩니다.</span><span style="flex:1"></span><label class="btnlike noprint">결과 파일 열기<input type="file" id="d-file" accept=".json" hidden></label></div>
 
 <main class="wrap">
   <section class="card empty" id="d-empty">
@@ -94,12 +87,12 @@
 <div id="tip" class="tip" role="tooltip" hidden></div>
 <footer class="wrap foot">조회 전용.</footer>
 
+<script src="ui/shell.js"></script>
 <script src="engine/params.js"></script>
 <script src="engine/util.js"></script>
 <script src="engine/report.js"></script>
 <script src="engine/gantt.js"></script>
 <script src="engine/crypto.js"></script>
 <script src="dashboard.js"></script>
-<script src="ui/home.js"></script>
 </body>
 </html>

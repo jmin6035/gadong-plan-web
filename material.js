@@ -18,7 +18,7 @@
 
   function urgent() {
     const L = [];
-    O.rows.forEach((r) => r.months.forEach((m) => { if (m.arrive >= 1) L.push({ r, m, d: days(m.orderBy) }); }));
+    O.rows.filter((r) => UI.inScope(r.plant)).forEach((r) => r.months.forEach((m) => { if (m.arrive >= 1) L.push({ r, m, d: days(m.orderBy) }); }));
     const soon = L.filter((x) => x.d >= 0 && x.d <= 45).sort((a, b) => a.d - b.d);
     const past = L.filter((x) => x.d < 0 && x.m.ym >= O.months[2]).sort((a, b) => b.m.arrive - a.m.arrive);
     const row = (x) => `<tr><td class="dd ${x.d < 0 ? 'dl-past' : x.d <= 7 ? 'dl-soon' : ''}">${md(x.m.orderBy)} <span class="muted">(${x.d < 0 ? -x.d + '일 지남' : 'D-' + x.d})</span></td><td class="l">${esc(x.r.name)} <span class="muted">${x.r.sup}</span></td><td class="l">${PLANT[x.r.plant]}</td><td class="l">${esc(items(x.r))}</td><td>${+x.m.ym.slice(5)}월</td><td><b>${n0(x.m.arrive)}</b></td><td class="muted">${md(x.m.orderRec)}</td><td class="l why">${esc(forTop(x.m, 3))}</td></tr>`;
@@ -32,8 +32,8 @@
   }
 
   function matrix() {
-    const rows = O.rows.filter((r) => plant === 'all' || r.plant === plant);
-    const chips = `<div class="chips tabs">${[['all', '전체'], ['G', '도금 FH'], ['C', '컬러 구매소재']].map(([k, n]) => `<button type="button" data-p="${k}" aria-pressed="${k === plant}">${n}</button>`).join('')}</div>`;
+    const rows = O.rows.filter((r) => UI.inScope(r.plant));
+    const chips = '';
     const tot = O.months.map((ym) => rows.reduce((a, r) => a + r.months.find((m) => m.ym === ym).arrive, 0));
     const body = rows.map((r, i) => `<tr data-i="${O.rows.indexOf(r)}" class="${sel === O.rows.indexOf(r) ? 'sel' : ''}"><td class="l nm">${esc(r.name)} <span class="muted">${r.sup}</span></td><td class="l muted">${PLANT[r.plant]}</td><td class="l">${esc(items(r))}</td><td>${r.lt.p80}일</td>${r.months.map((m) => { const d = days(m.orderBy); return `<td class="cell ${m.arrive >= 1 ? (d < 0 ? 'past' : d <= 45 ? 'soon' : '') : ''}">${m.arrive >= 1 ? n0(m.arrive) : '·'}${m.arrive >= 1 ? `<small>마감 ${md(m.orderBy)}</small>` : ''}</td>`; }).join('')}</tr>`).join('');
     return card('m-mx', '②', '업체 × 월 입고 필요', '셀 = 수량(t) · 발주 마감, 행을 누르면 상세', chips + `
@@ -61,8 +61,8 @@
   function basis() {
     const u = O.util;
     return card('m-basis', '③', '생산 기준과 확인할 점', '', `<div class="scroll"><table class="t"><thead><tr><th>월</th>${O.months.map((ym) => `<th>${ym.slice(2, 4)}.${+ym.slice(5)}</th>`).join('')}</tr></thead><tbody>
-      <tr><td class="l">컬러 생산(t)</td>${O.months.map((ym) => `<td>${n0(O.colorProd[ym])}</td>`).join('')}</tr>
-      <tr><td class="l">도금 생산(t)</td>${O.months.map((ym) => `<td>${n0(O.platingProd[ym])}</td>`).join('')}</tr>
+      <tr data-pl="C"><td class="l">컬러 생산(t)</td>${O.months.map((ym) => `<td>${n0(O.colorProd[ym])}</td>`).join('')}</tr>
+      <tr data-pl="G"><td class="l">도금 생산(t)</td>${O.months.map((ym) => `<td>${n0(O.platingProd[ym])}</td>`).join('')}</tr>
       <tr><td class="l">능력 대비(1~3월)</td>${O.months.map((ym) => `<td>${u[ym] ? `컬러 <b class="${u[ym].color > 1 ? 'neg' : ''}">${pc(u[ym].color)}</b><br>도금 ${pc(u[ym].plating)}` : ''}</td>`).join('')}</tr></tbody></table></div>
       <ul class="notes">
         <li>1~3월 컬러는 TF 판매계획대로면 MES 월차(24.4천t)를 넘음 → 컬러 소재도 그만큼 많게 잡힘. 컬러 건재 재고로 일부 흡수 가능</li>
@@ -73,8 +73,8 @@
 
   function render() {
     $('m-main').innerHTML = urgent() + matrix() + basis();
-    $('m-sub').textContent = `컬러·도금 계획 → 소재 소요 → 업체·품명·수량·발주 마감 (26.10~27.3) · 기준 ${O.today} · 계산 ${String(O.built || '').replace('T', ' ')}`;
-    document.querySelectorAll('#m-mx .chips button').forEach((b) => b.addEventListener('click', () => { plant = b.dataset.p; const y = scrollY; render(); scrollTo(0, y); }));
+    UI.reveal($('m-main'));
+    UI.sub(`${{ all: '', G: '도금 FH 보기 · ', C: '컬러 구매소재 보기 · ' }[UI.scope()]}컬러·도금 계획 → 소재 소요 → 업체·품명·수량·발주 마감 (26.10~27.3) · 기준 ${O.today} · 계산 ${String(O.built || '').replace('T', ' ')}`);
     document.querySelectorAll('#m-mx tr[data-i]').forEach((tr) => tr.addEventListener('click', () => { sel = +tr.dataset.i; document.querySelectorAll('#m-mx tr.sel').forEach((z) => z.classList.remove('sel')); tr.classList.add('sel'); detail(); }));
     detail();
   }
@@ -82,7 +82,7 @@
 
   let env = null;
   async function open(pw) {
-    try { O = await GP.decryptJSON(env, pw); try { localStorage.setItem(PW_KEY, pw); } catch (e) { /* 무시 */ } render(); }
+    try { O = await GP.decryptJSON(env, pw); try { localStorage.setItem(PW_KEY, pw); } catch (e) { /* 무시 */ } render(); UI.onScope(() => { sel = null; const y = scrollY; render(); scrollTo(0, y); }); }
     catch (e) { $('m-form').hidden = false; $('m-msg').textContent = pw ? '암호가 맞지 않습니다' : ''; }
   }
   $('m-form').addEventListener('submit', (e) => { e.preventDefault(); open($('m-pw').value); });

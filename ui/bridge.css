@@ -1,0 +1,36 @@
+/* 엔진·대시보드 페이지(style.css·dashboard.css 사용) → 새 디자인 연결. 순서: style.css → dashboard.css → theme.css → bridge.css */
+:root:not([data-zz]) { --card: var(--surface); --muted: var(--ink-3); --soft: var(--tint); --brand-ink: var(--on-brand); --ok: var(--good); --err: var(--bad); --warn: #9a5b00; --brand: #0b3a75; --bg: #eaeff5; --ink: #0f1720; --line: #d8e0ea; --grid: #e8edf3; }
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]):not([data-zz]) { --warn: #f0b04a; --brand: #8fb4ec; --bg: #0c1016; --ink: #f2f5f8; --line: #2b3440; --grid: #222a34; }
+}
+:root[data-theme="dark"]:not([data-zz]) { --warn: #f0b04a; --brand: #8fb4ec; --bg: #0c1016; --ink: #f2f5f8; --line: #2b3440; --grid: #222a34; }
+body { font-size: 15px; }
+/* 표: 보고서 양식 */
+table.data, table.edit, table.evt, table.vs, table.mes-t { font-size: 14px; border-collapse: separate; border-spacing: 0; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
+table.data th, table.edit th, table.evt th, table.vs th, table.mes-t th { background: linear-gradient(180deg, var(--head-2), var(--th)); color: var(--th-ink); font-weight: 700; padding: 9px 10px; border: 0; border-right: 1px solid rgba(255,255,255,.12); }
+table.data td, table.edit td, table.evt td, table.vs td, table.mes-t td { padding: 9px 10px; border: 0; border-bottom: 1px solid var(--grid); }
+:where(table.data, table.evt, table.vs, table.mes-t) tbody tr:nth-child(even) > td { background: var(--zebra); }
+:where(table.data, table.evt, table.vs, table.mes-t) tbody tr:hover > td { background: var(--hover); }
+.gtable thead th, .gtable thead .c0, .gtable thead .c1 { background: var(--tint-2); }
+.gtable-wrap { border-radius: 8px; }
+/* 버튼 */
+button, .btnlike { border-radius: 8px; font-weight: 600; transition: border-color .2s, box-shadow .2s; }
+button:hover:not(:disabled), .btnlike:hover { border-color: var(--brand-2); }
+button.primary { background: linear-gradient(180deg, var(--brand-2), var(--brand)); border-color: transparent; color: var(--on-brand); }
+.tabs { margin-bottom: 10px; }
+.tabs button.on { background: var(--surface); color: var(--brand); box-shadow: 0 1px 3px rgba(0,0,0,.12); border-color: transparent; }
+/* 진행 막대(.bar)는 theme 의 툴바 .bar 와 이름이 같아 되돌림 */
+.bar:has(#bar-fill) { display: block; height: 10px; margin: 6px 0; padding: 0; background: var(--tint-2); border-radius: 5px; overflow: hidden; }
+#bar-fill { background: linear-gradient(90deg, var(--brand-2), var(--brand-3)); }
+.drop { animation: none; border-radius: 10px; background: var(--tint); }
+.exec { border-left-color: var(--brand-2); box-shadow: var(--shadow); background: linear-gradient(120deg, var(--tint-2), var(--surface) 60%); }
+.kpi b { font-variant-numeric: tabular-nums; }
+.line-card { background: linear-gradient(160deg, var(--tint-2), var(--surface) 70%); }
+.pagebar .pt { font-size: 15px; color: var(--brand); }
+.pagebar label.btnlike { display: inline-flex; }
+.privacy { font-size: 13px; color: var(--ink-2); }
+footer.foot, .foot { font-size: 12px; }
+#d-unlock { display: block; text-align: center; }
+#d-unlock .row { justify-content: center; }
+#d-unlock label.check { flex-direction: row; justify-content: center; margin-top: 10px; color: var(--ink-2); }
+#d-unlock label.check input { width: 16px; height: 16px; }
