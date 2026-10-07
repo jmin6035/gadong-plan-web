@@ -3,8 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>소재 발주</title>
-<meta name="description" content="컬러·도금 계획에서 이어지는 소재 발주 — 업체·품명·수량·발주 마감(26.10~27.3)">
+<title>소재 조달 판단</title>
+<meta name="description" content="필요 시점에 따라 가능한 업체를 판단하고 구매 요청서를 만드는 소재 조달 보드">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='6' fill='%231f3864'/><rect x='6' y='8' width='9' height='5' fill='%23fff'/><rect x='12' y='15' width='14' height='5' fill='%23fff'/><rect x='6' y='22' width='12' height='5' fill='%23fff'/></svg>">
 <style>
 :root {
@@ -205,43 +205,66 @@ table.rules td.wrap, table.sum td.wrap { white-space: normal; }
 .flow i { color: var(--ink-3); font-style: normal; }
 </style>
 <style>
-.urg td.dd { font-weight:700; }
-.dl-past { color: var(--bad); font-weight:700; } .dl-soon { color: var(--warn); font-weight:700; }
-table.mx td { text-align:right; cursor:pointer; } table.mx td.l { cursor:default; }
-table.mx td.cell small { display:block; font-size:10.5px; color: var(--ink-3); }
-table.mx td.past { background: var(--bad-bg); } table.mx td.soon { background: var(--warn-bg); }
-table.mx tr.sel td { outline: 2px solid var(--ink); outline-offset:-2px; }
 .tabs { flex-wrap: wrap; }
-.chips { display:flex; gap:6px; flex-wrap:wrap; margin:0 0 10px; }
+.tabs.big { display: flex; margin: 0 0 14px; }
+.tabs.big button { padding: 7px 14px; font-size: 14px; }
+.bar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin: 14px 0 10px; }
+.bar .tabs { margin: 0; }
+.bar .sp { flex: 1; }
+.btn { border: 1px solid var(--brand); background: var(--surface); color: var(--brand); border-radius: 6px; padding: 5px 12px; font: inherit; font-size: 13px; cursor: pointer; white-space: nowrap; }
+#p-export { background: var(--brand); color: var(--surface); }
+.kpi .v.wv { color: var(--warn); } .kpi .v.bv { color: var(--bad); }
+table.t td.c { text-align: center; }
+table.bd td { vertical-align: top; }
+table.bd td.why { min-width: 210px; max-width: 280px; }
+table.bd select { max-width: 190px; }
+table.bd tr.u.on td { background: var(--surface-2); }
+table.bd tr.ux td { background: var(--surface-2); white-space: normal; text-align: left; }
+table.t select, table.t input { font: inherit; font-size: 12.5px; padding: 3px 5px; border: 1px solid var(--line); border-radius: 5px; background: var(--surface); color: var(--ink); max-width: 230px; }
+table.t input[type=number] { width: 76px; text-align: right; }
+table.t input[type=text], table.ed input:not([type]) { width: 120px; }
+table.ed td { text-align: center; }
+.tg { border: 0; background: none; color: var(--brand); cursor: pointer; font-size: 13px; padding: 0 4px 0 0; }
+.use { display: flex; flex-wrap: wrap; gap: 4px 12px; font-size: 12.5px; margin: 2px 0 6px; }
+.use b:first-child { width: 100%; color: var(--ink-2); font-size: 12px; }
+.use span { background: var(--surface); border: 1px solid var(--line); border-radius: 6px; padding: 2px 8px; }
+.use span.no { color: var(--ink-3); text-decoration: line-through; }
+.use i { font-style: normal; color: var(--ink-3); }
+.chips { display: flex; gap: 6px; flex-wrap: wrap; }
+.chip { border: 1px solid var(--line); background: var(--surface-2); border-radius: 999px; padding: 3px 10px; font-size: 12.5px; }
+table.ed input[size] { width: 48px; }
+@media (max-width: 640px) { .kpis { grid-template-columns: 1fr 1fr; gap: 8px; } .kpi .v { font-size: 20px; } .kpi { padding: 10px; } }
+.x { border: 0; background: none; color: var(--ink-3); cursor: pointer; }
+.bar input[type=date], .bar input[type=number], .bar label input { font: inherit; font-size: 13px; padding: 3px 5px; border: 1px solid var(--line); border-radius: 5px; background: var(--surface); color: var(--ink); }
 </style>
 </head>
 <body>
 <header class="top">
   <div class="wrap top-row">
     <div>
-      <h1>소재 발주</h1>
-      <p class="sub" id="m-sub">컬러·도금 계획 → 소재 소요 → 업체·품명·수량·발주 마감 (26.10~27.3)</p>
+      <h1>소재 조달 판단</h1>
+      <p class="sub" id="p-sub">필요 시점 → 가능한 업체 → 구매 요청</p>
     </div>
     <div class="top-actions noprint" style="display:flex;gap:8px;flex-wrap:wrap">
       <a href="integrated.html">통합 가동계획</a>
-      <a href="procure.html">조달 판단</a>
+      <a href="material.html">소재 발주(월)</a>
       <a href="doc.html?d=conditions">조건식</a>
-      <a href="doc.html?d=requests">요청 사항</a>
     </div>
   </div>
 </header>
-<main class="wrap" id="m-main">
-  <section class="card empty" id="m-lock">
-    <h2 style="justify-content:center">소재 발주 불러오는 중…</h2>
-    <form class="unlock" id="m-form" hidden>
-      <input type="password" id="m-pw" placeholder="분석 암호" autocomplete="current-password" aria-label="분석 암호">
+<main class="wrap" id="p-main">
+  <section class="card empty" id="p-lock">
+    <h2 style="justify-content:center">불러오는 중…</h2>
+    <form class="unlock" id="p-form" hidden>
+      <input type="password" id="p-pw" placeholder="분석 암호" autocomplete="current-password" aria-label="분석 암호">
       <button type="submit">열기</button>
     </form>
-    <p class="hint" id="m-msg"></p>
+    <p class="hint" id="p-msg"></p>
   </section>
 </main>
-<footer class="wrap">기발주·입고예정 자료가 아직 없어 수량은 '입고 필요량'(사용 + 목표재고 − 재고)입니다. 마감이 지난 건은 이미 발주돼 있어야 할 양 — 구매 기발주와 대조 필요. 계산: tools/material_order.py</footer>
+<footer class="wrap">v0 — 주문재는 마케팅 목록 전까지 추정치, 기발주는 입고예정 탭에 넣어야 반영. 리드타임·우선순위는 소재구매그룹과 맞출 초기값.</footer>
 <script src="engine/crypto.js"></script>
-<script src="material.js"></script>
+<script src="vendor/exceljs.min.js"></script>
+<script src="procure.js"></script>
 </body>
 </html>
