@@ -3,8 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>4분기 통합 가동계획</title>
-<meta name="description" content="컬러·도금·소재 2026년 4분기 통합 일별 가동계획 — 자가재 기준 두 안(V1 계산값 / V2 자가재계획) 비교, 배정 근거">
+<title>소재 발주</title>
+<meta name="description" content="컬러·도금 계획에서 이어지는 소재 발주 — 업체·품명·수량·발주 마감(26.10~27.3)">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='6' fill='%231f3864'/><rect x='6' y='8' width='9' height='5' fill='%23fff'/><rect x='12' y='15' width='14' height='5' fill='%23fff'/><rect x='6' y='22' width='12' height='5' fill='%23fff'/></svg>">
 <style>
 :root {
@@ -204,37 +204,42 @@ table.rules td.wrap, table.sum td.wrap { white-space: normal; }
 .flow span { border: 1px solid var(--line); background: var(--surface-2); border-radius: 6px; padding: 5px 9px; }
 .flow i { color: var(--ink-3); font-style: normal; }
 </style>
+<style>
+.urg td.dd { font-weight:700; }
+.dl-past { color: var(--bad); font-weight:700; } .dl-soon { color: var(--warn); font-weight:700; }
+table.mx td { text-align:right; cursor:pointer; } table.mx td.l { cursor:default; }
+table.mx td.cell small { display:block; font-size:10.5px; color: var(--ink-3); }
+table.mx td.past { background: var(--bad-bg); } table.mx td.soon { background: var(--warn-bg); }
+table.mx tr.sel td { outline: 2px solid var(--ink); outline-offset:-2px; }
+.chips { display:flex; gap:6px; flex-wrap:wrap; margin:0 0 10px; }
+</style>
 </head>
 <body>
 <header class="top">
   <div class="wrap top-row">
     <div>
-      <h1>4분기 통합 가동계획</h1>
-      <p class="sub" id="g-sub">컬러 1~4CCL · 도금 1·2CGL · 소재 — 2026년 10~12월</p>
+      <h1>소재 발주</h1>
+      <p class="sub" id="m-sub">컬러·도금 계획 → 소재 소요 → 업체·품명·수량·발주 마감 (26.10~27.3)</p>
     </div>
-    <div class="top-actions noprint" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
-      <div class="seg" role="group" aria-label="자가재 기준">
-
-      </div>
-      <a href="material.html">소재 발주</a>
+    <div class="top-actions noprint" style="display:flex;gap:8px;flex-wrap:wrap">
+      <a href="integrated.html">통합 가동계획</a>
       <a href="doc.html?d=conditions">조건식</a>
-      <a href="report.html">주간 보고</a>
-      <a href="./">대시보드</a>
+      <a href="doc.html?d=requests">요청 사항</a>
     </div>
   </div>
 </header>
-<main class="wrap" id="g-main">
-  <section class="card empty" id="g-lock">
-    <h2 style="justify-content:center">통합 계획 불러오는 중…</h2>
-    <form class="unlock" id="g-form" hidden>
-      <input type="password" id="g-pw" placeholder="분석 암호" autocomplete="current-password" aria-label="분석 암호">
+<main class="wrap" id="m-main">
+  <section class="card empty" id="m-lock">
+    <h2 style="justify-content:center">소재 발주 불러오는 중…</h2>
+    <form class="unlock" id="m-form" hidden>
+      <input type="password" id="m-pw" placeholder="분석 암호" autocomplete="current-password" aria-label="분석 암호">
       <button type="submit">열기</button>
     </form>
-    <p class="hint" id="g-msg"></p>
+    <p class="hint" id="m-msg"></p>
   </section>
 </main>
-<footer class="wrap">계산: tools/master_plan.py(월 물량 LP) → cglplan.color_full(컬러 일별) → cglplan MILP(도금 일별) → tools/integrated_plan.py(자가재·소재). 기초재고 = 9월말 재고현황, 컬러 10/1~5는 실적.</footer>
+<footer class="wrap">기발주·입고예정 자료가 아직 없어 수량은 '입고 필요량'(사용 + 목표재고 − 재고)입니다. 마감이 지난 건은 이미 발주돼 있어야 할 양 — 구매 기발주와 대조 필요. 계산: tools/material_order.py</footer>
 <script src="engine/crypto.js"></script>
-<script src="integrated.js"></script>
+<script src="material.js"></script>
 </body>
 </html>
