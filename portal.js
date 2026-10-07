@@ -1,0 +1,81 @@
+/* 포털(홈): published/portal.enc.json (tools/portal_data.py) — 핵심 지표 4개 + 월별 도금 계획 + 발주 시한 임박 + 메뉴 타일 */
+(function () {
+  'use strict';
+  const $ = (id) => document.getElementById(id);
+  const PW_KEY = 'cgl-analysis-pw';
+  const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  const n0 = (v) => Math.round(v).toLocaleString('ko-KR');
+  const md = (s) => { const p = String(s).slice(5, 10).split('-'); return `${+p[0]}/${+p[1]}`; };
+  const svg = (d) => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${d}</svg>`;
+  const IC = {
+    plan: svg('<rect x="3" y="4" width="18" height="17" rx="2"/><path d="M3 9h18M8 2v4M16 2v4M7 13h4M7 17h8"/>'),
+    gantt: svg('<path d="M4 5h9M7 10h11M5 15h7M9 20h11"/>'),
+    calc: svg('<rect x="5" y="3" width="14" height="18" rx="2"/><path d="M8 7h8M8 11h2M12 11h2M16 11h0M8 15h2M12 15h2M8 18h6"/>'),
+    chart: svg('<path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/>'),
+    report: svg('<path d="M6 3h9l4 4v14H6z"/><path d="M14 3v5h5M9 13h7M9 17h5"/>'),
+    box: svg('<path d="M3 7l9-4 9 4-9 4-9-4z"/><path d="M3 7v10l9 4 9-4V7M12 11v10"/>'),
+    truck: svg('<path d="M2 6h11v10H2zM13 10h5l3 3v3h-8"/><circle cx="6" cy="18" r="2"/><circle cx="17" cy="18" r="2"/>'),
+    book: svg('<path d="M4 4h7a3 3 0 0 1 3 3v13a2 2 0 0 0-2-2H4zM20 4h-6"/><path d="M14 7v13M20 4v14h-6"/>'),
+    help: svg('<circle cx="12" cy="12" r="9"/><path d="M9.5 9a2.5 2.5 0 1 1 3.5 2.3c-.6.3-1 .9-1 1.5V14M12 17h0"/>'),
+    mail: svg('<rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 6 9-6"/>'),
+  };
+  const GROUPS = [
+    ['가동계획', [['integrated.html', 'plan', '통합 가동계획', '컬러 → 도금 4분기 일별 계획, 버전 비교·재고 추이'], ['status.html', 'gantt', '가동 현황', '도금 1·2CGL 월별 간트, 강종 전환, 부서별 물량'], ['rolling.html', 'calc', '계획 계산', '실적을 넣어 다시 계산(롤링)하고 게시']]],
+    ['실적', [['analysis.html', 'chart', '실적 분석', '속도·손실·M/C 실적과 파라미터 보정 후보'], ['report.html', 'report', '주간 보고', '주간 계획 대비 실적 보고 양식']]],
+    ['소재', [['procure.html', 'truck', '조달 판단', '필요 시점별 가능 업체 추천, 구매 요청서', true], ['material.html', 'box', '소재 발주(월)', '업체 × 월 입고 필요량과 발주 마감(~27.3)']]],
+    ['자료', [['doc.html?d=conditions', 'book', '계획 조건식', '컬러·도금·소재 계산식과 보완할 점'], ['doc.html?d=procure_guide', 'help', '조달 판단 사용법', '사용 순서 10단계와 계산 조건'], ['doc.html?d=requests', 'mail', '협조 요청 메일', '전산·구매·판매·생산 요청 사항']]],
+  ];
+
+  $('h-groups').innerHTML = GROUPS.map(([g, L]) => `<div class="group"><h3>${g}</h3>${L.map(([u, ic, t, d, nw]) => `<a class="tile" href="${u}" data-rk="t-${u}"><span class="ic">${IC[ic]}</span><b>${t}${nw ? '<em class="new">NEW</em>' : ''}</b><span>${d}</span></a>`).join('')}</div>`).join('');
+  UI.reveal(document);
+
+  function kpi(tone, l, valHtml, b, href, ck) { return `<div class="kpi tone-${tone}" data-rk="k-${ck}">${href ? `<a class="go" href="${href}" aria-label="${esc(l)} 자세히"></a>` : ''}<div class="l">${l}</div><div class="v">${valHtml}</div><div class="b">${b}</div></div>`; }
+
+  function render(O) {
+    const p = O.plating, r = O.roll, c = O.color, q = O.procure;
+    const tot = p.g1.reduce((a, x) => a + x, 0) + p.g2.reduce((a, x) => a + x, 0);
+    const diff = r.actual - r.plan;
+    $('h-asof').textContent = `실적 기준 ${md(r.asOf)} · 계획 ${O.rec}`;
+    $('h-meta').innerHTML = `<span><b>기준일</b>${O.asOf}</span><span><b>추천 계획</b>${O.rec}</span><span><b>자료</b>MES 생산·재고, 판매계획, 소재재고</span><span><b>계산</b>${String(O.built).replace('T', ' ')}</span>`;
+    $('h-kpis').innerHTML = [
+      kpi(p.short + p.late ? 'bad' : 'good', '도금 계획 결품 · 지연', `<b data-count="${p.short}" data-ck="ps">0</b> · <b data-count="${p.late}" data-ck="pl">0</b><small>건</small>`, `4분기 계획 ${n0(tot)}t · M/C ${p.mc}회`, 'integrated.html', 'pl'),
+      kpi(diff >= 0 ? 'good' : 'warn', `계획 대비 실적 (~${md(r.asOf)})`, `<b data-count="${r.actual}" data-ck="ra">0</b><small>t</small><span class="pm" style="color:var(--${diff >= 0 ? 'good' : 'warn'})">${diff >= 0 ? '▲' : '▼'} ${n0(Math.abs(diff))}</span>`, `계획 ${n0(r.plan)}t · 10월 누계 도금`, 'status.html', 'ra'),
+      kpi(c.unplaced[0] > 0 ? 'warn' : 'good', '컬러 미편성 (10월)', `<b data-count="${c.unplaced[0]}" data-ck="cu">0</b><small>t</small>`, `11월 ${n0(c.unplaced[1])}t · 12월 ${n0(c.unplaced[2])}t — 라인 전용 품목`, 'integrated.html', 'cu'),
+      kpi(q.near ? 'warn' : 'good', '소재 1순위 발주 시한 2주 안', `<b data-count="${q.near}" data-ck="qn">0</b><small>건</small>`, q.nearTop[0] ? `가장 급함 ${esc(q.nearTop[0].mat)} · 시한 ${md(q.nearTop[0].deadline)}` : '-', 'procure.html', 'qn'),
+    ].join('');
+    // 월별 도금 계획(라인 누적)
+    const mx = Math.max(...O.months.map((m, i) => p.g1[i] + p.g2[i])) * 1.04;
+    $('h-load').innerHTML = `<h2>월별 도금 생산계획 <small>${O.rec} · 라인별</small><span class="unit">단위: 톤</span></h2>
+      <div class="legend"><span><i style="background:var(--c1)"></i>1CGL</span><span><i style="background:var(--c2)"></i>2CGL</span></div>
+      <div class="load" role="img" aria-label="월별 도금 생산계획 1CGL·2CGL">${O.months.map((m, i) => {
+        const a = p.g1[i], b = p.g2[i];
+        return `<div class="lrow"><span class="m">${+m.slice(5)}월</span><div class="track"><i class="seg s1" style="width:${a / mx * 100}%;--i:${i}" data-tip="${+m.slice(5)}월 1CGL ${n0(a)}t"></i><i class="seg s2" style="left:${a / mx * 100}%;width:${b / mx * 100}%;--i:${i}" data-tip="${+m.slice(5)}월 2CGL ${n0(b)}t"></i></div><span class="pct">${n0(a + b)}</span></div>`;
+      }).join('')}</div>
+      <details style="margin-top:12px"><summary class="small" style="cursor:pointer">표로 보기</summary><div class="scroll" style="margin-top:8px"><table class="t"><thead><tr><th class="l">월</th><th>1CGL</th><th>2CGL</th><th>합계</th></tr></thead><tbody>${O.months.map((m, i) => `<tr><td class="l">${+m.slice(5)}월</td><td>${n0(p.g1[i])}</td><td>${n0(p.g2[i])}</td><td><b>${n0(p.g1[i] + p.g2[i])}</b></td></tr>`).join('')}</tbody></table></div></details>
+      <div class="decide" style="margin-top:14px"><b class="tag">추천 계획</b><br>${esc(O.recWhy)}</div>`;
+    $('h-due').innerHTML = `<h2>발주 시한 임박 <small>1순위 업체 기준 · 2주 안</small><span class="unit">단위: 톤</span></h2>
+      <div class="scroll"><table class="t"><thead><tr><th class="l">시한</th><th class="l">소재</th><th class="l">업체</th><th>첫 필요일</th><th>부족</th></tr></thead><tbody>${q.nearTop.map((x) => `<tr><td class="l"><b>${md(x.deadline)}</b></td><td class="l">${esc(x.mat)}</td><td class="l">${esc(x.sup)}</td><td>${md(x.first)}</td><td>${n0(x.t)}</td></tr>`).join('') || '<tr><td colspan="5" class="c muted">없음</td></tr>'}</tbody></table></div>
+      <div class="kpis" style="margin-top:14px;grid-template-columns:1fr 1fr">
+        ${kpi(q.alt ? 'warn' : 'good', '대체 업체 필요 (2~4주)', `<b data-count="${q.alt}" data-ck="qa">0</b><small>건</small>`, '1순위 리드타임 초과', '', 'qa')}
+        ${kpi(q.check ? 'warn' : 'good', '기발주 확인 (2~4주)', `<b data-count="${q.check}" data-ck="qc">0</b><small>건</small>`, '리드타임 안쪽 수량', '', 'qc')}</div>
+      <p class="small" style="margin-top:10px">조달 판단 화면의 기본값(여유 5일, 기발주 미입력) 기준 — 입력한 기발주·판단은 <a href="procure.html">조달 판단</a>에서 확인</p>`;
+    $('h-detail').hidden = false;
+    UI.reveal(document); UI.count(document);
+    const tip = $('h-tip');
+    document.querySelectorAll('.seg').forEach((s) => {
+      s.addEventListener('mousemove', (e) => { tip.textContent = s.dataset.tip; tip.style.display = 'block'; tip.style.left = (e.clientX + 12) + 'px'; tip.style.top = (e.clientY - 34) + 'px'; });
+      s.addEventListener('mouseleave', () => { tip.style.display = 'none'; });
+    });
+  }
+
+  let env = null;
+  async function unlock(pw) {
+    try { const O = await GP.decryptJSON(env, pw); try { localStorage.setItem(PW_KEY, pw); } catch (e) { /* 무시 */ } $('h-lock').hidden = true; render(O); }
+    catch (e) { $('h-kpis').innerHTML = ''; $('h-lock').hidden = false; $('h-msg').textContent = pw ? '암호가 맞지 않습니다' : ''; }
+  }
+  $('h-form').addEventListener('submit', (e) => { e.preventDefault(); $('h-kpis').innerHTML = '<div class="skel" style="grid-column:1/-1"><i style="width:30%"></i><i></i></div>'; unlock($('h-pw').value); });
+  fetch('published/portal.enc.json', { cache: 'no-store' }).then((r) => { if (!r.ok) throw new Error(); return r.json(); }).then((e) => {
+    env = e; let s = null; try { s = localStorage.getItem(PW_KEY); } catch (x) { /* 무시 */ }
+    if (s) unlock(s); else { $('h-kpis').innerHTML = ''; $('h-lock').hidden = false; }
+  }).catch(() => { $('h-kpis').innerHTML = ''; $('h-lock').hidden = false; $('h-msg').textContent = '요약 자료를 찾을 수 없습니다'; });
+})();

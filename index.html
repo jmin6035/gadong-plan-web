@@ -3,102 +3,84 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>CGL 가동 대시보드</title>
-<meta name="description" content="도금 1·2CGL 가동계획 조회 전용 대시보드">
-<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='6' fill='%231f3864'/><rect x='6' y='16' width='4' height='10' fill='%23fff'/><rect x='14' y='10' width='4' height='16' fill='%23fff'/><rect x='22' y='6' width='4' height='20' fill='%23fff36b'/></svg>">
-<link rel="stylesheet" href="style.css">
-<link rel="stylesheet" href="dashboard.css">
+<title>가동계획 포털</title>
+<meta name="description" content="포스코스틸리온 도금·컬러 가동계획 포털 — 오늘 핵심 지표와 메뉴">
+<script>if (/[?&]src=/.test(location.search)) location.replace('status.html' + location.search);</script>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='7' fill='%230b3a75'/><rect x='10' y='10' width='12' height='12' rx='1.5' transform='rotate(45 16 16)' fill='none' stroke='%23fff' stroke-width='2.6'/></svg>">
+<link rel="stylesheet" href="ui/theme.css">
+<style>
+.hero-kpis { margin-top: 4px; }
+.kpi .v .pm { font-size: 15px; font-weight: 700; margin-left: 6px; }
+.kpi a.go { position: absolute; inset: 0; }
+.grid2 { display: grid; grid-template-columns: 1.25fr 1fr; gap: 16px; }
+.grid2 > * { min-width: 0; }
+@media (max-width: 880px) { .grid2 { grid-template-columns: 1fr; } }
+/* 월별 도금 부하 */
+.load { display: grid; gap: 14px; margin-top: 4px; }
+.lrow { display: grid; grid-template-columns: 54px 1fr 64px; gap: 10px; align-items: center; font-size: 13px; }
+.lrow .m { color: var(--ink-2); font-weight: 600; }
+.track { position: relative; height: 26px; background: var(--grid); border-radius: 6px; }
+.seg { position: absolute; top: 0; bottom: 0; border-radius: 0 4px 4px 0; transform-origin: left; animation: grow .9s var(--ease) both; animation-delay: calc(.15s + var(--i, 0) * 90ms); }
+.seg.s1 { background: var(--c1); left: 0; border-radius: 4px 0 0 4px; }
+.seg.s2 { background: var(--c2); box-shadow: -2px 0 0 var(--surface); }
+.seg:hover { filter: brightness(1.08); }
+.cap { position: absolute; top: -4px; bottom: -4px; width: 2px; background: var(--ink); border-radius: 1px; }
+.lrow .pct { text-align: right; font-weight: 800; font-variant-numeric: tabular-nums; }
+.legend { display: flex; gap: 14px; font-size: 12px; color: var(--ink-2); margin: 0 0 10px; flex-wrap: wrap; }
+.legend i { display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin-right: 6px; vertical-align: -1px; }
+.legend i.capk { width: 2px; height: 12px; border-radius: 1px; background: var(--ink); }
+.tipbox { position: fixed; pointer-events: none; background: var(--surface); color: var(--ink); border: 1px solid var(--line); border-radius: 7px; padding: 7px 10px; font-size: 12px; box-shadow: var(--shadow-up); z-index: 40; display: none; white-space: nowrap; }
+/* 결론 */
+.decide { border: 1px solid var(--line); border-left: 4px solid var(--brand-2); border-radius: 0 8px 8px 0; padding: 12px 14px; background: var(--surface-2); font-size: 13.5px; }
+.decide b.tag { display: inline-block; font-size: 11px; letter-spacing: .08em; color: var(--brand-2); margin-bottom: 4px; }
+/* 메뉴 타일 */
+.groups { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; }
+@media (max-width: 980px) { .groups { grid-template-columns: repeat(2, 1fr); } }
+@media (max-width: 560px) { .groups { grid-template-columns: 1fr; } }
+.group h3 { margin: 0 0 8px; font-size: 12px; letter-spacing: .1em; color: var(--ink-3); font-weight: 700; }
+.tile { position: relative; display: grid; grid-template-columns: 38px 1fr; gap: 4px 12px; align-items: start; text-decoration: none; color: var(--ink); background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 13px 14px; margin-bottom: 10px; box-shadow: var(--shadow); transition: transform .25s var(--ease), box-shadow .25s, border-color .25s; overflow: hidden; }
+.tile::after { content: "→"; position: absolute; right: 14px; top: 13px; color: var(--ink-3); transition: transform .25s var(--ease), color .25s; }
+.tile:hover { transform: translateY(-3px); box-shadow: var(--shadow-up); border-color: var(--brand-2); }
+.tile:hover::after { transform: translateX(4px); color: var(--brand-2); }
+.tile .ic { grid-row: span 2; width: 38px; height: 38px; border-radius: 9px; display: grid; place-items: center; background: linear-gradient(145deg, var(--steel-1), var(--surface-2)); color: var(--brand-2); border: 1px solid var(--line); }
+.tile .ic svg { width: 20px; height: 20px; }
+.tile b { font-size: 14px; padding-right: 18px; }
+.tile span { font-size: 12px; color: var(--ink-3); line-height: 1.45; }
+.tile .new { display: inline-block; font-size: 10px; font-weight: 700; color: var(--brand-2); border: 1px solid var(--brand-2); border-radius: 4px; padding: 0 4px; margin-left: 6px; vertical-align: 1px; }
+#h-lock .unlock { margin-top: 6px; }
+</style>
 </head>
-<body class="dash">
-<header class="top">
-  <div class="wrap top-row">
-    <div>
-      <h1 id="d-title">CGL 가동 대시보드</h1>
-      <p class="sub" id="d-meta">계획 결과 파일을 열면 표시됩니다.</p>
-    </div>
-    <div class="top-actions">
-      <label class="btnlike light">결과 파일 열기<input type="file" id="d-file" accept=".json" hidden></label>
-    </div>
-  </div>
-</header>
-
+<body>
+<header id="shell" data-page="home" data-crumb="홈" data-title="도금·컬러 가동계획 포털" data-sub="계획 → 실적 → 소재 조달을 한 곳에서"></header>
 <main class="wrap">
-  <section class="card empty" id="d-empty">
-    <h2 id="d-empty-title">계획 결과를 여세요</h2>
-    <p id="d-empty-text">계획 계산 화면에서 받은 <b>결과 파일(.json)</b>을 위 버튼으로 열거나 이 창에 끌어다 놓으세요. 파일은 이 브라우저 안에서만 읽습니다.</p>
-    <form id="d-unlock" class="unlock" hidden>
-      <p id="d-pubinfo"></p>
-      <div class="row">
-        <input type="password" id="d-pw" placeholder="게시 암호" autocomplete="current-password" aria-label="게시 암호">
-        <button type="submit" class="primary">열기</button>
-      </div>
-      <label class="check"><input type="checkbox" id="d-remember" checked> 이 기기에서 암호 기억(공용 PC면 해제)</label>
-      <p class="hint" id="d-unlock-msg"></p>
-    </form>
-    <p class="hint">사내 서버·공유폴더에 결과 파일을 두면 <code>?src=결과파일주소</code> 로 바로 열 수 있습니다.</p>
+  <div class="docmeta" id="h-meta"></div>
+
+  <section class="card" id="h-today" style="margin-top:12px">
+    <h2>오늘의 핵심 <small id="h-asof"></small><span class="unit">단위: 톤</span></h2>
+    <div id="h-kpis" class="kpis hero-kpis">
+      <div class="skel" style="grid-column:1/-1"><i style="width:30%"></i><i></i><i style="width:70%"></i></div>
+    </div>
+    <div id="h-lock" hidden>
+      <p class="hint" style="margin:0">핵심 지표는 분석 암호로 열립니다. 아래 메뉴는 바로 쓸 수 있습니다.</p>
+      <form class="unlock" id="h-form" style="justify-content:flex-start"><input type="password" id="h-pw" placeholder="분석 암호" autocomplete="current-password" aria-label="분석 암호"><button type="submit">열기</button></form>
+      <p class="hint" id="h-msg"></p>
+    </div>
   </section>
 
-  <div id="d-body" hidden>
-    <section class="exec" id="d-exec"></section>
-    <section class="card replan" id="d-replan" hidden></section>
-    <section class="kpis big" id="d-kpis" aria-label="분기 핵심 지표"></section>
-
-    <section class="card">
-      <div class="head-row">
-        <h2>월별 가동계획</h2>
-        <div class="tabs" id="g-tabs"></div>
-      </div>
-      <div class="glegend" id="g-legend"></div>
-      <div class="gtable-wrap"><table class="gtable" id="g-table"></table></div>
-      <p class="hint">숫자 단위: 톤. 강종 행 = 그날 생산 강종과 물량, 부서 행 = 같은 날 부서별 물량. 노란색 = 강종 전환(M/C)·정기수리 후 재가동, 회색 = 정기수리.</p>
-    </section>
-
-    <div class="two">
-      <section class="card">
-        <h2>강종 전환 일정</h2>
-        <table class="data evt" id="d-events"></table>
-        <p class="hint">행을 누르면 전환 이유가 펼쳐집니다.</p>
-      </section>
-      <section class="card">
-        <h2>월별 부하</h2>
-        <div id="d-load"></div>
-      </section>
-    </div>
-
-    <section class="card">
-      <div class="head-row">
-        <h2>기준일 라인 현황</h2>
-        <label class="inline">날짜 <input type="date" id="d-date"></label>
-      </div>
-      <div class="lines-now" id="d-now"></div>
-    </section>
-
-    <section class="card">
-      <h2>부서별 월 생산량 <small class="muted">(t, 생산일 기준)</small></h2>
-      <div class="scroll"><table class="data" id="d-dept"></table></div>
-    </section>
-
-    <details class="card more">
-      <summary><h2>상세: 일별 생산 추이 · 전월 선생산 이유 · 간트 이미지</h2></summary>
-      <h3>일별 계획 생산량</h3>
-      <div class="legend" id="d-legend"></div>
-      <div id="d-daily"></div>
-      <h3>전월 선생산과 이유</h3>
-      <div class="scroll"><table class="data" id="d-early"></table></div>
-      <h3>간트 이미지(보고서 붙여넣기용)</h3>
-      <div class="tabs" id="d-tabs"></div>
-      <div class="gantt-box"><img id="d-gantt" alt="월별 간트"></div>
-    </details>
+  <div class="grid2" id="h-detail" hidden>
+    <section class="card" id="h-load"></section>
+    <section class="card" id="h-due"></section>
   </div>
-</main>
-<div id="tip" class="tip" role="tooltip" hidden></div>
-<footer class="wrap foot">조회 전용.</footer>
 
-<script src="engine/params.js"></script>
-<script src="engine/util.js"></script>
-<script src="engine/report.js"></script>
-<script src="engine/gantt.js"></script>
+  <section class="card" id="h-menu">
+    <h2>메뉴</h2>
+    <div class="groups" id="h-groups"></div>
+  </section>
+</main>
+<footer class="foot"><div class="wrap"><span>자료는 암호화되어 게시되며 이 브라우저 안에서만 풉니다 · 계산: tools/portal_data.py</span><span>POSCO STEELEON 도금·컬러 가동계획</span></div></footer>
+<div class="tipbox" id="h-tip" role="tooltip"></div>
+<script src="ui/shell.js"></script>
 <script src="engine/crypto.js"></script>
-<script src="dashboard.js"></script>
+<script src="portal.js"></script>
 </body>
 </html>

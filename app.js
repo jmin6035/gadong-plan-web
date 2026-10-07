@@ -219,7 +219,7 @@
   $('dl-json').onclick = () => download(new Blob([packResult()], { type: 'application/json' }), baseName() + '_결과.json');
   $('to-dash').onclick = () => {
     try { sessionStorage.setItem('cgl-dash-handoff', packResult()); } catch (e) { alert('브라우저 저장공간이 부족합니다. 결과 저장(.json) 후 대시보드에서 여세요.'); return; }
-    window.open('./', '_blank');
+    window.open('status.html', '_blank');
   };
   $('result-file').onchange = async (ev) => {
     const f = ev.target.files[0]; if (!f) return;
@@ -266,7 +266,7 @@
     try {
       const env = await makeEnvelope();
       await GP.publishToGitHub(env, tok);
-      $('pub-msg').innerHTML = `게시 완료(${esc(env.label)}). 1~2분 뒤 <a href="./" target="_blank">대시보드</a>에서 암호로 열 수 있습니다.`;
+      $('pub-msg').innerHTML = `게시 완료(${esc(env.label)}). 1~2분 뒤 <a href="status.html" target="_blank">가동 현황</a>에서 암호로 열 수 있습니다.`;
     } catch (e) { $('pub-msg').textContent = '⚠ ' + e.message; }
     btn.disabled = false;
   };

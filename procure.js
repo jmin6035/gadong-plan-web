@@ -15,7 +15,7 @@
   const plantOf = (code) => (G_CODES.includes(code) ? 'G' : 'C');
   const PERIODS = [['w1', '1주차'], ['w4', '2~4주'], ['w8', '5~8주'], ['w9', '9주 이후'], ['all', '전체']];
   const STATUS = ['판단대기', '요청', '발주됨', '보류'];
-  let D = null, S = null, tab = 'board', period = 'w4', plantF = 'all', open = {};
+  let D = null, S = null, tab = 'board', period = 'w4', plantF = 'all', open = {}, justOpened = null, lastTab = null;
 
   /* ---------- 저장 상태 ---------- */
   function defaults() {
@@ -94,16 +94,18 @@
     const sum = (f) => V.filter(f).reduce((a, j) => a + j.short, 0);
     const cnt = (k) => V.filter((j) => j.kind === k).length;
     const near = J.filter((j) => j.deadline && j.short >= 1 && diff(j.deadline, S.today) >= 0 && diff(j.deadline, S.today) <= 14).sort((a, b) => (a.deadline < b.deadline ? -1 : 1));
+    const nAdj = cnt('adjust') + cnt('nosup'), nChk = cnt('check');
+    const kpiBox = (tone, l, v, unit, b, ck, extra = '') => `<div class="kpi tone-${tone}" data-rk="k-${ck}"><div class="l">${l}</div><div class="v ${extra}"><b data-count="${v}" data-ck="${ck}">${n0(v)}</b><small>${unit}</small></div><div class="b">${b}</div></div>`;
     const kp = `<div class="kpis">
-      <div class="kpi"><div class="l">발주 필요(이 기간)</div><div class="v">${n0(sum(() => true))}<small>t</small></div><div class="b">${V.filter((j) => j.short >= 1).length}건 · 재고·입고예정 충당 후</div></div>
-      <div class="kpi"><div class="l">대체 업체 필요</div><div class="v ${cnt('alt') ? 'wv' : ''}">${cnt('alt')}<small>건</small></div><div class="b">1순위 리드타임이 남은 일수보다 김 · ${n0(sum((j) => j.kind === 'alt'))}t</div></div>
-      <div class="kpi"><div class="l">기발주 확인 · 조정 필요</div><div class="v ${cnt('adjust') + cnt('nosup') ? 'bv' : cnt('check') ? 'wv' : ''}">${cnt('check')} · ${cnt('adjust') + cnt('nosup')}<small>건</small></div><div class="b">리드타임 안쪽이라 새 발주로는 못 맞춤 · ${n0(sum((j) => ['adjust', 'nosup', 'check'].includes(j.kind)))}t</div></div>
-      <div class="kpi"><div class="l">1순위 발주 시한 2주 안</div><div class="v">${near.length}<small>건</small></div><div class="b">${near[0] ? `가장 급한 시한 ${codeNm(near[0].code)} ${md(near[0].first)} 필요분 · ${md(near[0].deadline)}` : '-'}</div></div></div>`;
+      ${kpiBox('brand', '발주 필요(이 기간)', Math.round(sum(() => true)), 't', `${V.filter((j) => j.short >= 1).length}건 · 재고·입고예정 충당 후`, 'need')}
+      ${kpiBox(cnt('alt') ? 'warn' : 'good', '대체 업체 필요', cnt('alt'), '건', `1순위 리드타임이 남은 일수보다 김 · ${n0(sum((j) => j.kind === 'alt'))}t`, 'alt', cnt('alt') ? 'wv' : '')}
+      <div class="kpi tone-${nAdj ? 'bad' : nChk ? 'warn' : 'good'}" data-rk="k-adj"><div class="l">기발주 확인 · 조정 필요</div><div class="v ${nAdj ? 'bv' : nChk ? 'wv' : ''}"><b data-count="${nChk}" data-ck="chk">${nChk}</b> · <b data-count="${nAdj}" data-ck="adj">${nAdj}</b><small>건</small></div><div class="b">리드타임 안쪽이라 새 발주로는 못 맞춤 · ${n0(sum((j) => ['adjust', 'nosup', 'check'].includes(j.kind)))}t</div></div>
+      ${kpiBox(near.length ? 'warn' : 'good', '1순위 발주 시한 2주 안', near.length, '건', near[0] ? `가장 급한 시한 ${esc(codeNm(near[0].code))} ${md(near[0].first)} 필요분 · ${md(near[0].deadline)}` : '-', 'near')}</div>`;
     const ctl = `<div class="bar">
       <div class="tabs">${PERIODS.map(([k, n]) => `<button type="button" data-per="${k}" aria-pressed="${k === period}">${n}</button>`).join('')}</div>
       <div class="tabs">${[['all', '전체'], ['C', '컬러'], ['G', '도금 FH']].map(([k, n]) => `<button type="button" data-pl="${k}" aria-pressed="${k === plantF}">${n}</button>`).join('')}</div>
       <span class="sp"></span>
-      <button type="button" class="btn" id="p-export">구매 요청서 내보내기(.xlsx)</button></div>`;
+      <button type="button" class="btn primary" id="p-export">구매 요청서 내보내기(.xlsx)</button></div>`;
     const rows = V.map((j) => {
       const [kn, kc] = KIND[j.kind], d = j.dec;
       const okL = j.cand.filter((x) => j.specOk(x)).map((x) => +x.lt), minLT = okL.length ? Math.min(...okL) : null;
@@ -128,8 +130,8 @@
         <td>${j.short >= 1 ? `<input data-f="qty" type="number" min="0" step="10" value="${esc(qty)}" aria-label="수량">` : ''}</td>
         <td>${j.short >= 1 ? `<select data-f="status" aria-label="상태">${STATUS.map((s) => `<option ${s === (d.status || '판단대기') ? 'selected' : ''}>${s}</option>`).join('')}</select>` : ''}</td>
         <td><input data-f="memo" type="text" value="${esc(d.memo || '')}" placeholder="메모" aria-label="메모"></td></tr>
-        ${isOpen ? `<tr class="ux"><td colspan="11"><div class="use"><b>무엇을 만들려고</b> ${j.use.slice().sort((a, b) => b[3] - a[3]).slice(0, 12).map((r) => `<span><i>${esc(r[0])}</i> ${esc(r[1])} ${esc(r[2])} <b>${n0(r[3])}t</b></span>`).join('')}</div>
-          <div class="use"><b>업체별</b> ${j.cand.map((s) => `<span class="${+s.lt <= j.left && j.specOk(s) ? '' : 'no'}">${s.prio}순위 ${esc(supName(s))} LT ${s.lt}일 → 발주 시한 ${md(addD(j.needBy, -s.lt))}${j.specOk(s) ? '' : ' · 두께 범위 밖'}</span>`).join('') || '-'}</div></td></tr>` : ''}`;
+        ${isOpen ? `<tr class="ux"><td colspan="11"><div class="${j.key === justOpened ? 'drop' : ''}"><div class="use"><b>무엇을 만들려고</b> ${j.use.slice().sort((a, b) => b[3] - a[3]).slice(0, 12).map((r) => `<span><i>${esc(r[0])}</i> ${esc(r[1])} ${esc(r[2])} <b>${n0(r[3])}t</b></span>`).join('')}</div>
+          <div class="use"><b>업체별</b> ${j.cand.map((s) => `<span class="${+s.lt <= j.left && j.specOk(s) ? '' : 'no'}">${s.prio}순위 ${esc(supName(s))} LT ${s.lt}일 → 발주 시한 ${md(addD(j.needBy, -s.lt))}${j.specOk(s) ? '' : ' · 두께 범위 밖'}</span>`).join('') || '-'}</div></div></td></tr>` : ''}`;
     }).join('');
     return card('p-board', '판단 보드', `기준일 ${S.today} · 필요일 = 투입 ${S.safety}일 전 입고`, kp + ctl + `
       <div class="scroll"><table class="t bd"><thead><tr><th class="l">첫 필요일</th><th class="l">소재</th><th>필요(t)</th><th>충당</th><th>발주 필요</th><th>판단</th><th class="l">이유</th><th class="l">업체(선택)</th><th>수량</th><th>상태</th><th>메모</th></tr></thead>
@@ -187,8 +189,11 @@
   function render() {
     const y = scrollY;
     const body = { board, arr: arrivals, ord: orders, sup: suppliers, basis }[tab]();
-    $('p-main').innerHTML = `<nav class="tabs big noprint">${TABS.map(([k, n]) => `<button type="button" data-tab="${k}" aria-pressed="${k === tab}">${n}</button>`).join('')}</nav>` + body;
-    $('p-sub').textContent = `필요 시점 → 가능한 업체 → 요청 · 기준일 ${S.today} · 컬러·도금 계획(V1) 연동`;
+    const fresh = lastTab !== tab; lastTab = tab;
+    $('p-main').innerHTML = `<nav class="tabs big noprint">${TABS.map(([k, n]) => `<button type="button" data-tab="${k}" aria-pressed="${k === tab}">${n}</button>`).join('')}</nav><div class="${fresh ? 'fade' : ''}">${body}</div>`;
+    UI.sub(`필요 시점 → 가능한 업체 → 구매 요청 · 기준일 ${S.today} · 컬러·도금 계획(V1) 연동`);
+    $('p-meta').innerHTML = `<span><b>기준일</b>${S.today}</span><span><b>자료</b>컬러·도금 계획 V1 · 소재재고List · 재고현황</span><span><b>계산</b>${String(D.built).replace('T', ' ')}</span><span><b>단위</b>톤</span>`;
+    UI.reveal($('p-main')); UI.count($('p-main')); justOpened = null;
     scrollTo(0, y);
   }
 
@@ -256,7 +261,7 @@
     if ((b = t.closest('[data-tab]'))) { tab = b.dataset.tab; render(); return; }
     if ((b = t.closest('[data-per]'))) { period = b.dataset.per; render(); return; }
     if ((b = t.closest('[data-pl]'))) { plantF = b.dataset.pl; render(); return; }
-    if ((b = t.closest('button.tg'))) { const k = b.closest('tr').dataset.k; open[k] = !open[k]; render(); return; }
+    if ((b = t.closest('button.tg'))) { const k = b.closest('tr').dataset.k; open[k] = !open[k]; justOpened = open[k] ? k : null; render(); return; }
     if ((b = t.closest('[data-add]'))) { if (b.dataset.add === 'arr') S.arr.push({ sup: '', code: '', t: '', date: S.today, po: '', memo: '' }); else S.sup.push({ plant: 'C', code: '', sup: '', name: '', prio: 9, lt: 30, on: true, memo: '' }); save(); render(); return; }
     if ((b = t.closest('[data-del]'))) { S[b.dataset.del].splice(+b.dataset.i, 1); save(); render(); return; }
     if ((b = t.closest('[data-clear]'))) { S[b.dataset.clear] = []; save(); render(); return; }
@@ -267,7 +272,7 @@
   });
   document.addEventListener('change', (e) => {
     const t = e.target;
-    if (t.dataset.f) { const k = t.closest('tr').dataset.k; const d = S.dec[k] = S.dec[k] || {}; d[t.dataset.f] = t.value; save(); if (t.dataset.f !== 'memo') render(); return; }
+    if (t.dataset.f) { const k = t.closest('tr').dataset.k; const d = S.dec[k] = S.dec[k] || {}; d[t.dataset.f] = t.value; save(); UI.toast('저장됨'); if (t.dataset.f !== 'memo') render(); return; }
     if (t.dataset.a) { const a = S.arr[+t.closest('tr').dataset.i]; a[t.dataset.a] = t.dataset.a === 'code' ? t.value.trim().toUpperCase().slice(0, 1) : t.value; save(); return; }
     if (t.dataset.s) { const s = S.sup[+t.closest('tr').dataset.i]; const f = t.dataset.s; s[f] = f === 'on' ? t.checked : (f === 'prio' || f === 'lt') ? +t.value : f === 'code' ? t.value.trim().toUpperCase().slice(0, 1) : t.value; if (f === 'code') s.plant = plantOf(s.code); save(); if (f === 'code' || f === 'prio') render(); return; }
     if (t.dataset.up) { if (t.files[0]) upload(t.dataset.up, t.files[0]); return; }
@@ -279,8 +284,9 @@
 
   let env = null;
   async function unlock(pw) {
+    if (pw) { $('p-lockbox').hidden = true; $('p-skel').hidden = false; }
     try { D = await GP.decryptJSON(env, pw); try { localStorage.setItem(PW_KEY, pw); } catch (e) { /* 무시 */ } S = load(); render(); }
-    catch (e) { $('p-form').hidden = false; $('p-msg').textContent = pw ? '암호가 맞지 않습니다' : ''; }
+    catch (e) { $('p-lockbox').hidden = false; $('p-skel').hidden = true; $('p-form').hidden = false; $('p-msg').textContent = pw ? '암호가 맞지 않습니다' : ''; }
   }
   $('p-form').addEventListener('submit', (e) => { e.preventDefault(); unlock($('p-pw').value); });
   fetch('published/procure.enc.json', { cache: 'no-store' }).then((r) => { if (!r.ok) throw new Error(); return r.json(); }).then((e) => {
