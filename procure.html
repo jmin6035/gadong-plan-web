@@ -8,24 +8,38 @@
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='7' fill='%230b3a75'/><rect x='10' y='10' width='12' height='12' rx='1.5' transform='rotate(45 16 16)' fill='none' stroke='%23fff' stroke-width='2.6'/></svg>">
 <link rel="stylesheet" href="ui/theme.css">
 <style>
-table.bd td { vertical-align: top; }
-table.bd td.why { min-width: 210px; max-width: 280px; }
-table.bd select { max-width: 190px; }
-table.bd tr.u.on > td { background: var(--surface-2); }
-table.bd tr.ux > td { background: var(--surface-2); white-space: normal; text-align: left; border-bottom: 1px solid var(--line); }
+table.bd { font-size: 14px; }
+table.bd td { vertical-align: top; padding: 10px 9px; }
+table.bd th { padding: 11px 9px; }
+table.bd td:nth-child(2) { white-space: normal; min-width: 130px; }
+table.bd td.jd { min-width: 230px; max-width: 300px; white-space: normal; }
+table.bd td.jd .why { font-size: 13.5px; color: var(--ink-2); line-height: 1.5; margin-top: 6px; }
+table.bd td.dec { min-width: 320px; white-space: normal; }
+.onlyshort { display: inline-flex; align-items: center; gap: 6px; font-size: 14px; font-weight: 600; color: var(--ink-2); cursor: pointer; }
+.onlyshort input { width: 16px; height: 16px; accent-color: var(--brand-2); }
+.dg { display: grid; grid-template-columns: minmax(130px, 1fr) 78px 92px; gap: 6px 8px; }
+.dg select, .dg input { width: 100%; max-width: none !important; }
+@media (max-width: 640px) { .dg { grid-template-columns: 1fr 1fr; } }
+.dg label { display: flex; flex-direction: column; gap: 2px; font-size: 11.5px; color: var(--ink-3); font-weight: 700; }
+table.bd input.memo { width: 100% !important; max-width: none; margin-top: 6px; }
+table.bd td b { font-size: 15px; }
+table.bd select { max-width: 200px; }
+
+table.bd tr.u.on > td { background: var(--tint-2) !important; }
+table.bd tr.ux > td { background: var(--tint) !important; white-space: normal; text-align: left; border-bottom: 1px solid var(--line); }
 table.t input[type=text], table.ed input:not([type]) { width: 120px; }
 table.ed td { text-align: center; }
 table.ed input[size] { width: 48px; }
-.tg { border: 0; background: var(--steel-1); color: var(--brand); cursor: pointer; font-size: 11px; width: 20px; height: 20px; border-radius: 5px; margin-right: 4px; transition: background .2s; }
+.tg { border: 0; background: var(--tint-2); color: var(--brand); cursor: pointer; font-size: 12px; width: 24px; height: 24px; border-radius: 5px; margin-right: 4px; transition: background .2s; }
 .tg:hover { background: var(--steel-2); }
-.use { display: flex; flex-wrap: wrap; gap: 5px 10px; font-size: 12.5px; margin: 2px 0 8px; }
-.use b:first-child { width: 100%; color: var(--ink-2); font-size: 12px; }
-.use span { background: var(--surface); border: 1px solid var(--line); border-radius: 6px; padding: 2px 9px; }
+.use { display: flex; flex-wrap: wrap; gap: 6px 10px; font-size: 14px; margin: 4px 0 10px; }
+.use b:first-child { width: 100%; color: var(--brand); font-size: 13px; }
+.use span { background: var(--surface); border: 1px solid var(--line); border-radius: 7px; padding: 4px 10px; }
 .use span.no { color: var(--ink-3); text-decoration: line-through; }
 .use i { font-style: normal; color: var(--ink-3); }
 .x { border: 0; background: none; color: var(--ink-3); cursor: pointer; border-radius: 5px; width: 24px; height: 24px; }
 .x:hover { background: var(--bad-bg); color: var(--bad); }
-.bar input[type=date], .bar input[type=number] { font: inherit; font-size: 13px; padding: 4px 6px; border: 1px solid var(--line); border-radius: 6px; background: var(--surface); color: var(--ink); }
+.bar input[type=date], .bar input[type=number] { font: inherit; font-size: 14px; padding: 6px 8px; border: 1px solid var(--line); border-radius: 6px; background: var(--surface); color: var(--ink); }
 </style>
 </head>
 <body>

@@ -15,7 +15,7 @@
   const plantOf = (code) => (G_CODES.includes(code) ? 'G' : 'C');
   const PERIODS = [['w1', '1주차'], ['w4', '2~4주'], ['w8', '5~8주'], ['w9', '9주 이후'], ['all', '전체']];
   const STATUS = ['판단대기', '요청', '발주됨', '보류'];
-  let D = null, S = null, tab = 'board', period = 'w4', plantF = 'all', open = {}, justOpened = null, lastTab = null;
+  let D = null, S = null, tab = 'board', period = 'w4', plantF = 'all', open = {}, onlyShort = true, justOpened = null, lastTab = null;
 
   /* ---------- 저장 상태 ---------- */
   function defaults() {
@@ -90,7 +90,7 @@
   const matSel = (attr, cur) => `<select ${attr} aria-label="소재"><option value="">-</option>${Object.entries(D.matCode).sort((a, b) => (a[1] < b[1] ? -1 : 1)).map(([k, n]) => `<option value="${k}" ${k === cur ? 'selected' : ''}>${esc(n)}</option>`).join('')}</select>`;
 
   function board() {
-    const J = judge(), V = J.filter((j) => inPeriod(j) && (plantF === 'all' || j.plant === plantF));
+    const J = judge(), V0 = J.filter((j) => inPeriod(j) && (plantF === 'all' || j.plant === plantF)), V = V0;
     const sum = (f) => V.filter(f).reduce((a, j) => a + j.short, 0);
     const cnt = (k) => V.filter((j) => j.kind === k).length;
     const near = J.filter((j) => j.deadline && j.short >= 1 && diff(j.deadline, S.today) >= 0 && diff(j.deadline, S.today) <= 14).sort((a, b) => (a.deadline < b.deadline ? -1 : 1));
@@ -104,19 +104,21 @@
     const ctl = `<div class="bar">
       <div class="tabs">${PERIODS.map(([k, n]) => `<button type="button" data-per="${k}" aria-pressed="${k === period}">${n}</button>`).join('')}</div>
       <div class="tabs">${[['all', '전체'], ['C', '컬러'], ['G', '도금 FH']].map(([k, n]) => `<button type="button" data-pl="${k}" aria-pressed="${k === plantF}">${n}</button>`).join('')}</div>
+      <label class="onlyshort"><input type="checkbox" id="p-only" ${onlyShort ? 'checked' : ''}> 발주 필요만 보기 <span class="muted">(${V.filter((j) => j.short >= 1).length}/${V.length})</span></label>
       <span class="sp"></span>
       <button type="button" class="btn primary" id="p-export">구매 요청서 내보내기(.xlsx)</button></div>`;
-    const rows = V.map((j) => {
+    const VR = onlyShort ? V.filter((j) => j.short >= 1) : V;
+    const rows = VR.map((j) => {
       const [kn, kc] = KIND[j.kind], d = j.dec;
       const okL = j.cand.filter((x) => j.specOk(x)).map((x) => +x.lt), minLT = okL.length ? Math.min(...okL) : null;
-      const specNote = j.cand.some((x) => !j.specOk(x) && +x.lt <= j.left) ? ' · 더 빠른 업체는 두께 범위 밖(펼쳐서 확인)' : '';
+      const specNote = j.cand.some((x) => !j.specOk(x) && +x.lt <= j.left) ? ' · 더 빠른 업체는 두께 범위 밖' : '';
       const sel = d.sup || (j.rec && j.rec.sup) || '';
       const qty = d.qty != null && d.qty !== '' ? d.qty : Math.ceil(j.short);
       const opts = ['<option value="">-</option>'].concat(j.cand.map((s) => `<option value="${esc(s.sup)}" ${s.sup === sel ? 'selected' : ''}>${esc(supName(s))} · LT ${s.lt}일${+s.lt > j.left ? ' (늦음)' : ''}${j.specOk(s) ? '' : ' (사양 밖)'}</option>`)).join('');
       const why = j.kind === 'ok' ? '재고·입고예정으로 충당'
         : j.kind === 'nosup' ? '등록된 업체 없음 → 업체 기준정보에 추가'
-          : j.kind === 'check' ? `남은 ${j.left}일 < 리드타임(최단 ${minLT ?? '-'}일) — 이미 발주돼 있어야 할 양. 입고예정 탭에 기발주를 넣으면 다시 판단${specNote}`
-          : j.kind === 'adjust' ? `남은 ${j.left}일 < 최단 LT ${minLT ?? '-'}일 → 재고 전환·투입 순서 변경·자가재 대체 검토${specNote}`
+          : j.kind === 'check' ? `${minLT == null ? '두께 범위에 맞는 등록 업체 없음' : `남은 ${j.left}일 < 리드타임(최단 ${minLT}일)`} → 이미 발주돼 있어야 할 양(입고예정에 기발주 입력)${specNote}`
+          : j.kind === 'adjust' ? `${minLT == null ? '두께 범위에 맞는 등록 업체 없음' : `남은 ${j.left}일 < 최단 LT ${minLT}일`} → 재고 전환·투입 순서 변경·자가재 대체 검토${specNote}`
             : j.kind === 'alt' ? `1순위 ${esc(supName(j.cand[0]))} LT ${j.cand[0].lt}일 > 남은 ${j.left}일 → ${esc(supName(j.rec))}(LT ${j.rec.lt}일)`
               : `남은 ${j.left}일 ≥ LT ${j.rec.lt}일 · 시한 ${md(j.deadline)}`;
       const isOpen = open[j.key];
@@ -124,18 +126,15 @@
         <td class="l"><button type="button" class="tg" aria-expanded="${!!isOpen}" aria-label="용도 보기">${isOpen ? '▾' : '▸'}</button> ${md(j.first)} <span class="muted">(${j.left >= 0 ? 'D-' + j.left : -j.left + '일 지남'})</span></td>
         <td class="l">${PL[j.plant]} <b>${esc(codeNm(j.code))}</b>${j.thk ? `<br><span class="muted">${j.thk[0]}~${j.thk[1]}mm</span>` : ''}</td>
         <td>${n0(j.t)}${j.est >= 1 ? `<br><span class="muted">추정 ${n0(j.est)}</span>` : ''}</td><td>${n0(j.cover)}</td><td><b>${j.short >= 1 ? n0(j.short) : '·'}</b></td>
-        <td class="c"><span class="st ${kc}">${kn}</span></td>
-        <td class="l why">${why}</td>
-        <td class="l">${j.short >= 1 ? `<select data-f="sup" aria-label="업체">${opts}</select>` : ''}</td>
-        <td>${j.short >= 1 ? `<input data-f="qty" type="number" min="0" step="10" value="${esc(qty)}" aria-label="수량">` : ''}</td>
-        <td>${j.short >= 1 ? `<select data-f="status" aria-label="상태">${STATUS.map((s) => `<option ${s === (d.status || '판단대기') ? 'selected' : ''}>${s}</option>`).join('')}</select>` : ''}</td>
-        <td><input data-f="memo" type="text" value="${esc(d.memo || '')}" placeholder="메모" aria-label="메모"></td></tr>
-        ${isOpen ? `<tr class="ux"><td colspan="11"><div class="${j.key === justOpened ? 'drop' : ''}"><div class="use"><b>무엇을 만들려고</b> ${j.use.slice().sort((a, b) => b[3] - a[3]).slice(0, 12).map((r) => `<span><i>${esc(r[0])}</i> ${esc(r[1])} ${esc(r[2])} <b>${n0(r[3])}t</b></span>`).join('')}</div>
+        <td class="l jd"><span class="st ${kc}">${kn}</span><div class="why">${why}</div></td>
+        <td class="l dec">${j.short >= 1 ? `<div class="dg"><label>업체<select data-f="sup" aria-label="업체">${opts}</select></label><label>수량<input data-f="qty" type="number" min="0" step="10" value="${esc(qty)}" aria-label="수량"></label><label>상태<select data-f="status" aria-label="상태">${STATUS.map((x) => `<option ${x === (d.status || '판단대기') ? 'selected' : ''}>${x}</option>`).join('')}</select></label></div>` : '<span class="muted">발주 불필요</span>'}
+          <input class="memo" data-f="memo" type="text" value="${esc(d.memo || '')}" placeholder="메모" aria-label="메모"></td></tr>
+        ${isOpen ? `<tr class="ux"><td colspan="7"><div class="${j.key === justOpened ? 'drop' : ''}"><div class="use"><b>무엇을 만들려고</b> ${j.use.slice().sort((a, b) => b[3] - a[3]).slice(0, 12).map((r) => `<span><i>${esc(r[0])}</i> ${esc(r[1])} ${esc(r[2])} <b>${n0(r[3])}t</b></span>`).join('')}</div>
           <div class="use"><b>업체별</b> ${j.cand.map((s) => `<span class="${+s.lt <= j.left && j.specOk(s) ? '' : 'no'}">${s.prio}순위 ${esc(supName(s))} LT ${s.lt}일 → 발주 시한 ${md(addD(j.needBy, -s.lt))}${j.specOk(s) ? '' : ' · 두께 범위 밖'}</span>`).join('') || '-'}</div></div></td></tr>` : ''}`;
     }).join('');
     return card('p-board', '판단 보드', `기준일 ${S.today} · 필요일 = 투입 ${S.safety}일 전 입고`, kp + ctl + `
-      <div class="scroll"><table class="t bd"><thead><tr><th class="l">첫 필요일</th><th class="l">소재</th><th>필요(t)</th><th>충당</th><th>발주 필요</th><th>판단</th><th class="l">이유</th><th class="l">업체(선택)</th><th>수량</th><th>상태</th><th>메모</th></tr></thead>
-      <tbody>${rows || '<tr><td colspan="11" class="c muted">이 기간에 해당 없음</td></tr>'}</tbody></table></div>
+      <div class="scroll"><table class="t bd"><thead><tr><th class="l">첫 필요일</th><th class="l">소재</th><th>필요(t)</th><th>충당</th><th>발주 필요</th><th class="l">판단 · 이유</th><th class="l">결정 (업체 · 수량 · 상태 · 메모)</th></tr></thead>
+      <tbody>${rows || '<tr><td colspan="7" class="c muted">이 기간에 해당 없음</td></tr>'}</tbody></table></div>
       <p class="small">판단 단위 = 필요 주차 × 소재. 충당 = 오늘 재고 + 필요일까지 들어오는 입고예정(이른 주부터). 남은 일수 = 첫 필요일 − ${S.safety}일 − 기준일. 업체는 리드타임 ≤ 남은 일수 · 두께 범위 안에서 우선순위가 가장 높은 곳을 추천 — 선택을 바꾸면 이 브라우저에 저장.</p>`);
   }
 
@@ -276,6 +275,7 @@
     if (t.dataset.a) { const a = S.arr[+t.closest('tr').dataset.i]; a[t.dataset.a] = t.dataset.a === 'code' ? t.value.trim().toUpperCase().slice(0, 1) : t.value; save(); return; }
     if (t.dataset.s) { const s = S.sup[+t.closest('tr').dataset.i]; const f = t.dataset.s; s[f] = f === 'on' ? t.checked : (f === 'prio' || f === 'lt') ? +t.value : f === 'code' ? t.value.trim().toUpperCase().slice(0, 1) : t.value; if (f === 'code') s.plant = plantOf(s.code); save(); if (f === 'code' || f === 'prio') render(); return; }
     if (t.dataset.up) { if (t.files[0]) upload(t.dataset.up, t.files[0]); return; }
+    if (t.id === 'p-only') { onlyShort = t.checked; render(); return; }
     if (t.id === 'p-today' && t.value) { S.today = t.value; save(); return; }
     if (t.id === 'p-safety') { S.safety = +t.value || 0; save(); return; }
     if (t.id === 'p-duelead') { S.dueLead = +t.value || 0; S.orders = S.orders.map((o) => ({ ...o, need: addD(o.due, -S.dueLead) })); save(); render(); return; }
