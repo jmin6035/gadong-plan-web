@@ -9,10 +9,11 @@
   const pc = (v) => Math.round(v * 100) + '%';
   const md = (s) => { const p = String(s).slice(5, 10).split('-'); return `${+p[0]}/${+p[1]}`; };
   const PLANT = { G: '도금 FH', C: '컬러 구매소재' };
-  let O = null, plant = 'all', sel = null;
+  let O = null, plant = 'all', sel = null, fsel = 2;
 
   const card = (id, num, title, sm, body) => `<section class="card" id="${id}"><h2><span class="n">${num}</span> ${esc(title)} ${sm ? `<small>${esc(sm)}</small>` : ''}</h2>${body}</section>`;
   const days = (d) => Math.round((new Date(d) - new Date(O.today)) / 864e5);
+  const forTop = (m, k) => { const t = (m.for || []).reduce((a, x) => a + x[3], 0) || 1; return (m.for || []).slice(0, k).map((x) => `${x[0]} ${x[1]}${x[2] ? '(' + x[2] + ')' : ''} ${Math.round(x[3] / t * 100)}%`).join(', '); };
   const items = (r) => Object.entries(r.items).map(([k, v]) => `${k} ${pc(v)}`).join(' · ') || '-';
 
   function urgent() {
@@ -20,8 +21,8 @@
     O.rows.forEach((r) => r.months.forEach((m) => { if (m.arrive >= 1) L.push({ r, m, d: days(m.orderBy) }); }));
     const soon = L.filter((x) => x.d >= 0 && x.d <= 45).sort((a, b) => a.d - b.d);
     const past = L.filter((x) => x.d < 0 && x.m.ym >= O.months[2]).sort((a, b) => b.m.arrive - a.m.arrive);
-    const row = (x) => `<tr><td class="dd ${x.d < 0 ? 'dl-past' : x.d <= 7 ? 'dl-soon' : ''}">${md(x.m.orderBy)} <span class="muted">(${x.d < 0 ? -x.d + '일 지남' : 'D-' + x.d})</span></td><td class="l">${esc(x.r.name)} <span class="muted">${x.r.sup}</span></td><td class="l">${PLANT[x.r.plant]}</td><td class="l">${esc(items(x.r))}</td><td>${+x.m.ym.slice(5)}월</td><td><b>${n0(x.m.arrive)}</b></td><td class="muted">${md(x.m.orderRec)}</td></tr>`;
-    const head = '<thead><tr><th>발주 마감</th><th>업체</th><th>구분</th><th>품명</th><th>입고월</th><th>수량(t)</th><th>권장 발주</th></tr></thead>';
+    const row = (x) => `<tr><td class="dd ${x.d < 0 ? 'dl-past' : x.d <= 7 ? 'dl-soon' : ''}">${md(x.m.orderBy)} <span class="muted">(${x.d < 0 ? -x.d + '일 지남' : 'D-' + x.d})</span></td><td class="l">${esc(x.r.name)} <span class="muted">${x.r.sup}</span></td><td class="l">${PLANT[x.r.plant]}</td><td class="l">${esc(items(x.r))}</td><td>${+x.m.ym.slice(5)}월</td><td><b>${n0(x.m.arrive)}</b></td><td class="muted">${md(x.m.orderRec)}</td><td class="l why">${esc(forTop(x.m, 3))}</td></tr>`;
+    const head = '<thead><tr><th>발주 마감</th><th>업체</th><th>구분</th><th>품명</th><th>입고월</th><th>수량(t)</th><th>권장 발주</th><th>무엇을 만들려고(그 달 사용 기준 상위)</th></tr></thead>';
     const total = soon.reduce((a, x) => a + x.m.arrive, 0);
     return card('m-urg', '①', '발주 임박 — 앞으로 45일', `기준 ${O.today}`, `<p class="lead">45일 안에 마감되는 발주 ${soon.length}건, ${n0(total)}t. 가장 급한 건: ${soon[0] ? `${esc(soon[0].r.name)} ${+soon[0].m.ym.slice(5)}월분 ${n0(soon[0].m.arrive)}t (마감 ${md(soon[0].m.orderBy)})` : '없음'}</p>
       <div class="scroll"><table class="t urg">${head}<tbody>${soon.map(row).join('')}</tbody></table></div>
@@ -51,6 +52,9 @@
       <div class="kpi"><div class="l">리드타임 실적</div><div class="v">${r.lt.med}<small>일 중앙</small></div><div class="b">80% ${r.lt.p80}일 · ${r.lt.n ? r.lt.n + '건' : '자료 없음 → 기본 60일'}</div></div>
       <div class="kpi"><div class="l">품명</div><div class="v" style="font-size:18px">${esc(items(r))}</div><div class="b">재고 품명코드 비중</div></div></div>
       <div class="scroll"><table class="t"><thead><tr><th>월</th><th>사용</th><th>입고 필요</th><th>월말 재고</th><th>권장 발주</th><th>발주 마감</th></tr></thead><tbody>${r.months.map((m) => `<tr><td class="l">${m.ym}</td><td>${n0(m.use)}</td><td><b>${n0(m.arrive)}</b></td><td>${n0(m.end)}</td><td>${md(m.orderRec)}</td><td class="${days(m.orderBy) < 0 && m.arrive >= 1 ? 'dl-past' : ''}">${md(m.orderBy)}${days(m.orderBy) < 0 && m.arrive >= 1 ? ' (지남)' : ''}</td></tr>`).join('')}</tbody></table></div>
+      <h3>무엇을 만들기 위한 소재인가 — 월별 사용 내역(상위 12개)</h3>
+      <div class="tabs" id="m-ftabs">${r.months.map((m, i) => `<button type="button" data-k="${i}" aria-pressed="${i === fsel}">${m.ym.slice(2, 4)}.${+m.ym.slice(5)}월</button>`).join('')}</div>
+      <div class="scroll"><table class="t"><thead><tr><th>${r.plant === 'G' ? '도금 구분' : '컬러 그룹'}</th>${r.plant === 'G' ? '' : '<th>제품 품명</th><th>고객·지역</th>'}<th>소재 사용(t)</th><th>비중</th></tr></thead><tbody>${(() => { const m = r.months[fsel]; const t = (m.for || []).reduce((a, x) => a + x[3], 0) || 1; return (m.for || []).map((x) => `<tr><td class="l">${esc(x[0])}</td>${r.plant === 'G' ? '' : `<td class="l">${esc(x[1])}</td><td class="l">${esc(x[2] || '-')}</td>`}<td>${n0(x[3])}</td><td>${Math.round(x[3] / t * 100)}%</td></tr>`).join(''); })()}</tbody></table></div>
       <p class="small">사용 = ${r.plant === 'G' ? '도금 생산 ÷ 1.008 × 이 업체 FH 비중(9월말 재고 기준)' : '컬러 품명별 생산 × (1 − 자가재 비중) × 이 업체 비중(13주 실적, 원소재 번호 앞 2자리 → 업체)'}. 10~12월 = 통합 계획 일별, 1~3월 = TF 판매계획.</p>`;
   }
 
@@ -74,6 +78,7 @@
     document.querySelectorAll('#m-mx tr[data-i]').forEach((tr) => tr.addEventListener('click', () => { sel = +tr.dataset.i; document.querySelectorAll('#m-mx tr.sel').forEach((z) => z.classList.remove('sel')); tr.classList.add('sel'); detail(); }));
     detail();
   }
+  document.addEventListener('click', (e) => { const b = e.target.closest('#m-ftabs button'); if (b) { fsel = +b.dataset.k; detail(); } });
 
   let env = null;
   async function open(pw) {
