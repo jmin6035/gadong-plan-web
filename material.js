@@ -22,7 +22,7 @@
     const soon = L.filter((x) => x.d >= 0 && x.d <= 45).sort((a, b) => a.d - b.d);
     const past = L.filter((x) => x.d < 0 && x.m.ym >= O.months[2]).sort((a, b) => b.m.arrive - a.m.arrive);
     const row = (x) => `<tr><td class="dd ${x.d < 0 ? 'dl-past' : x.d <= 7 ? 'dl-soon' : ''}">${md(x.m.orderBy)} <span class="muted">(${x.d < 0 ? -x.d + '일 지남' : 'D-' + x.d})</span></td><td class="l">${esc(x.r.name)} <span class="muted">${x.r.sup}</span></td><td class="l">${PLANT[x.r.plant]}</td><td class="l">${esc(items(x.r))}</td><td>${+x.m.ym.slice(5)}월</td><td><b>${n0(x.m.arrive)}</b></td><td class="muted">${md(x.m.orderRec)}</td><td class="l why">${esc(forTop(x.m, 3))}</td></tr>`;
-    const head = '<thead><tr><th>발주 마감</th><th>업체</th><th>구분</th><th>품명</th><th>입고월</th><th>수량(t)</th><th>권장 발주</th><th>무엇을 만들려고(그 달 사용 기준 상위)</th></tr></thead>';
+    const head = '<thead><tr><th>발주 마감</th><th>업체</th><th>구분</th><th>소재</th><th>입고월</th><th>수량(t)</th><th>권장 발주</th><th>무엇을 만들려고(그 달 사용 기준 상위)</th></tr></thead>';
     const total = soon.reduce((a, x) => a + x.m.arrive, 0);
     return card('m-urg', '①', '발주 임박 — 앞으로 45일', `기준 ${O.today}`, `<p class="lead">45일 안에 마감되는 발주 ${soon.length}건, ${n0(total)}t. 가장 급한 건: ${soon[0] ? `${esc(soon[0].r.name)} ${+soon[0].m.ym.slice(5)}월분 ${n0(soon[0].m.arrive)}t (마감 ${md(soon[0].m.orderBy)})` : '없음'}</p>
       <div class="scroll"><table class="t urg">${head}<tbody>${soon.map(row).join('')}</tbody></table></div>
@@ -38,7 +38,7 @@
     const body = rows.map((r, i) => `<tr data-i="${O.rows.indexOf(r)}" class="${sel === O.rows.indexOf(r) ? 'sel' : ''}"><td class="l nm">${esc(r.name)} <span class="muted">${r.sup}</span></td><td class="l muted">${PLANT[r.plant]}</td><td class="l">${esc(items(r))}</td><td>${r.lt.p80}일</td>${r.months.map((m) => { const d = days(m.orderBy); return `<td class="cell ${m.arrive >= 1 ? (d < 0 ? 'past' : d <= 45 ? 'soon' : '') : ''}">${m.arrive >= 1 ? n0(m.arrive) : '·'}${m.arrive >= 1 ? `<small>마감 ${md(m.orderBy)}</small>` : ''}</td>`; }).join('')}</tr>`).join('');
     return card('m-mx', '②', '업체 × 월 입고 필요', '셀 = 수량(t) · 발주 마감, 행을 누르면 상세', chips + `
       <div class="legend"><span><i class="box" style="background:var(--bad-bg)"></i>마감 지남(확인 필요)</span><span><i class="box" style="background:var(--warn-bg)"></i>45일 안 마감</span></div>
-      <div class="scroll"><table class="t mx"><thead><tr><th class="l">업체</th><th class="l">구분</th><th class="l">품명</th><th>LT(80%)</th>${O.months.map((ym) => `<th>${ym.slice(2, 4)}.${+ym.slice(5)}월</th>`).join('')}</tr></thead>
+      <div class="scroll"><table class="t mx"><thead><tr><th class="l">업체</th><th class="l">구분</th><th class="l">소재</th><th>LT(80%)</th>${O.months.map((ym) => `<th>${ym.slice(2, 4)}.${+ym.slice(5)}월</th>`).join('')}</tr></thead>
       <tbody>${body}<tr><td class="l nm" colspan="4">합계</td>${tot.map((v) => `<td><b>${n0(v)}</b></td>`).join('')}</tr></tbody></table></div>
       <div class="detail" id="m-detail"></div>`);
   }
@@ -50,7 +50,7 @@
     el.innerHTML = `<h3>${esc(r.name)} (${r.sup}) — ${PLANT[r.plant]}</h3>
       <div class="kpis"><div class="kpi"><div class="l">9월말 재고</div><div class="v">${n0(r.begin)}<small>t</small></div><div class="b">목표 ${n0(r.target)}t</div></div>
       <div class="kpi"><div class="l">리드타임 실적</div><div class="v">${r.lt.med}<small>일 중앙</small></div><div class="b">80% ${r.lt.p80}일 · ${r.lt.n ? r.lt.n + '건' : '자료 없음 → 기본 60일'}</div></div>
-      <div class="kpi"><div class="l">품명</div><div class="v" style="font-size:18px">${esc(items(r))}</div><div class="b">재고 품명코드 비중</div></div></div>
+      <div class="kpi"><div class="l">소재</div><div class="v" style="font-size:18px">${esc(items(r))}</div><div class="b">재고 소재 비중</div></div></div>
       <div class="scroll"><table class="t"><thead><tr><th>월</th><th>사용</th><th>입고 필요</th><th>월말 재고</th><th>권장 발주</th><th>발주 마감</th></tr></thead><tbody>${r.months.map((m) => `<tr><td class="l">${m.ym}</td><td>${n0(m.use)}</td><td><b>${n0(m.arrive)}</b></td><td>${n0(m.end)}</td><td>${md(m.orderRec)}</td><td class="${days(m.orderBy) < 0 && m.arrive >= 1 ? 'dl-past' : ''}">${md(m.orderBy)}${days(m.orderBy) < 0 && m.arrive >= 1 ? ' (지남)' : ''}</td></tr>`).join('')}</tbody></table></div>
       <h3>무엇을 만들기 위한 소재인가 — 월별 사용 내역(상위 12개)</h3>
       <div class="tabs" id="m-ftabs">${r.months.map((m, i) => `<button type="button" data-k="${i}" aria-pressed="${i === fsel}">${m.ym.slice(2, 4)}.${+m.ym.slice(5)}월</button>`).join('')}</div>

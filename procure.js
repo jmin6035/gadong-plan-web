@@ -1,5 +1,5 @@
 /* 소재 조달 판단: published/procure.enc.json (tools/procure_data.py --out)
-   필요 주차 × 소재코드마다 → 재고·입고예정 충당 → 부족분을 '남은 일수 안에 들어오는 업체' 중 우선순위로 추천.
+   필요 주차 × 소재마다 → 재고·입고예정 충당 → 부족분을 '남은 일수 안에 들어오는 업체' 중 우선순위로 추천.
    업체 기준정보·입고예정·주문재 목록·판단(업체/수량/상태/메모)은 이 브라우저(localStorage)에 저장, JSON 으로 주고받기 */
 (function () {
   'use strict';
@@ -85,7 +85,9 @@
 
   /* ---------- 화면 ---------- */
   const card = (id, title, sm, body) => `<section class="card" id="${id}"><h2>${esc(title)} ${sm ? `<small>${esc(sm)}</small>` : ''}</h2>${body}</section>`;
-  const codeNm = (c) => `${c} ${D.matCode[c] || ''}`.trim();
+  const codeNm = (c) => D.matCode[c] || c || '-';                 // 소재는 이름으로만 표시(내부 키는 품명코드)
+  const toCode = (v) => { const x = String(v || '').trim(); if (!x) return ''; const u = x.toUpperCase(); const hit = Object.entries(D.matCode).find(([, n]) => n.toUpperCase() === u || n.toUpperCase().replace(/[^A-Z0-9가-힣]/g, '') === u.replace(/[^A-Z0-9가-힣]/g, '')); return hit ? hit[0] : (u.length === 1 && D.matCode[u] ? u : ''); };
+  const matSel = (attr, cur) => `<select ${attr} aria-label="소재"><option value="">-</option>${Object.entries(D.matCode).sort((a, b) => (a[1] < b[1] ? -1 : 1)).map(([k, n]) => `<option value="${k}" ${k === cur ? 'selected' : ''}>${esc(n)}</option>`).join('')}</select>`;
 
   function board() {
     const J = judge(), V = J.filter((j) => inPeriod(j) && (plantF === 'all' || j.plant === plantF));
@@ -132,50 +134,50 @@
     return card('p-board', '판단 보드', `기준일 ${S.today} · 필요일 = 투입 ${S.safety}일 전 입고`, kp + ctl + `
       <div class="scroll"><table class="t bd"><thead><tr><th class="l">첫 필요일</th><th class="l">소재</th><th>필요(t)</th><th>충당</th><th>발주 필요</th><th>판단</th><th class="l">이유</th><th class="l">업체(선택)</th><th>수량</th><th>상태</th><th>메모</th></tr></thead>
       <tbody>${rows || '<tr><td colspan="11" class="c muted">이 기간에 해당 없음</td></tr>'}</tbody></table></div>
-      <p class="small">판단 단위 = 필요 주차 × 소재 품명코드. 충당 = 오늘 재고 + 필요일까지 들어오는 입고예정(이른 주부터). 남은 일수 = 첫 필요일 − ${S.safety}일 − 기준일. 업체는 리드타임 ≤ 남은 일수 · 두께 범위 안에서 우선순위가 가장 높은 곳을 추천 — 선택을 바꾸면 이 브라우저에 저장.</p>`);
+      <p class="small">판단 단위 = 필요 주차 × 소재. 충당 = 오늘 재고 + 필요일까지 들어오는 입고예정(이른 주부터). 남은 일수 = 첫 필요일 − ${S.safety}일 − 기준일. 업체는 리드타임 ≤ 남은 일수 · 두께 범위 안에서 우선순위가 가장 높은 곳을 추천 — 선택을 바꾸면 이 브라우저에 저장.</p>`);
   }
 
   function arrivals() {
-    const rows = S.arr.map((a, i) => `<tr data-i="${i}"><td><input data-a="sup" value="${esc(a.sup)}" aria-label="업체"></td><td><input data-a="code" value="${esc(a.code)}" size="3" aria-label="소재코드"></td><td><input data-a="t" type="number" value="${esc(a.t)}" aria-label="수량"></td><td><input data-a="date" type="date" value="${esc(a.date)}" aria-label="입고예정일"></td><td><input data-a="po" value="${esc(a.po || '')}" aria-label="발주번호"></td><td><input data-a="memo" value="${esc(a.memo || '')}" aria-label="메모"></td><td><button type="button" class="x" data-del="arr" data-i="${i}" aria-label="삭제">✕</button></td></tr>`).join('');
+    const rows = S.arr.map((a, i) => `<tr data-i="${i}"><td><input data-a="sup" value="${esc(a.sup)}" aria-label="업체"></td><td>${matSel('data-a="code"', a.code)}</td><td><input data-a="t" type="number" value="${esc(a.t)}" aria-label="수량"></td><td><input data-a="date" type="date" value="${esc(a.date)}" aria-label="입고예정일"></td><td><input data-a="po" value="${esc(a.po || '')}" aria-label="발주번호"></td><td><input data-a="memo" value="${esc(a.memo || '')}" aria-label="메모"></td><td><button type="button" class="x" data-del="arr" data-i="${i}" aria-label="삭제">✕</button></td></tr>`).join('');
     return card('p-arr', '입고예정 · 기발주 잔량', `${S.arr.length}건 · 합계 ${n0(S.arr.reduce((a, x) => a + (+x.t || 0), 0))}t`, `
       <p class="lead">MES 기발주 화면이 생기기 전까지 소재구매그룹 목록을 여기에 넣으면 '충당'에 반영됩니다.</p>
-      <div class="bar"><button type="button" class="btn" data-add="arr">+ 줄 추가</button><label class="btn">엑셀 올리기<input type="file" accept=".xlsx" data-up="arr" hidden></label><span class="small">양식: 소재조달_양식_v0.xlsx '입고예정' 시트 (업체 · 소재코드 · 수량(t) · 입고예정일 · 발주번호 · 메모)</span></div>
-      <div class="scroll"><table class="t ed"><thead><tr><th>업체</th><th>소재코드</th><th>수량(t)</th><th>입고예정일</th><th>발주번호</th><th>메모</th><th></th></tr></thead><tbody>${rows || '<tr><td colspan="7" class="c muted">없음 — 지금 판단은 재고만으로 충당</td></tr>'}</tbody></table></div>
+      <div class="bar"><button type="button" class="btn" data-add="arr">+ 줄 추가</button><label class="btn">엑셀 올리기<input type="file" accept=".xlsx" data-up="arr" hidden></label><span class="small">양식: 소재조달_양식_v0.xlsx '입고예정' 시트 (업체 · 소재 · 수량(t) · 입고예정일 · 발주번호 · 메모)</span></div>
+      <div class="scroll"><table class="t ed"><thead><tr><th>업체</th><th>소재</th><th>수량(t)</th><th>입고예정일</th><th>발주번호</th><th>메모</th><th></th></tr></thead><tbody>${rows || '<tr><td colspan="7" class="c muted">없음 — 지금 판단은 재고만으로 충당</td></tr>'}</tbody></table></div>
       <h3>현재 재고(구매소재, 자가 제외)</h3><p class="small">${esc(D.stockNote)}</p>
       <div class="chips">${Object.entries(D.stock).filter(([, t]) => t >= 1).sort((a, b) => b[1] - a[1]).map(([k, t]) => `<span class="chip">${PL[k[0]]} ${esc(codeNm(k.slice(2)))} <b>${n0(t)}t</b></span>`).join('')}</div>`);
   }
 
   function orders() {
     const cut = S.orders.length ? S.orders.map((o) => o.need).sort().pop() : null;
-    const rows = S.orders.map((o, i) => `<tr><td class="l">${esc(o.con || '')}</td><td class="l">${esc(o.prod)}</td><td class="l">${esc(o.cust || '')}</td><td>${o.thk || '-'}</td><td>${o.wid || '-'}</td><td>${esc(o.code)}</td><td>${n0(o.qty)}</td><td>${md(o.due)}</td><td>${md(o.need)}</td><td>${n0(o.mat)}</td><td><button type="button" class="x" data-del="orders" data-i="${i}" aria-label="삭제">✕</button></td></tr>`).join('');
+    const rows = S.orders.map((o, i) => `<tr><td class="l">${esc(o.con || '')}</td><td class="l">${esc(o.prod)}</td><td class="l">${esc(o.cust || '')}</td><td>${o.thk || '-'}</td><td>${o.wid || '-'}</td><td>${esc(codeNm(o.code))}</td><td>${n0(o.qty)}</td><td>${md(o.due)}</td><td>${md(o.need)}</td><td>${n0(o.mat)}</td><td><button type="button" class="x" data-del="orders" data-i="${i}" aria-label="삭제">✕</button></td></tr>`).join('');
     return card('p-ord', '주문재 목록 (마케팅)', S.orders.length ? `${S.orders.length}건 · ${md(cut)} 필요분까지 추정치 대신 사용` : '아직 없음 — 판단 보드의 주문재는 추정치', `
       <p class="lead">마케팅 목록을 올리면 그 목록의 마지막 필요일까지 '주문재(추정)'을 빼고 목록 수량으로 판단합니다.</p>
       <div class="bar"><label class="btn">엑셀 올리기<input type="file" accept=".xlsx" data-up="orders" hidden></label>${S.orders.length ? '<button type="button" class="btn" data-clear="orders">목록 비우기</button>' : ''}
         <label class="small">납기 → 컬러 투입 <input type="number" id="p-duelead" value="${S.dueLead}" min="0" max="60" style="width:56px">일 전</label>
-        <span class="small">양식: '주문재 목록' 시트 (계약번호 · 품명 · 고객 · 두께 · 폭 · 소재코드 · 수량(t) · 납기)</span></div>
+        <span class="small">양식: '주문재 목록' 시트 (계약번호 · 품명 · 고객 · 두께 · 폭 · 소재 · 수량(t) · 납기)</span></div>
       <div class="scroll"><table class="t"><thead><tr><th class="l">계약번호</th><th class="l">품명</th><th class="l">고객</th><th>두께</th><th>폭</th><th>소재</th><th>제품(t)</th><th>납기</th><th>투입</th><th>구매소재(t)</th><th></th></tr></thead><tbody>${rows || '<tr><td colspan="11" class="c muted">없음</td></tr>'}</tbody></table></div>
-      <p class="small">구매소재 = 제품 × 소재/제품 비(품명별 실수율) × (1 − 자가재 비중). 소재코드 칸이 비면 품명의 과거 소재코드(가장 많은 것), 채우면 그 코드 전량 구매로 봄.</p>`);
+      <p class="small">구매소재 = 제품 × 소재/제품 비(품명별 실수율) × (1 − 자가재 비중). 소재 칸이 비면 품명의 과거 소재(가장 많은 것), 채우면 그 소재 전량 구매로 봄. 소재 칸은 소재명(CGI, GALVALUME(AZ) 등)으로 적음.</p>`);
   }
 
   function suppliers() {
     const L = S.sup.map((s, i) => ({ s, i })).sort((a, b) => (a.s.plant + a.s.code + String(a.s.prio).padStart(3, '0') < b.s.plant + b.s.code + String(b.s.prio).padStart(3, '0') ? -1 : 1));
-    const rows = L.map(({ s, i }) => `<tr data-i="${i}"><td><input type="checkbox" data-s="on" ${s.on ? 'checked' : ''} aria-label="사용"></td><td>${PL[s.plant] || ''}</td><td><input data-s="code" value="${esc(s.code)}" size="2" aria-label="소재코드"> <span class="muted">${esc(D.matCode[s.code] || '')}</span></td>
+    const rows = L.map(({ s, i }) => `<tr data-i="${i}"><td><input type="checkbox" data-s="on" ${s.on ? 'checked' : ''} aria-label="사용"></td><td>${PL[s.plant] || ''}</td><td>${matSel('data-s="code"', s.code)}</td>
       <td class="l"><input data-s="sup" value="${esc(s.sup)}" size="3" aria-label="업체코드"> <input data-s="name" value="${esc(s.name)}" aria-label="업체명"></td>
       <td><input data-s="prio" type="number" min="1" value="${esc(s.prio)}" style="width:52px" aria-label="우선순위"></td><td><input data-s="lt" type="number" min="0" value="${esc(s.lt)}" style="width:60px" aria-label="리드타임"></td>
       <td class="muted">${s.ltMed != null ? `${s.ltMed}일 · ${s.ltN || 0}건` : '-'}</td><td class="muted">${s.share != null ? Math.round(s.share * 100) + '%' : '-'}</td>
       <td class="muted">${s.thk ? `${s.thk[0]}~${s.thk[1]}` : '-'}</td><td><input data-s="memo" value="${esc(s.memo || '')}" placeholder="정기 마감·MOQ 등" aria-label="메모"></td><td><button type="button" class="x" data-del="sup" data-i="${i}" aria-label="삭제">✕</button></td></tr>`).join('');
     return card('p-sup', '업체 기준정보', '우선순위 · 리드타임은 소재구매그룹과 맞춰 고칠 값', `
       <div class="bar"><button type="button" class="btn" data-add="sup">+ 업체 추가</button><button type="button" class="btn" id="p-supreset">처음 값으로</button><span class="small">리드타임 = 발주 → 입고(일). 초기값은 재고현황 '주문일시 → 소재입고일' 실적 80% (주문일시가 소재 발주일인지 전산 확인 중)</span></div>
-      <div class="scroll"><table class="t ed"><thead><tr><th>사용</th><th>공장</th><th>소재코드</th><th class="l">업체</th><th>우선</th><th>LT(일)</th><th>LT 실적(중앙)</th><th>이력 비중</th><th>두께 범위</th><th>메모</th><th></th></tr></thead><tbody>${rows}</tbody></table></div>`);
+      <div class="scroll"><table class="t ed"><thead><tr><th>사용</th><th>공장</th><th>소재</th><th class="l">업체</th><th>우선</th><th>LT(일)</th><th>LT 실적(중앙)</th><th>이력 비중</th><th>두께 범위</th><th>메모</th><th></th></tr></thead><tbody>${rows}</tbody></table></div>`);
   }
 
   function basis() {
     return card('p-basis', '계산 기준', '', `<ul class="notes">
-      <li><b>필요량</b> 컬러 구매소재 = 통합 계획(V1) 컬러 일별 ÷ 실수율 × (1 − 자가재 비중) × 품명별 소재코드 비중(13주 실적, 매칭률 ${Math.round(D.codeMix.matchedShare * 100)}%) · 도금 FH = 도금 일별 ÷ 실수율, AL→H · AZ·MAC→F · AL-STS→N · 27.1~3월은 TF 월 판매계획을 주별로 나눔</li>
+      <li><b>필요량</b> 컬러 구매소재 = 통합 계획(V1) 컬러 일별 ÷ 실수율 × (1 − 자가재 비중) × 품명별 소재 비중(13주 실적, 매칭률 ${Math.round(D.codeMix.matchedShare * 100)}%) · 도금 FH = 도금 일별 ÷ 실수율, AL→H · AZ·MAC→F · AL-STS→N · 27.1~3월은 TF 월 판매계획을 주별로 나눔</li>
       <li><b>계획재</b>는 우리가 정하는 양(계획 그대로), 나머지 컬러 그룹은 <b>주문재(추정)</b> — 마케팅 목록이 오면 대체</li>
       <li><b>충당</b> 재고 → 입고예정 순, 이른 필요일부터. ${esc(D.stockNote)}. 9월말 이후 FH 입고는 자료가 없어 FH 충당은 적게 잡힘 — 입고예정 탭에 기발주를 넣어야 정확</li>
       <li><b>업체 판단</b> 남은 일수 = 첫 필요일 − 여유일 − 기준일. 리드타임 ≤ 남은 일수인 업체 중 우선순위 1등을 추천. 1순위가 안 되면 '대체 업체', 아무도 안 되면 '조정 필요'</li>
-      <li><b>확인할 점</b> 리드타임 기준(주문일시), 업체별 정기 마감·최소량, AL-STS 소재코드(N 재고가 월 사용량에 비해 매우 적음 — 코드 확인 필요), 업체명이 없는 코드(V3·YB·YF)</li></ul>
+      <li><b>확인할 점</b> 리드타임 기준(주문일시), 업체별 정기 마감·최소량, AL-STS 소재(도금용 SUS 재고가 월 사용량에 비해 매우 적음 — 코드 확인 필요), 업체명이 없는 코드(V3·YB·YF)</li></ul>
       <div class="bar"><label class="small">기준일 <input type="date" id="p-today" value="${S.today}"></label><label class="small">입고 → 투입 여유 <input type="number" id="p-safety" value="${S.safety}" min="0" max="30" style="width:56px">일</label>
       <button type="button" class="btn" id="p-dl">설정·판단 내보내기(.json)</button><label class="btn">설정 가져오기<input type="file" accept=".json" id="p-ul" hidden></label><button type="button" class="btn" id="p-resetall">모두 초기화</button></div>
       <p class="small">저장 위치 = 이 브라우저. 다른 사람과 맞추려면 내보낸 .json 을 보내 가져오기. 자료 계산 ${String(D.built).replace('T', ' ')} (tools/procure_data.py)</p>`);
@@ -197,7 +199,7 @@
     let hdr = null, hr = 0; const out = [];
     ws.eachRow((row, r) => {
       const v = row.values.slice(1).map((c) => (c && typeof c === 'object' ? (c instanceof Date ? c : c.result != null ? c.result : c.text != null ? c.text : '') : c));
-      if (!hdr) { if (v.filter((c) => typeof c === 'string' && c.length <= 20 && /수량|업체|품명|소재코드|납기|입고/.test(c)).length >= 2) { hdr = v.map((c) => String(c || '').replace(/\s/g, '')); hr = r; } return; }
+      if (!hdr) { if (v.filter((c) => typeof c === 'string' && c.length <= 20 && /수량|업체|품명|소재|납기|입고/.test(c)).length >= 2) { hdr = v.map((c) => String(c || '').replace(/\s/g, '')); hr = r; } return; }
       if (r > hr && v.some((c) => c !== '' && c != null) && !v.some((c) => typeof c === 'string' && c.includes('예시'))) out.push(Object.fromEntries(hdr.map((h, i) => [h, v[i]])));
     });
     return out;
@@ -207,7 +209,7 @@
   function topCode(p) { const m = D.codeMix.byProduct[p] || D.codeMix.byProduct[String(p).replace(/\d+$/, '')] || { G: 1 }; return Object.entries(m).sort((a, b) => b[1] - a[1])[0][0]; }
   function orderRow(o) {
     const prod = String(pick(o, '품명')).trim().toUpperCase(), qty = +pick(o, '수량') || 0, due = dstr(pick(o, '납기', '필요일'));
-    const given = String(pick(o, '소재코드')).trim().toUpperCase().slice(0, 1);
+    const given = toCode(pick(o, '소재'));
     const fac = D.cfac[prod] || 1, self = given ? 0 : (D.selfShare[prod] || 0);
     return { con: String(pick(o, '계약')), prod, cust: String(pick(o, '고객')), thk: +pick(o, '두께') || null, wid: +pick(o, '폭') || null, code: given || topCode(prod), qty, due, need: addD(due, -S.dueLead), mat: qty * fac * (1 - self) };
   }
@@ -215,7 +217,7 @@
     try {
       if (kind === 'arr') {
         const R = await readSheet(file, ['입고']);
-        S.arr = S.arr.concat(R.map((o) => ({ sup: String(pick(o, '업체')), code: String(pick(o, '소재코드')).trim().toUpperCase().slice(0, 1), t: +pick(o, '수량') || 0, date: dstr(pick(o, '입고')), po: String(pick(o, '발주번호')), memo: String(pick(o, '메모')) })).filter((a) => a.code && a.t && /^\d{4}-\d\d-\d\d$/.test(a.date)));
+        S.arr = S.arr.concat(R.map((o) => ({ sup: String(pick(o, '업체')), code: toCode(pick(o, '소재')), t: +pick(o, '수량') || 0, date: dstr(pick(o, '입고')), po: String(pick(o, '발주번호')), memo: String(pick(o, '메모')) })).filter((a) => a.code && a.t && /^\d{4}-\d\d-\d\d$/.test(a.date)));
       } else {
         const R = await readSheet(file, ['주문재']);
         S.orders = R.map(orderRow).filter((o) => o.prod && o.qty && /^\d{4}-\d\d-\d\d$/.test(o.due));
@@ -230,7 +232,7 @@
     const wb = new ExcelJS.Workbook(), ws = wb.addWorksheet('구매 요청서');
     ws.addRow([`소재 구매 요청서 — 작성 ${S.today} (상태 '요청' 줄, 없으면 보고 있는 기간 전체)`]).font = { bold: true, size: 13 };
     ws.addRow([]);
-    const H = ['요청번호', '업체', '업체코드', '공장', '소재코드', '소재명', '두께(mm)', '수량(t)', '입고 요청일', '첫 투입일', '리드타임(일)', '선정 이유', '용도(상위)', '메모', '발주번호(회신)', '약속 납기(회신)', '회신 메모'];
+    const H = ['요청번호', '업체', '업체코드', '공장', '소재', '두께(mm)', '수량(t)', '입고 요청일', '첫 투입일', '리드타임(일)', '선정 이유', '용도(상위)', '메모', '발주번호(회신)', '약속 납기(회신)', '회신 메모'];
     const hr = ws.addRow(H); hr.font = { bold: true, color: { argb: 'FFFFFFFF' } }; hr.eachCell((c) => { c.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF1F3864' } }; c.alignment = { horizontal: 'center', vertical: 'middle', wrapText: true }; });
     const bySup = {};
     L.forEach((j) => { const sup = j.dec.sup || (j.rec && j.rec.sup) || '미정'; (bySup[sup] = bySup[sup] || []).push(j); });
@@ -238,12 +240,12 @@
     Object.keys(bySup).sort().forEach((sup) => bySup[sup].forEach((j) => {
       const s = S.sup.find((x) => x.sup === sup && x.code === j.code && x.plant === j.plant);
       const reason = !s ? '업체 미정' : (+s.lt > j.left ? `리드타임 ${s.lt}일 > 남은 ${j.left}일 — 확인 필요` : j.kind === 'alt' ? `1순위 ${supName(j.cand[0])} 리드타임 초과 → 대체` : '우선순위 1 · 리드타임 충족');
-      ws.addRow([`R${S.today.replace(/-/g, '').slice(2)}-${String(++n).padStart(3, '0')}`, s ? supName(s) : sup, sup, PL[j.plant], j.code, D.matCode[j.code] || '', j.thk ? `${j.thk[0]}~${j.thk[1]}` : '', Math.round(+(j.dec.qty || Math.ceil(j.short))), j.needBy, j.first, s ? +s.lt : '', reason,
+      ws.addRow([`R${S.today.replace(/-/g, '').slice(2)}-${String(++n).padStart(3, '0')}`, s ? supName(s) : sup, sup, PL[j.plant], codeNm(j.code), j.thk ? `${j.thk[0]}~${j.thk[1]}` : '', Math.round(+(j.dec.qty || Math.ceil(j.short))), j.needBy, j.first, s ? +s.lt : '', reason,
         j.use.slice().sort((a, b) => b[3] - a[3]).slice(0, 3).map((r) => `${r[1]} ${r[2]} ${Math.round(r[3])}t`).join(', '), j.dec.memo || '', '', '', '']);
     }));
-    [10, 16, 8, 8, 8, 14, 10, 9, 11, 11, 9, 30, 40, 16, 14, 13, 16].forEach((w, i) => { ws.getColumn(i + 1).width = w; });
+    [10, 16, 8, 8, 16, 10, 9, 11, 11, 9, 30, 40, 16, 14, 13, 16].forEach((w, i) => { ws.getColumn(i + 1).width = w; });
     ws.views = [{ state: 'frozen', ySplit: 3 }];
-    for (let r = 4; r <= ws.rowCount; r++) ws.getRow(r).eachCell({ includeEmpty: true }, (c, ci) => { c.border = { top: { style: 'thin', color: { argb: 'FFBFBFBF' } }, bottom: { style: 'thin', color: { argb: 'FFBFBFBF' } }, left: { style: 'thin', color: { argb: 'FFBFBFBF' } }, right: { style: 'thin', color: { argb: 'FFBFBFBF' } } }; if (ci >= 15) c.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFF7E0' } }; c.alignment = { vertical: 'top', wrapText: ci >= 12 }; });
+    for (let r = 4; r <= ws.rowCount; r++) ws.getRow(r).eachCell({ includeEmpty: true }, (c, ci) => { c.border = { top: { style: 'thin', color: { argb: 'FFBFBFBF' } }, bottom: { style: 'thin', color: { argb: 'FFBFBFBF' } }, left: { style: 'thin', color: { argb: 'FFBFBFBF' } }, right: { style: 'thin', color: { argb: 'FFBFBFBF' } } }; if (ci >= 14) c.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFF7E0' } }; c.alignment = { vertical: 'top', wrapText: ci >= 11 }; });
     const buf = await wb.xlsx.writeBuffer();
     const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' })); a.download = `소재구매요청서_${S.today}.xlsx`; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 5000);
   }
