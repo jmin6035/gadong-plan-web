@@ -207,7 +207,7 @@
       ['자가재', '필요일', '컬러 생산일 − 5일, 품명별 자가재 비중(PGS 72% · PCS 0% · POR2 100% …), 10일 단위로 묶음(V2 는 월말)'],
       ['소재', '입고·발주', '재고가 목표(FH 16,000 · 컬러 15,500t) 밑으로 가는 날 = 입고기한, 발주 = 입고 − 리드타임'],
     ];
-    return { html: card('s-rule', '④', '일별 배치 기준', '', `<div class="scroll"><table class="t rules"><thead><tr><th>구분</th><th>단계</th><th>기준</th></tr></thead><tbody>${R.map((r) => `<tr><td class="l nm">${r[0]}</td><td class="l">${r[1]}</td><td class="l wrap">${r[2]}</td></tr>`).join('')}</tbody></table></div>`) };
+    return { html: card('s-rule', '④', '일별 배치 기준', '', `<p><a href="doc.html?d=conditions"><b>전체 조건식 보기 →</b></a> (월 물량 LP · 컬러 · 자가재 · 도금 MILP · 소재 · 재계획)</p>` + `<div class="scroll"><table class="t rules"><thead><tr><th>구분</th><th>단계</th><th>기준</th></tr></thead><tbody>${R.map((r) => `<tr><td class="l nm">${r[0]}</td><td class="l">${r[1]}</td><td class="l wrap">${r[2]}</td></tr>`).join('')}</tbody></table></div>`) };
   }
 
   // ---------- ⑤ 매일 감시·재계획 ----------
