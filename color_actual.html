@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>컬러 실적</title>
+<meta name="description" content="컬러 1~4CCL 생산 실적 — 진도, 일별·주별 생산, 속도, 품명, 휴지">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='7' fill='%230b3a75'/><rect x='10' y='10' width='12' height='12' rx='1.5' transform='rotate(45 16 16)' fill='none' stroke='%23fff' stroke-width='2.6'/></svg>">
+<link rel="stylesheet" href="ui/theme.css">
+<style>
+.chart { margin-top: 4px; }
+.cv { display: block; width: 100%; height: auto; overflow: visible; }
+.cv text { fill: var(--ink-3); font-size: 15px; }
+.cv text.we { fill: var(--bad); }
+.cv text.lab { fill: var(--ink); font-weight: 700; font-size: 15px; }
+.cv .gl { stroke: var(--grid); stroke-width: 1; }
+.cv .bar { transform-box: fill-box; transform-origin: bottom; animation: growY .7s var(--ease) both; animation-delay: calc(var(--i) * 12ms); }
+.cv .ln { stroke-dasharray: 3000; stroke-dashoffset: 3000; animation: draw 1.4s var(--ease) forwards .1s; }
+.cv .hit { fill: transparent; cursor: pointer; } .cv .hit:hover { fill: color-mix(in srgb, var(--ink) 6%, transparent); }
+@keyframes growY { from { transform: scaleY(0); } to { transform: scaleY(1); } }
+@keyframes draw { to { stroke-dashoffset: 0; } }
+.legend { display: flex; flex-wrap: wrap; gap: 6px 18px; color: var(--ink-2); margin: 0 0 8px; }
+.legend span { display: inline-flex; align-items: center; gap: 7px; }
+.legend i.box { width: 13px; height: 13px; border-radius: 3px; display: inline-block; }
+.dot { display: inline-block; width: 11px; height: 11px; border-radius: 50%; margin-right: 8px; vertical-align: 0; }
+.dlt { font-variant-numeric: tabular-nums; white-space: nowrap; } .dlt.up { color: var(--good); } .dlt.down { color: var(--bad); } .dlt.muted { color: var(--ink-3); }
+table.t.big td.nm { font-weight: 700; }
+td.pbar { min-width: 190px; } td.pbar div { display: inline-block; vertical-align: middle; width: 110px; height: 12px; border-radius: 6px; background: var(--grid); overflow: hidden; margin-right: 8px; }
+td.pbar i { display: block; height: 100%; border-radius: 6px; transform-origin: left; animation: grow .9s var(--ease) both .2s; } td.pbar i.ok { background: var(--good); } td.pbar i.wn { background: var(--warn); } td.pbar i.bd { background: var(--bad); }
+.hbar { height: 16px; border-radius: 4px; background: var(--grid); overflow: hidden; } .hbar i { display: block; height: 100%; border-radius: 4px; transform-origin: left; animation: grow .8s var(--ease) both; }
+.grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; } .grid2 > * { min-width: 0; } @media (max-width: 980px) { .grid2 { grid-template-columns: 1fr; } }
+details.tv { margin-top: 12px; } details.tv summary { cursor: pointer; color: var(--brand-2); font-weight: 600; font-size: 15px; }
+.tipbox { position: fixed; pointer-events: none; background: var(--surface); color: var(--ink); border: 1px solid var(--line); border-radius: 8px; padding: 9px 12px; font-size: 14.5px; line-height: 1.55; box-shadow: var(--shadow-up); z-index: 40; display: none; }
+</style>
+</head>
+<body>
+<header id="shell" data-page="coloract" data-crumb="실적 · 컬러" data-title="컬러 실적" data-sub="컬러 1~4CCL — 이번 달 진도, 일별·주별 생산, 속도, 품명, 휴지 (MES 원자료 재계산)"></header>
+<main class="wrap">
+  <div class="docmeta" id="ca-meta"></div>
+  <div id="ca-main" style="margin-top:12px">
+    <section class="card lock" id="ca-lock">
+      <div id="ca-lockbox"><div class="ic" aria-hidden="true">🔒</div><h2>불러오는 중…</h2>
+        <form class="unlock" id="ca-form" hidden><input type="password" id="ca-pw" placeholder="분석 암호" autocomplete="current-password" aria-label="분석 암호"><button type="submit">열기</button></form>
+        <p class="hint" id="ca-msg"></p></div>
+      <div class="skel" id="ca-skel" hidden><i style="width:40%"></i><i></i><i style="width:80%"></i></div>
+    </section>
+  </div>
+</main>
+<footer class="foot"><div class="wrap"><span>원자료: MES 컬러 생산·휴지 실적, 판매생산속보 · 계산: tools/color_actual.py</span><span>POSCO STEELEON 도금·컬러 가동계획</span></div></footer>
+<div class="tipbox" id="ca-tip" role="tooltip"></div>
+<script src="ui/shell.js"></script>
+<script src="engine/crypto.js"></script>
+<script src="color_actual.js"></script>
+</body>
+</html>

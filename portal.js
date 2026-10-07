@@ -21,12 +21,12 @@
   };
   const GROUPS = [
     ['가동계획', [['integrated.html', 'plan', '통합 가동계획', '컬러 → 도금 4분기 일별 계획, 버전 비교·재고 추이'], ['status.html', 'gantt', '가동 현황', '도금 1·2CGL 월별 간트, 강종 전환, 부서별 물량', 0, 'G'], ['rolling.html', 'calc', '계획 계산', '도금 실적을 넣어 다시 계산(롤링)하고 게시', 0, 'G']]],
-    ['실적', [['analysis.html', 'chart', '실적 분석', '도금 속도·손실·M/C 실적과 파라미터 보정 후보', 0, 'G'], ['report.html', 'report', '주간 보고', '도금·컬러 주간 계획 대비 실적 보고 양식']]],
+    ['실적', [['analysis.html', 'chart', '도금 실적 분석', '도금 속도·손실·M/C 실적과 파라미터 보정 후보', 0, 'G'], ['color_actual.html', 'chart', '컬러 실적', '1~4CCL 진도·일별·주별 생산·속도·품명·휴지', true, 'C'], ['report.html', 'report', '주간 보고', '도금·컬러 주간 계획 대비 실적 보고 양식']]],
     ['소재', [['procure.html', 'truck', '조달 판단', '필요 시점별 가능 업체 추천, 구매 요청서', true], ['material.html', 'box', '소재 발주(월)', '업체 × 월 입고 필요량과 발주 마감(~27.3)']]],
     ['자료', [['doc.html?d=conditions', 'book', '계획 조건식', '컬러·도금·소재 계산식과 보완할 점'], ['doc.html?d=procure_guide', 'help', '조달 판단 사용법', '사용 순서 10단계와 계산 조건'], ['doc.html?d=requests', 'mail', '협조 요청 메일', '전산·구매·판매·생산 요청 사항']]],
   ];
 
-  $('h-groups').innerHTML = GROUPS.map(([g, L]) => `<div class="group"><h3>${g}</h3>${L.map(([u, ic, t, d, nw, only]) => `<a class="tile" href="${u}" data-rk="t-${u}"${only ? ` data-only="${only}"` : ''}><span class="ic">${IC[ic]}</span><b>${t}${nw ? '<em class="new">NEW</em>' : ''}</b><span>${d}</span>${only ? '<em class="only">도금 전용</em>' : ''}</a>`).join('')}</div>`).join('');
+  $('h-groups').innerHTML = GROUPS.map(([g, L]) => `<div class="group"><h3>${g}</h3>${L.map(([u, ic, t, d, nw, only]) => `<a class="tile" href="${u}" data-rk="t-${u}"${only ? ` data-only="${only}"` : ''}><span class="ic">${IC[ic]}</span><b>${t}${nw ? '<em class="new">NEW</em>' : ''}</b><span>${d}</span>${only ? `<em class="only">${only === 'G' ? '도금' : '컬러'} 전용</em>` : ''}</a>`).join('')}</div>`).join('');
   UI.reveal(document);
 
   function kpi(tone, l, valHtml, b, href, ck) { return `<div class="kpi tone-${tone}" data-rk="k-${ck}">${href ? `<a class="go" href="${href}" aria-label="${esc(l)} 자세히"></a>` : ''}<div class="l">${l}</div><div class="v">${valHtml}</div><div class="b">${b}</div></div>`; }
@@ -40,7 +40,7 @@
     const tot = p.g1.reduce((a, x) => a + x, 0) + p.g2.reduce((a, x) => a + x, 0);
     const diff = r.actual - r.plan;
     $('h-asof').textContent = `실적 기준 ${md(r.asOf)} · 계획 ${O.rec}`;
-    $('h-meta').innerHTML = `<span><b>기준일</b>${O.asOf}</span><span><b>추천 계획</b>${O.rec}</span><span><b>자료</b>MES 생산·재고, 판매계획, 소재재고</span><span><b>계산</b>${String(O.built).replace('T', ' ')}</span>`;
+    $('h-meta').innerHTML = `<span><b>기준일</b>${O.asOf}</span><span><b>확정 계획</b>${O.rec}</span><span><b>자료</b>MES 생산·재고, 판매계획, 소재재고</span><span><b>계산</b>${String(O.built).replace('T', ' ')}</span>`;
     const K = [
       ['G', kpi(p.short + p.late ? 'bad' : 'good', '도금 계획 결품 · 지연', `<b data-count="${p.short}" data-ck="ps">0</b> · <b data-count="${p.late}" data-ck="pl">0</b><small>건</small>`, `4분기 계획 ${n0(tot)}t · M/C ${p.mc}회`, 'integrated.html', 'pl')],
       ['G', kpi(diff >= 0 ? 'good' : 'warn', `계획 대비 실적 (~${md(r.asOf)})`, `<b data-count="${r.actual}" data-ck="ra">0</b><small>t</small><span class="pm" style="color:var(--${diff >= 0 ? 'good' : 'warn'})">${diff >= 0 ? '▲' : '▼'} ${n0(Math.abs(diff))}</span>`, `계획 ${n0(r.plan)}t · 10월 누계 도금`, 'status.html', 'ra')],
@@ -63,7 +63,7 @@
       <div class="crow hd"><span></span>${['1CCL', '2CCL', '3CCL', '4CCL'].map((l) => `<span>${l}</span>`).join('')}</div>
       ${O.months.map((m, i) => `<div class="crow"><span class="m">${+m.slice(5)}월</span>${['1CCL', '2CCL', '3CCL', '4CCL'].map((l, j) => { const x = (cl[m] || {})[l] || { plan: 0, placed: 0 }; const pc = x.plan ? x.placed / x.plan : 0; return `<div class="cl" title="${+m.slice(5)}월 ${l} 편성 ${n0(x.placed)} / 월차 ${n0(x.plan)}t"><i class="${pc < 0.995 ? 'short' : ''}" style="width:${Math.min(100, pc * 100)}%;--i:${i * 4 + j}"></i><span>${(pc * 100).toFixed(pc < 0.995 ? 1 : 0)}%</span></div>`; }).join('')}</div>`).join('')}
       <p class="small" style="margin-top:8px">주황 = 월차를 다 못 채움(라인 전용 품목 미편성) · 10월 미편성 ${n0(c.unplaced[0])}t</p>`;
-    $('h-rec').innerHTML = `<h2>추천 계획 <small>${O.rec}</small></h2><div class="decide"><b class="tag">결론</b><br>${esc(O.recWhy)}</div>`;
+    $('h-rec').innerHTML = `<h2>확정 계획 <small>${O.rec} · 2026-10-07</small></h2><div class="decide"><b class="tag">진행</b><br>${esc(O.recWhy)}</div>`;
     $('h-due').innerHTML = `<h2>${scN[sc]}발주 시한 임박 <small>1순위 업체 기준 · 2주 안</small><span class="unit">단위: 톤</span></h2>
       <div class="scroll"><table class="t"><thead><tr><th class="l">시한</th><th class="l">소재</th><th class="l">업체</th><th>첫 필요일</th><th>부족</th></tr></thead><tbody>${q.nearTop.map((x) => `<tr><td class="l"><b>${md(x.deadline)}</b></td><td class="l">${esc(x.mat)}</td><td class="l">${esc(x.sup)}</td><td>${md(x.first)}</td><td>${n0(x.t)}</td></tr>`).join('') || '<tr><td colspan="5" class="c muted">없음</td></tr>'}</tbody></table></div>
       <div class="kpis" style="margin-top:14px;grid-template-columns:1fr 1fr">

@@ -5,12 +5,12 @@
   const NAV = [
     ['home', 'index.html', '홈'], '|',
     ['integrated', 'integrated.html', '통합 가동계획'], ['status', 'status.html', '가동 현황'], ['rolling', 'rolling.html', '계획 계산'], '|',
-    ['analysis', 'analysis.html', '실적 분석'], ['report', 'report.html', '주간 보고'], '|',
+    ['analysis', 'analysis.html', '도금 실적'], ['coloract', 'color_actual.html', '컬러 실적'], ['report', 'report.html', '주간 보고'], '|',
     ['procure', 'procure.html', '조달 판단'], ['material', 'material.html', '소재 발주(월)'], '|',
     ['conditions', 'doc.html?d=conditions', '계획 조건식'], ['guide', 'doc.html?d=procure_guide', '사용법'], ['requests', 'doc.html?d=requests', '요청 메일'],
   ];
   const TKEY = 'cgl-theme', SKEY = 'cgl-scope';
-  const ONLY = { status: 'G', analysis: 'G', rolling: 'G' };     // 도금 자료만 있는 화면
+  const ONLY = { status: 'G', analysis: 'G', rolling: 'G', coloract: 'C' };     // 도금 자료만 있는 화면
   const SCN = { all: '전체', G: '도금', C: '컬러' };
   const UI = window.UI = window.UI || {};
   const reduce = () => window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;

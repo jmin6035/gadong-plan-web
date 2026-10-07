@@ -213,6 +213,76 @@ table.t input[type=number] { width: 88px; text-align: right; }
 @keyframes pulse { 0% { box-shadow: 0 0 0 0 currentColor; } 100% { box-shadow: 0 0 0 6px transparent; } }
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition: none !important; } }
 
+
+/* ---------- 가독성(40·50대 기준): 넓은 화면 · 큰 글씨 · 큰 칸 ---------- */
+html body { font-size: 16px; }
+.wrap { max-width: 1720px; padding: 0 28px; }
+@media (max-width: 640px) { .wrap { padding: 0 14px; } }
+.small, .hint { font-size: 14px; }
+.lead { font-size: 17px; }
+.shell-head h1 { font-size: 30px; }
+.shell-head .sub { font-size: 15px; }
+.shell-nav a { font-size: 15.5px; padding: 10px 14px 12px; }
+.wordmark b { font-size: 14px; } .wordmark span { font-size: 13px; }
+.docmeta { font-size: 14px; } .docmeta b { font-size: 13px; }
+.card { padding: 24px 26px; }
+.card > h2 { font-size: 22px; }
+.card > h2 small { font-size: 14px; }
+.card > h2 .unit { font-size: 13.5px; }
+.card h3 { font-size: 17px; }
+.kpi { padding: 17px 19px 16px; }
+.kpi .l { font-size: 15px; }
+.kpi .v { font-size: 38px; }
+.kpi .v small { font-size: 16px; }
+.kpi .b { font-size: 14.5px; }
+table.t { font-size: 16px; }
+table.t th { font-size: 15.5px; padding: 12px 14px; }
+table.t td { padding: 12px 14px; }
+table.t td.why { font-size: 15px; }
+table.t select, table.t input, .field { font-size: 15.5px; min-height: 38px; }
+.st { font-size: 14.5px; padding: 5px 12px 5px 10px; }
+.chip { font-size: 15px; }
+.tabs button, .seg button { font-size: 15.5px; padding: 8px 16px; }
+.tabs.big button { font-size: 16.5px; padding: 14px 20px; }
+.btn { font-size: 15.5px; padding: 9px 16px; }
+.scope-seg button { font-size: 15px; padding: 7px 18px; }
+.notes li { font-size: 16px; }
+/* 차트 글자 */
+.chart svg text, svg text { font-size: 13.5px; }
+.legend { font-size: 14.5px; }
+.chart .ttl { font-size: 16px; }
+/* 예전 페이지 공용(legacy) */
+html .bul-row { font-size: 15px; grid-template-columns: 140px 1fr auto; }
+html .bul-track { height: 20px; }
+html table.sum td { font-size: 15.5px; }
+html .decide { font-size: 16px; }
+html .issue { font-size: 15.5px; }
+html .flow { font-size: 15px; }
+/* 가동표(달력) — 통합 가동계획 */
+html table.calt { font-size: 15px; }
+html table.calt th, html table.calt td { padding: 8px 4px; min-width: 50px; }
+html table.calt .stick { min-width: 84px; font-size: 15px; }
+html table.calt td.camp { font-size: 13.5px; }
+html table.heat td, html table.heat th { padding: 9px 8px; font-size: 15.5px; }
+/* 소재 발주 매트릭스 */
+html table.mx td.cell small { font-size: 12.5px; }
+/* 가동 현황 간트표·이벤트 */
+html table.gtable { font-size: 15px; min-width: 1900px; }
+html .gtable th, html .gtable td { min-width: 52px; padding: 7px 3px; }
+html .gtable tr.r-fam td, html .gtable tr.r-fam .c1 { font-size: 15px; }
+html .gtable tr.r-hrs td, html .gtable tr.r-hrs .c1 { font-size: 13px; }
+html .gtable th.line { font-size: 17px; }
+html .gtable col.cc0 { width: 62px; } html .gtable col.cc1 { width: 110px; } html .gtable col.ctot { width: 78px; }
+html .gtable .c1 { left: 62px; }
+html table.evt td, html table.evt th { font-size: 15.5px; }
+html .line-card dl { font-size: 15.5px; } html .line-card h3 { font-size: 18px; }
+html .kpis.big .kpi b { font-size: 36px; } html .kpis.big .kpi .kl { font-size: 15px; } html .kpis.big .kpi .ks { font-size: 14px; }
+html .exec .headline { font-size: 22px; } html .exec .headline b { font-size: 25px; }
+html .load-row { font-size: 15px; } html .load-track { height: 18px; }
+html table.data, html table.edit, html table.vs, html table.mes-t { font-size: 15.5px; }
+html table.data th, html table.data td, html table.mes-t th, html table.mes-t td { padding: 11px 12px; }
+html label { font-size: 15.5px; }
+
 /* ---------- 인쇄: A4 보고서 양식 ---------- */
 @media print {
   @page { size: A4 landscape; margin: 11mm 10mm 13mm; }

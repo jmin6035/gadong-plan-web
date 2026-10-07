@@ -52,7 +52,7 @@
 .tile .new { display: inline-block; font-size: 10px; font-weight: 700; color: var(--brand-2); border: 1px solid var(--brand-2); border-radius: 4px; padding: 0 4px; margin-left: 6px; vertical-align: 1px; }
 #h-lock .unlock { margin-top: 6px; }
 .tile .only { position: absolute; right: 36px; top: 14px; font-size: 10.5px; font-weight: 700; color: var(--ink-3); border: 1px solid var(--line); border-radius: 4px; padding: 0 5px; }
-:root[data-scope="C"] .tile[data-only="G"] { filter: grayscale(1) opacity(.5); }
+:root[data-scope="C"] .tile[data-only="G"], :root[data-scope="G"] .tile[data-only="C"] { filter: grayscale(1) opacity(.5); }
 .crow { display: grid; grid-template-columns: 54px repeat(4, 1fr); gap: 8px; align-items: center; font-size: 14px; margin: 8px 0; }
 .crow .m { font-weight: 700; color: var(--ink-2); }
 .cl { position: relative; height: 30px; border-radius: 6px; background: var(--grid); overflow: hidden; }
