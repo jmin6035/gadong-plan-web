@@ -42,7 +42,7 @@
     $('h-asof').textContent = `실적 기준 ${md(r.asOf)} · 계획 ${O.rec}`;
     $('h-meta').innerHTML = `<span><b>기준일</b>${O.asOf}</span><span><b>확정 계획</b>${O.rec}</span><span><b>자료</b>MES 생산·재고, 판매계획, 소재재고</span><span><b>계산</b>${String(O.built).replace('T', ' ')}</span>`;
     const K = [
-      ['G', kpi(p.short + p.late ? 'bad' : 'good', '도금 계획 결품 · 지연', `<b data-count="${p.short}" data-ck="ps">0</b> · <b data-count="${p.late}" data-ck="pl">0</b><small>건</small>`, `4분기 계획 ${n0(tot)}t · M/C ${p.mc}회`, 'integrated.html', 'pl')],
+      ['G', kpi(p.short + p.late ? 'bad' : p.tightN ? 'warn' : 'good', '도금 납기 빠듯 (계획상 결품·지연 0)', `<b data-count="${p.tightN || 0}" data-ck="pt">0</b><small>건</small>`, `납기 2일 이내 생산 ${n0(p.tightT || 0)}t · 2CGL 하루 여유 최대 ${p.slack ? n0(p.slack['2CGL']) : '-'}분`, 'integrated.html', 'pl')],
       ['G', kpi(diff >= 0 ? 'good' : 'warn', `계획 대비 실적 (~${md(r.asOf)})`, `<b data-count="${r.actual}" data-ck="ra">0</b><small>t</small><span class="pm" style="color:var(--${diff >= 0 ? 'good' : 'warn'})">${diff >= 0 ? '▲' : '▼'} ${n0(Math.abs(diff))}</span>`, `계획 ${n0(r.plan)}t · 10월 누계 도금`, 'status.html', 'ra')],
       ['C', kpi(c.unplaced[0] > 0 ? 'warn' : 'good', '컬러 미편성 (10월)', `<b data-count="${c.unplaced[0]}" data-ck="cu">0</b><small>t</small>`, `11월 ${n0(c.unplaced[1])}t · 12월 ${n0(c.unplaced[2])}t — 라인 전용 품목`, 'integrated.html', 'cu')],
       ['C', kpi(cm[0][1] < cm[0][0] ? 'warn' : 'good', '컬러 10월 월차 편성률', `<b data-count="${(cm[0][1] / cm[0][0] * 100).toFixed(1)}" data-dec="1" data-ck="cr">0</b><small>%</small>`, `편성 ${n0(cm[0][1])} / 월차 ${n0(cm[0][0])}t · 11월 ${(cm[1][1] / cm[1][0] * 100).toFixed(1)}%`, 'integrated.html', 'cr')],
