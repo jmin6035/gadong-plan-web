@@ -91,6 +91,12 @@ a { color: var(--brand-2); }
 .scope-note { margin-top: 14px; }
 .scope-note > div { background: var(--warn-bg); color: var(--warn); border: 1px solid color-mix(in srgb, var(--warn) 30%, transparent); border-radius: 10px; padding: 11px 14px; font-size: 14px; }
 .scope-note button { font: inherit; font-weight: 700; color: var(--warn); background: var(--surface); border: 1px solid currentColor; border-radius: 6px; padding: 1px 8px; cursor: pointer; }
+/* 화면 도움말 · 카드 엑셀 버튼 */
+.shell-head .help { margin: 8px 0 0; font-size: 14px; opacity: .92; max-width: 980px; background: rgba(255,255,255,.08); border-left: 3px solid var(--brand-3); padding: 6px 10px; border-radius: 0 6px 6px 0; }
+.shell-head .help b { font-size: 12.5px; letter-spacing: .05em; margin-right: 6px; opacity: .8; }
+.card > .xbtn { position: absolute; right: 18px; top: 18px; z-index: 2; font: inherit; font-size: 13px; font-weight: 700; color: var(--brand-2); background: var(--surface); border: 1px solid var(--line); border-radius: 7px; padding: 4px 10px; cursor: pointer; opacity: .75; transition: opacity .2s, border-color .2s; }
+.card > .xbtn:hover { opacity: 1; border-color: var(--brand-2); }
+.card:has(> .xbtn) > h2 .unit { margin-right: 84px; }
 /* 자료 신선도 배지·경고 띠 */
 .fresh { display: inline-flex; align-items: center; gap: 7px; color: #fff; text-decoration: none; font-size: 13px; font-weight: 600; padding: 4px 11px; border-radius: 999px; background: rgba(255,255,255,.12); border: 1px solid rgba(255,255,255,.28); white-space: nowrap; }
 .fresh i { width: 8px; height: 8px; border-radius: 50%; background: #5cd38a; box-shadow: 0 0 0 3px rgba(92,211,138,.25); }

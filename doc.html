@@ -14,7 +14,7 @@
 <script>
   (function () { // 문서 종류 → 메뉴 위치·제목
     var d = (new URLSearchParams(location.search).get('d') || '');
-    var x = { conditions: ['conditions', '계획 조건식'], procure_guide: ['guide', '조달 판단 사용법'], requests: ['requests', '협조 요청 메일'], tf_review: ['doc', 'TF 계산구조 검토'], strategy: ['doc', '운영 전략'] }[d] || ['doc', '회의 자료'];
+    var x = { conditions: ['conditions', '계획 조건식'], procure_guide: ['guide', '조달 판단 사용법'], requests: ['requests', '협조 요청 메일'], glossary: ['glossary', '용어·정의 · 확인 대기'], ops: ['doc', '운영 매뉴얼'], tf_review: ['doc', 'TF 계산구조 검토'], strategy: ['doc', '운영 전략'] }[d] || ['doc', '회의 자료'];
     var h = document.getElementById('shell'); h.dataset.page = x[0]; h.dataset.title = x[1];
   })();
 </script>
