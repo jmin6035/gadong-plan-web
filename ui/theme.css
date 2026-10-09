@@ -98,6 +98,7 @@ a { color: var(--brand-2); }
 .card > .xbtn:hover { opacity: 1; border-color: var(--brand-2); }
 .card:has(> .xbtn) > h2 .unit { margin-right: 84px; }
 /* 자료 신선도 배지·경고 띠 */
+@media (max-width: 560px) { .shell-tools #ui-theme { display: none; } .fresh { font-size: 12px; padding: 3px 9px; } }
 .fresh { display: inline-flex; align-items: center; gap: 7px; color: #fff; text-decoration: none; font-size: 13px; font-weight: 600; padding: 4px 11px; border-radius: 999px; background: rgba(255,255,255,.12); border: 1px solid rgba(255,255,255,.28); white-space: nowrap; }
 .fresh i { width: 8px; height: 8px; border-radius: 50%; background: #5cd38a; box-shadow: 0 0 0 3px rgba(92,211,138,.25); }
 .fresh.warn i { background: #f5b942; box-shadow: 0 0 0 3px rgba(245,185,66,.25); } .fresh.bad i { background: #ff6b5e; box-shadow: 0 0 0 3px rgba(255,107,94,.3); animation: pulse 1.6s ease-out 3; }
