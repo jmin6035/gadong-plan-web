@@ -122,13 +122,15 @@
   function render2() { document.querySelectorAll('#ca-pl button').forEach((b) => b.addEventListener('click', () => { pl = b.dataset.l; $('ca-prod').outerHTML = products(); render2(); })); }
 
   let env = null;
+  const envReady = GP.latest('color_actual.enc.json');
   async function unlock(pw) {
+    if (!env) env = await envReady;                              // 자료를 받기 전에 암호를 넣은 경우
     if (pw) { $('ca-lockbox').hidden = true; $('ca-skel').hidden = false; }
     try { O = await GP.decryptJSON(env, pw); try { localStorage.setItem(PW_KEY, pw); } catch (e) { /* 무시 */ } render(); }
     catch (e) { $('ca-lockbox').hidden = false; $('ca-skel').hidden = true; $('ca-form').hidden = false; $('ca-msg').textContent = pw ? '암호가 맞지 않습니다' : ''; }
   }
   $('ca-form').addEventListener('submit', (e) => { e.preventDefault(); unlock($('ca-pw').value); });
-  fetch('published/color_actual.enc.json', { cache: 'no-store' }).then((r) => { if (!r.ok) throw new Error(); return r.json(); }).then((e) => {
+  envReady.then((e) => { if (!e) throw new Error();
     env = e; let s = null; try { s = localStorage.getItem(PW_KEY); } catch (x) { /* 무시 */ }
     if (s) unlock(s); else $('ca-form').hidden = false;
   }).catch(() => { $('ca-msg').textContent = '자료를 찾을 수 없습니다'; });

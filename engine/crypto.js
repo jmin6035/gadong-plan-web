@@ -44,6 +44,8 @@
     const stamp = (e) => (e && (e.created || e.savedAt)) || '';
     return got.filter(Boolean).sort((a, b) => (stamp(a) < stamp(b) ? 1 : -1))[0] || null;
   };
+  // 화면 자료: 사내 PC 자동 실행기(Supabase)와 GitHub 게시본 중 더 최근 것
+  GP.latest = (name) => GP.fetchPublished([GP.SUPABASE_URL + '/storage/v1/object/public/published/' + name, 'published/' + name]);
   GP.PUBLISH_REPO = { owner: 'jmin6035', repo: 'gadong-plan-web', branch: 'main' };
 
   /* GitHub에 바로 게시(관리자용). token: 이 저장소 Contents 쓰기 권한만 준 fine-grained 토큰. 브라우저 → GitHub API 직접 호출 */

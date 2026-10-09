@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>자료 상태</title>
+<meta name="description" content="원천 자료별 마지막 수집일과 화면별 게시 시각 — 자동 실행이 멈췄는지 확인">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='7' fill='%230b3a75'/><rect x='10' y='10' width='12' height='12' rx='1.5' transform='rotate(45 16 16)' fill='none' stroke='%23fff' stroke-width='2.6'/></svg>">
+<link rel="stylesheet" href="ui/theme.css">
+<style>
+.ageb { display: inline-block; min-width: 74px; text-align: center; font-weight: 800; border-radius: 999px; padding: 3px 10px; font-size: 14.5px; }
+.ageb.ok { background: var(--good-bg); color: var(--good); } .ageb.warn { background: var(--warn-bg); color: var(--warn); } .ageb.bad { background: var(--bad-bg); color: var(--bad); }
+ol.fix li { margin: 8px 0; font-size: 16px; } ol.fix code { background: var(--tint-2); padding: 2px 6px; border-radius: 5px; font-size: 14px; }
+</style>
+</head>
+<body>
+<header id="shell" data-page="health" data-crumb="자료" data-title="자료 상태" data-sub="원천 자료별 마지막 날짜와 화면별 게시 시각 — 숫자가 언제 기준인지 확인"></header>
+<main class="wrap">
+  <div id="h-main" style="margin-top:16px"><section class="card"><div class="skel"><i style="width:40%"></i><i></i><i style="width:70%"></i></div></section></div>
+</main>
+<footer class="foot"><div class="wrap"><span>status.json 은 날짜·건수만 담고 있어 암호 없이 열립니다 · 계산: cglplan/pages.py</span><span>POSCO STEELEON 도금·컬러 가동계획</span></div></footer>
+<script src="ui/shell.js"></script>
+<script src="engine/crypto.js"></script>
+<script>
+(function () {
+  const $ = (id) => document.getElementById(id);
+  const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  const SUPA = GP.SUPABASE_URL + '/storage/v1/object/public/published/';
+  const today = new Date(); const t0 = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+  const age = (d) => (d ? Math.floor((t0 - new Date(String(d).slice(0, 10) + 'T00:00:00')) / 864e5) : null);
+  const badge = (a) => (a == null ? '<span class="ageb bad">없음</span>' : `<span class="ageb ${a <= 1 ? 'ok' : a <= 2 ? 'warn' : 'bad'}">${a <= 0 ? '오늘' : a + '일 전'}</span>`);
+  const kst = (s) => { if (!s) return '-'; const d = new Date(s); return isNaN(d) ? String(s).slice(0, 16) : d.toLocaleString('ko-KR', { timeZone: 'Asia/Seoul', month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' }); };
+  const get = (u) => fetch(u + (u.startsWith('http') ? '?v=' + Date.now() : ''), { cache: 'no-store' }).then((r) => (r.ok ? r.json() : null)).catch(() => null);
+  const PAGES = [['portal.enc.json', '홈 요약', '자동(사내 PC)'], ['color_actual.enc.json', '컬러 실적', '자동(사내 PC)'], ['procure.enc.json', '조달 판단', '자동(재고) · 수요는 계획 갱신 시'],
+    ['latest.plan.enc.json', '가동 현황(도금 계획·재계획)', '자동(사내 PC)'], ['analysis.enc.json', '도금 실적 분석', '자동(사내 PC)'], ['weekly_report.enc.json', '주간 보고', '주 1회(클라우드)'],
+    ['integrated.enc.json', '통합 가동계획', '계획 변경 시(클라우드)'], ['material.enc.json', '소재 발주(월)', '계획 변경 시(클라우드)']];
+  (async () => {
+    const st = (await Promise.all([get(SUPA + 'status.json'), get('published/status.json')])).filter(Boolean).sort((a, b) => (String(a.runAt) < String(b.runAt) ? 1 : -1))[0];
+    const envs = await Promise.all(PAGES.map(async ([n]) => { const [a, b] = await Promise.all([get(SUPA + n), get('published/' + n)]); const ca = a && (a.created || a.savedAt), cb = b && (b.created || b.savedAt); return ca && (!cb || ca > cb) ? { src: '사내 PC(Supabase)', at: ca } : cb ? { src: 'GitHub(클라우드)', at: cb } : null; }));
+    let h = '';
+    if (st) {
+      const fs = st.feeds || [];
+      const worst = Math.max(...fs.filter((f) => f.last && !/월말/.test(f.name)).map((f) => age(f.last)));
+      h += `<section class="card"><h2>원천 자료 <small>마지막 게시 ${kst(st.runAt)}</small></h2>
+        <div class="kpis" style="margin-bottom:16px"><div class="kpi tone-${worst <= 1 ? 'good' : worst <= 2 ? 'warn' : 'bad'}"><div class="l">가장 오래된 일일 자료</div><div class="v">${worst}<small>일 전</small></div><div class="b">${worst <= 1 ? '정상 — 매일 갱신 중' : '자동 실행이 멈췄을 수 있음 — 아래 점검 순서'}</div></div>
+        <div class="kpi tone-brand"><div class="l">마지막 재계획</div><div class="v" style="font-size:26px">${st.auto && st.auto.actualTo ? esc(st.auto.actualTo) : '-'}</div><div class="b">${st.auto && st.auto.replanned ? '재계획함' + (st.auto.optimal === false ? ' (시간 제한)' : '') : esc((st.auto && st.auto.notes && st.auto.notes.join(' · ')) || '클라우드에서 계산한 자료')}</div></div></div>
+        <div class="scroll"><table class="t"><thead><tr><th class="l">자료</th><th>마지막 날짜</th><th>경과</th><th>건수</th></tr></thead><tbody>${fs.map((f) => `<tr><td class="l"><b>${esc(f.name)}</b></td><td>${esc(f.last || '-')}</td><td class="c">${/월말/.test(f.name) ? '<span class="muted">월 1회</span>' : badge(age(f.last))}</td><td>${f.n != null ? f.n.toLocaleString('ko-KR') : '-'}</td></tr>`).join('')}</tbody></table></div></section>`;
+    } else h += '<section class="card"><h2>원천 자료</h2><p class="lead">자료 상태 파일이 아직 없습니다(새 자동 실행기 설치 후 생김).</p></section>';
+    h += `<section class="card"><h2>화면별 게시 시각 <small>사내 PC 게시본과 GitHub 게시본 중 최신</small></h2><div class="scroll"><table class="t"><thead><tr><th class="l">화면</th><th>게시</th><th>경과</th><th class="l">출처</th><th class="l">갱신 방식</th></tr></thead><tbody>${PAGES.map(([n, nm, how], i) => { const e = envs[i]; return `<tr><td class="l"><b>${nm}</b></td><td>${e ? kst(e.at) : '-'}</td><td class="c">${badge(e ? age(new Date(e.at).toLocaleDateString('sv-SE', { timeZone: 'Asia/Seoul' })) : null)}</td><td class="l">${e ? e.src : '-'}</td><td class="l muted">${how}</td></tr>`; }).join('')}</tbody></table></div></section>`;
+    h += `<section class="card"><h2>멈췄을 때 점검 순서</h2><ol class="fix">
+      <li>사내 PC가 켜져 있고 로그인돼 있는지(MES 받기가 Edge 화면을 직접 조작)</li>
+      <li>작업 스케줄러에 등록됐는지: 명령 프롬프트에서 <code>schtasks /Query /TN "CGL 자동수집"</code> — 없으면 설치 폴더의 <code>register_task.bat</code> 실행</li>
+      <li>직접 한 번 실행: <code>run_auto.bat</code> → 끝나고 이 화면 새로고침</li>
+      <li>실패 기록: 설치 폴더 <code>out\\auto_log.txt</code> 마지막 줄(‘실패:’로 시작) — MES 화면 변경·암호 만료가 흔한 원인</li></ol></section>`;
+    $('h-main').innerHTML = h; UI.reveal($('h-main'));
+  })();
+})();
+</script>
+</body>
+</html>

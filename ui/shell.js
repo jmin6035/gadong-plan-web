@@ -7,7 +7,7 @@
     ['integrated', 'integrated.html', '통합 가동계획'], ['status', 'status.html', '가동 현황'], ['rolling', 'rolling.html', '계획 계산'], '|',
     ['analysis', 'analysis.html', '도금 실적'], ['coloract', 'color_actual.html', '컬러 실적'], ['report', 'report.html', '주간 보고'], '|',
     ['procure', 'procure.html', '조달 판단'], ['material', 'material.html', '소재 발주(월)'], '|',
-    ['conditions', 'doc.html?d=conditions', '계획 조건식'], ['guide', 'doc.html?d=procure_guide', '사용법'], ['requests', 'doc.html?d=requests', '요청 메일'],
+    ['conditions', 'doc.html?d=conditions', '계획 조건식'], ['guide', 'doc.html?d=procure_guide', '사용법'], ['requests', 'doc.html?d=requests', '요청 메일'], ['health', 'health.html', '자료 상태'],
   ];
   const TKEY = 'cgl-theme', SKEY = 'cgl-scope';
   const ONLY = { status: 'G', analysis: 'G', rolling: 'G', coloract: 'C' };     // 도금 자료만 있는 화면
@@ -49,7 +49,7 @@
     h.className = 'shell-top';
     h.innerHTML = `<div class="sheen" aria-hidden="true"></div><div class="wrap">
       <div class="shell-bar"><a class="wordmark" href="index.html"><span class="mk" aria-hidden="true"><i></i></span><b>POSCO STEELEON</b><span>도금·컬러 가동계획</span></a>
-        <div class="shell-tools noprint"><button type="button" id="ui-theme" aria-label="화면 모드">${{ auto: '◐ 자동', light: '☀ 밝게', dark: '☾ 어둡게' }[theme]}</button></div></div>
+        <div class="shell-tools noprint"><a class="fresh" id="ui-fresh" href="health.html" hidden></a><button type="button" id="ui-theme" aria-label="화면 모드">${{ auto: '◐ 자동', light: '☀ 밝게', dark: '☾ 어둡게' }[theme]}</button></div></div>
       <div class="shell-head"><div class="sh-l">${d.crumb ? `<div class="crumb">${esc(d.crumb)}</div>` : ''}<h1>${esc(d.title || document.title)}</h1>${d.sub != null ? `<p class="sub" id="ui-sub">${esc(d.sub)}</p>` : ''}</div>
         <div class="scope noprint"><span>보기</span><div class="scope-seg" role="group" aria-label="공정 보기">${Object.entries(SCN).map(([k, n]) => `<button type="button" data-sc="${k}" aria-pressed="${k === scope}">${n}</button>`).join('')}</div></div></div>
       <nav class="shell-nav" aria-label="메뉴">${nav}<span class="ink" aria-hidden="true"></span></nav></div>`;
@@ -67,6 +67,32 @@
       applyTheme(theme); e.currentTarget.textContent = { auto: '◐ 자동', light: '☀ 밝게', dark: '☾ 어둡게' }[theme];
     });
   }
+
+  /* 자료 신선도: status.json(사내 PC 자동 실행기·클라우드 게시 중 최신) → 헤더 배지 + 오래되면 경고 띠 */
+  const FEED = { coloract: '컬러 생산 실적', procure: '소재재고List(컬러)', material: '소재재고List(컬러)' };
+  async function fresh() {
+    const h = document.getElementById('shell'); if (!h) return;
+    const urls = ['https://gatcqxrzaonjsixajrwd.supabase.co/storage/v1/object/public/published/status.json?v=' + Date.now(), 'published/status.json'];
+    const got = (await Promise.all(urls.map((u) => fetch(u, { cache: 'no-store' }).then((r) => (r.ok ? r.json() : null)).catch(() => null)))).filter(Boolean);
+    if (!got.length) return;
+    const S = got.sort((a, b) => (String(a.runAt) < String(b.runAt) ? 1 : -1))[0];
+    UI.status = S;
+    const want = FEED[h.dataset.page] || '도금 생산 실적(코일)';
+    const f = (S.feeds || []).find((x) => x.name === want) || (S.feeds || [])[0];
+    if (!f || !f.last) return;
+    const today = new Date(); const d0 = new Date(f.last + 'T00:00:00');
+    const age = Math.floor((new Date(today.getFullYear(), today.getMonth(), today.getDate()) - d0) / 864e5);
+    const el = document.getElementById('ui-fresh');
+    el.hidden = false; el.className = 'fresh ' + (age <= 1 ? 'ok' : age <= 2 ? 'warn' : 'bad');
+    el.title = `${want} 마지막 날짜 · 게시 ${String(S.runAt || '').replace('T', ' ').slice(0, 16)}`;
+    el.innerHTML = `<i></i>자료 ~${+f.last.slice(5, 7)}/${+f.last.slice(8, 10)}${age >= 1 ? ` · ${age}일 전` : ''}`;
+    if (age >= 2 && h.dataset.page !== 'health' && !document.getElementById('ui-stale')) {
+      const b = document.createElement('div'); b.id = 'ui-stale'; b.className = 'wrap stale-band';
+      b.innerHTML = `<div>⚠ <b>자료가 ${age}일 전(${f.last})에서 멈춰 있습니다.</b> 숫자는 그날 기준입니다 — 사내 PC 자동 실행을 확인하세요. <a href="health.html">자료 상태 보기 →</a></div>`;
+      h.after(b);
+    }
+  }
+  UI.fresh = fresh;
 
   UI.sub = (text) => { const s = document.getElementById('ui-sub'); if (s) s.textContent = text; };
 
@@ -102,5 +128,6 @@
     el.textContent = msg; el.classList.add('on'); clearTimeout(tt); tt = setTimeout(() => el.classList.remove('on'), 1600);
   };
 
-  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', build); else build();
+  const boot = () => { build(); fresh(); };
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot); else boot();
 })();

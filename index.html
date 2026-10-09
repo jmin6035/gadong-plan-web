@@ -51,6 +51,16 @@
 .tile span { font-size: 13px; color: var(--ink-2); line-height: 1.5; }
 .tile .new { display: inline-block; font-size: 10px; font-weight: 700; color: var(--brand-2); border: 1px solid var(--brand-2); border-radius: 4px; padding: 0 4px; margin-left: 6px; vertical-align: 1px; }
 #h-lock .unlock { margin-top: 6px; }
+.exl { display: grid; gap: 8px; }
+.ex { display: grid; grid-template-columns: 34px 82px 1fr auto; gap: 12px; align-items: center; padding: 11px 14px; border: 1px solid var(--line); border-left: 4px solid var(--warn); border-radius: 0 10px 10px 0; background: var(--surface); text-decoration: none; color: var(--ink); font-size: 16px; transition: transform .2s var(--ease), box-shadow .2s; }
+.ex:hover { transform: translateX(3px); box-shadow: var(--shadow-up); }
+.ex.bad { border-left-color: var(--bad); background: linear-gradient(90deg, var(--bad-bg), var(--surface) 40%); }
+.ex.warn { background: linear-gradient(90deg, var(--warn-bg), var(--surface) 40%); }
+.ex .no { font-weight: 800; color: var(--ink-3); text-align: center; }
+.ex .ar { font-size: 13px; font-weight: 800; border-radius: 6px; padding: 3px 0; text-align: center; background: var(--tint-2); color: var(--brand); }
+.ex .who { font-size: 13px; color: var(--ink-3); white-space: nowrap; }
+@media (max-width: 640px) { .ex { grid-template-columns: 26px 1fr; } .ex .ar { grid-column: 2; justify-self: start; padding: 2px 8px; } .ex .who { grid-column: 2; } }
+table.acc td.l b { font-size: 16px; } .accd { display: flex; gap: 6px; flex-wrap: wrap; } .accd span { font-size: 13px; border: 1px solid var(--line); border-radius: 6px; padding: 2px 7px; background: var(--surface-2); } .accd span.lo { color: var(--bad); border-color: color-mix(in srgb, var(--bad) 35%, transparent); }
 .tile .only { position: absolute; right: 36px; top: 14px; font-size: 10.5px; font-weight: 700; color: var(--ink-3); border: 1px solid var(--line); border-radius: 4px; padding: 0 5px; }
 :root[data-scope="C"] .tile[data-only="G"], :root[data-scope="G"] .tile[data-only="C"] { filter: grayscale(1) opacity(.5); }
 .crow { display: grid; grid-template-columns: 54px repeat(4, 1fr); gap: 8px; align-items: center; font-size: 14px; margin: 8px 0; }
@@ -68,6 +78,7 @@
 <header id="shell" data-page="home" data-crumb="홈" data-title="도금·컬러 가동계획 포털" data-sub="계획 → 실적 → 소재 조달을 한 곳에서"></header>
 <main class="wrap">
   <div class="docmeta" id="h-meta"></div>
+  <div class="pagebar noprint"><span class="lbl">보는 사람</span><div class="tabs" id="h-role" role="group" aria-label="역할"></div><span class="small" id="h-rolehint"></span></div>
 
   <section class="card" id="h-today" style="margin-top:12px">
     <h2>오늘의 핵심 <small id="h-asof"></small><span class="unit">단위: 톤</span></h2>
@@ -81,8 +92,9 @@
     </div>
   </section>
 
+  <section class="card" id="h-ex" hidden></section>
   <div class="grid2" id="h-detail" hidden>
-    <div><section class="card" id="h-load" data-pl="G"></section><section class="card" id="h-color" data-pl="C"></section><section class="card" id="h-rec"></section></div>
+    <div><section class="card" id="h-load" data-pl="G"></section><section class="card" id="h-color" data-pl="C"></section><section class="card" id="h-acc" data-pl="G"></section><section class="card" id="h-rec"></section></div>
     <section class="card" id="h-due"></section>
   </div>
 

@@ -21,7 +21,7 @@
   function defaults() {
     return { today: D.today, safety: 5, dueLead: 7, sup: D.suppliers.map((s) => ({ ...s, on: true, memo: '' })), arr: [], orders: [], dec: {} };
   }
-  function load() { try { const x = JSON.parse(localStorage.getItem(ST_KEY) || 'null'); if (x && x.sup) return { ...defaults(), ...x }; } catch (e) { /* 무시 */ } return defaults(); }
+  function load() { try { const x = JSON.parse(localStorage.getItem(ST_KEY) || 'null'); if (x && x.sup) return { ...defaults(), ...x, today: D.today }; } catch (e) { /* 무시 */ } return defaults(); }
   function save() { try { localStorage.setItem(ST_KEY, JSON.stringify(S)); } catch (e) { /* 무시 */ } }
 
   /* ---------- 계산 ---------- */
@@ -281,13 +281,15 @@
   });
 
   let env = null;
+  const envReady = GP.latest('procure.enc.json');
   async function unlock(pw) {
+    if (!env) env = await envReady;                              // 자료를 받기 전에 암호를 넣은 경우
     if (pw) { $('p-lockbox').hidden = true; $('p-skel').hidden = false; }
     try { D = await GP.decryptJSON(env, pw); try { localStorage.setItem(PW_KEY, pw); } catch (e) { /* 무시 */ } S = load(); render(); UI.onScope(() => render()); }
     catch (e) { $('p-lockbox').hidden = false; $('p-skel').hidden = true; $('p-form').hidden = false; $('p-msg').textContent = pw ? '암호가 맞지 않습니다' : ''; }
   }
   $('p-form').addEventListener('submit', (e) => { e.preventDefault(); unlock($('p-pw').value); });
-  fetch('published/procure.enc.json', { cache: 'no-store' }).then((r) => { if (!r.ok) throw new Error(); return r.json(); }).then((e) => {
+  envReady.then((e) => { if (!e) throw new Error();
     env = e; $('p-lock').querySelector('h2').textContent = '소재 조달 판단 — 암호를 입력하세요';
     let s = null; try { s = localStorage.getItem(PW_KEY); } catch (x) { /* 무시 */ }
     if (s) unlock(s); else $('p-form').hidden = false;
