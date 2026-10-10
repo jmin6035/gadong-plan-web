@@ -1,3 +1,5 @@
+/* 서체: Pretendard(OFL, 사이트에 포함 — 사내망에서 외부 서체 서버가 막혀도 표시). 못 읽으면 맑은 고딕 */
+@font-face { font-family: "Pretendard Variable"; src: url("fonts/PretendardVariable.woff2") format("woff2-variations"), url("fonts/PretendardVariable.woff2") format("woff2"); font-weight: 45 920; font-style: normal; font-display: swap; }
 /* 포스코스틸리온 가동계획 시스템 — 공통 디자인 (색은 CI 근사값: CI 매뉴얼 값을 받으면 --brand* 만 바꾸면 됨)
    구성: 토큰 → 기본 → 셸(헤더·메뉴) → 카드·지표·표·배지·탭·버튼 → 애니메이션 → 인쇄 */
 :root {
@@ -50,7 +52,7 @@
 /* ---------- 기본 ---------- */
 * { box-sizing: border-box; }
 html { -webkit-text-size-adjust: 100%; }
-body { margin: 0; color: var(--ink); background: radial-gradient(1200px 380px at 85% -60px, color-mix(in srgb, var(--brand-3) 14%, transparent), transparent 70%), linear-gradient(180deg, color-mix(in srgb, var(--brand-2) 7%, var(--bg)) 0, var(--bg) 420px) no-repeat, var(--bg); font: 15px/1.6 "Malgun Gothic", "맑은 고딕", "Apple SD Gothic Neo", "Noto Sans KR", system-ui, sans-serif; }
+body { margin: 0; color: var(--ink); background: radial-gradient(1200px 380px at 85% -60px, color-mix(in srgb, var(--brand-3) 14%, transparent), transparent 70%), linear-gradient(180deg, color-mix(in srgb, var(--brand-2) 7%, var(--bg)) 0, var(--bg) 420px) no-repeat, var(--bg); font: 15px/1.6 "Pretendard Variable", Pretendard, "Malgun Gothic", "맑은 고딕", "Apple SD Gothic Neo", "Noto Sans KR", system-ui, sans-serif; }
 a { color: var(--brand-2); }
 .wrap { max-width: 1180px; margin: 0 auto; padding: 0 16px; }
 .num, table.t td, .kpi .v { font-variant-numeric: tabular-nums; }
@@ -295,6 +297,85 @@ html .load-row { font-size: 15px; } html .load-track { height: 18px; }
 html table.data, html table.edit, html table.vs, html table.mes-t { font-size: 15.5px; }
 html table.data th, html table.data td, html table.mes-t th, html table.mes-t td { padding: 11px 12px; }
 html label { font-size: 15.5px; }
+
+
+/* ---------- 색감: 산업용 디자인 시스템 방식(Siemens iX·IBM Carbon·SAP Horizon 참고) ----------
+   평평한 무채색 층(회색 바탕 + 흰 카드 + 가는 선) 위에 색은 '의미'에만 단색으로: 도금 파랑 · 컬러 청록 · 소재 호박 · 상태(양호·주의·심각).
+   그라데이션·빛 번짐·떠 있는 그림자는 쓰지 않음 */
+:root { --gc-g: #1660c9; --gc-c: #00857a; --gc-m: #c46f00; --gc-x: #5b4bb7;
+  --gt-g: #e8f0fc; --gt-c: #e2f4f1; --gt-m: #fcf0de; --gt-x: #eeebfa;
+  --bg: #eceff3; --line: #d5dbe3; --head-1: #0c2b55; --th: #1d3557; }
+:root[data-theme="dark"] { --gc-g: #5d9be6; --gc-c: #2fc1ae; --gc-m: #f0b04a; --gc-x: #a99cf0; --gt-g: #16253a; --gt-c: #12302c; --gt-m: #33270f; --gt-x: #241f3d; --bg: #0c1016; --line: #2b3440; --th: #1d3a63; }
+@media (prefers-color-scheme: dark) { :root:where(:not([data-theme="light"])) { --gc-g: #5d9be6; --gc-c: #2fc1ae; --gc-m: #f0b04a; --gc-x: #a99cf0; --gt-g: #16253a; --gt-c: #12302c; --gt-m: #33270f; --gt-x: #241f3d; --bg: #0c1016; --line: #2b3440; --th: #1d3a63; } }
+body { background: var(--bg); letter-spacing: -.01em; }
+/* 머리: 단색 네이비 + 아래 분야색 3단 띠 */
+.shell-top { background: var(--head-1); }
+.shell-top .sheen { display: none; }
+.shell-top::after { height: 4px; animation: none; background: linear-gradient(90deg, var(--gc-g) 0 40%, var(--gc-c) 40% 72%, var(--gc-m) 72% 100%); }
+.shell-head h1 { font-weight: 800; letter-spacing: -.8px; }
+.shell-head .help { background: rgba(255,255,255,.06); border-left-color: #6fb3ff; }
+/* 카드: 흰 면 + 가는 선, 위 띠는 분야 단색 */
+.card { --gc: var(--brand-2); --gt: var(--tint); box-shadow: none; border-color: var(--line); border-radius: 8px; }
+body:has(#shell[data-page="procure"], #shell[data-page="material"], #shell[data-page="guide"]) .card { --gc: var(--gc-m); --gt: var(--gt-m); }
+body:has(#shell[data-page="coloract"]) .card { --gc: var(--gc-c); --gt: var(--gt-c); }
+.card[data-pl="G"] { --gc: var(--gc-g); --gt: var(--gt-g); } .card[data-pl="C"] { --gc: var(--gc-c); --gt: var(--gt-c); }
+.card::before { height: 3px; opacity: 1; background: var(--gc); }
+.card > h2 { font-weight: 800; letter-spacing: -.4px; }
+.card > h2::before { background: var(--gc); width: 4px; }
+.card h3 { color: var(--gc); }
+.card > h2 .unit { background: var(--gt); border-color: transparent; }
+/* 지표: 단색 연한 면 + 왼쪽 굵은 색 막대 */
+.kpi { background: var(--gt, var(--tint)); border: 1px solid transparent; border-radius: 8px; }
+.kpi::before { background: var(--gc, var(--brand-2)); width: 5px; }
+.kpi:hover { transform: none; box-shadow: none; border-color: var(--gc, var(--brand-2)); }
+/* 지표 면색 = 분야(data-dom G·C·M), 상태 = 왼쪽 막대색 + 상태 점 */
+[data-dom="G"] { --gc: var(--gc-g); --gt: var(--gt-g); } [data-dom="C"] { --gc: var(--gc-c); --gt: var(--gt-c); } [data-dom="M"] { --gc: var(--gc-m); --gt: var(--gt-m); }
+.kpi[data-dom] { background: var(--gt); } .kpi[data-dom] .l { color: var(--gc); }
+.kpi.tone-good:not([data-dom]) { background: var(--good-bg); } .kpi.tone-warn:not([data-dom]) { background: var(--warn-bg); } .kpi.tone-bad:not([data-dom]) { background: var(--bad-bg); }
+.kpi[data-dom].tone-warn .l::after, .kpi[data-dom].tone-bad .l::after, .kpi[data-dom].tone-good .l::after { content: ""; display: inline-block; width: 9px; height: 9px; border-radius: 50%; margin-left: 7px; vertical-align: 1px; background: var(--good); }
+.kpi[data-dom].tone-warn .l::after { background: var(--warn); } .kpi[data-dom].tone-bad .l::after { background: var(--bad); }
+.kpi .v { font-weight: 800; letter-spacing: -1px; }
+.kpi .meter i { background: var(--gc, var(--brand-2)); }
+/* 표 머리: 단색 */
+table.t th { background: var(--th); }
+table.t tbody tr:where(:hover) td { background: var(--hover); }
+/* 탭·버튼: 선택 = 단색 */
+.tabs button[aria-pressed="true"], .seg button[aria-pressed="true"] { background: var(--brand-2); color: #fff; box-shadow: none; }
+.tabs.big button[aria-pressed="true"] { background: transparent; color: var(--brand); }
+.btn.primary { background: var(--brand); border-color: var(--brand); }
+.lead { background: var(--gt, var(--tint)); border-left-color: var(--gc, var(--brand-3)); }
+.docmeta span { box-shadow: none; }
+
+/* ---------- 휴대폰(≤640px): 위 큰 글씨 규칙보다 뒤에 둬야 적용됨 ---------- */
+@media (max-width: 640px) {
+  html body { font-size: 15px; }
+  .shell-head h1 { font-size: 21px; }
+  .shell-head .sub { font-size: 13.5px; }
+  .shell-head { padding: 10px 0 8px; }
+  .wordmark b { font-size: 12px; letter-spacing: .1em; white-space: nowrap; } .wordmark span { display: none; }
+  .fresh { font-size: 12px; padding: 3px 9px; max-width: 46vw; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .shell-nav a { font-size: 14.5px; padding: 9px 11px 11px; }
+  .scope-seg button { font-size: 14px; padding: 6px 13px; }
+  .card { padding: 16px 14px; }
+  .card > h2 { font-size: 18.5px; }
+  .card > h2 small { font-size: 13px; }
+  .kpis { grid-template-columns: 1fr 1fr; gap: 8px; }
+  .kpi { padding: 11px 11px 10px; min-width: 0; }
+  .kpi .l { font-size: 13px; } .kpi .b { font-size: 12.5px; }
+  .kpi .v { font-size: 25px; overflow-wrap: anywhere; }
+  .form { grid-template-columns: 1fr !important; } .form > * { min-width: 0; } .field { min-width: 0 !important; max-width: 100% !important; } .kpi .v small { font-size: 13px; }
+  table.t { font-size: 14px; } table.t th { font-size: 13.5px; padding: 9px 8px; } table.t td { padding: 9px 8px; }
+  .tabs button, .seg button { font-size: 14px; padding: 7px 11px; }
+  .tabs.big button { font-size: 14.5px; padding: 11px 13px; }
+  .btn { font-size: 14.5px; padding: 8px 12px; }
+  .small, .hint { font-size: 13px; } .lead { font-size: 15px; }
+  .chart svg text, svg text { font-size: 12px; }
+  html label { font-size: 14.5px; }
+  html .gtable th.line { font-size: 15px; }
+  /* 차트: 화면 폭으로 줄이면 글자가 안 보임 → 최소 폭 유지하고 옆으로 밀어 보기 */
+  .chart { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  .chart > svg, .chart > .cv > svg { min-width: 680px; }
+}
 
 /* ---------- 인쇄: A4 보고서 양식 ---------- */
 @media print {

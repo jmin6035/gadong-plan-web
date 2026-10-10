@@ -76,7 +76,7 @@
       ['C', kpi(cm[0][1] < cm[0][0] ? 'warn' : 'good', '컬러 10월 월차 편성률', `<b data-count="${(cm[0][1] / cm[0][0] * 100).toFixed(1)}" data-dec="1" data-ck="cr">0</b><small>%</small>`, `편성 ${n0(cm[0][1])} / 월차 ${n0(cm[0][0])}t · 11월 ${(cm[1][1] / cm[1][0] * 100).toFixed(1)}%`, 'integrated.html', 'cr')],
       ['GC', kpi(q.near ? 'warn' : 'good', `${{ all: '소재', G: '도금 FH', C: '컬러 소재' }[sc]} 1순위 발주 시한 2주 안`, `<b data-count="${q.near}" data-ck="qn">0</b><small>건</small>`, q.nearTop[0] ? `가장 급함 ${esc(q.nearTop[0].mat)} · 시한 ${md(q.nearTop[0].deadline)}` : '-', 'procure.html', 'qn')],
     ];
-    $('h-kpis').innerHTML = (sc === 'all' ? [K[0], K[1], K[2], K[4]] : K.filter(([pl]) => UI.inScope(pl))).map((x) => x[1]).join('');
+    $('h-kpis').innerHTML = (sc === 'all' ? [K[0], K[1], K[2], K[4]] : K.filter(([pl]) => UI.inScope(pl))).map(([pl, h]) => h.replace('<div class="kpi ', `<div data-dom="${pl === 'GC' ? 'M' : pl}" class="kpi `)).join('');
     // 월별 도금 계획(라인 누적)
     const mx = Math.max(...O.months.map((m, i) => p.g1[i] + p.g2[i])) * 1.04;
     $('h-load').innerHTML = `<h2>월별 도금 생산계획 <small>${O.rec} · 라인별</small><span class="unit">단위: 톤</span></h2>

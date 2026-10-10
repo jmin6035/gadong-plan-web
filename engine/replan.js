@@ -5,12 +5,14 @@
    - 남은 수요 = 계획 수요 − 실적(부서·강종·마감일 버킷 단위)
    - t0 당일 라인 강종 = 현재 상태, t0+1 ~ t0+동결일수는 기존 계획 강종 유지(소재 준비 등 현장 제약)
    - 지연·결품을 M/C보다 우선해 최소화, 같은 조건이면 기존 계획과 가까운 일정 선호(계획 안정성)
+   - lockMC(기본 켬): 기준 계획의 M/C·S/D 재가동 강종 변경 날짜와 강종을 강제 고정(인원 편성). 고정 조건으로 지연·결품이 생기면
+     고정을 푼 계산을 한 번 더 해 '이동 제안'(replan.proposal)으로만 보여줌 — 게시 계획은 고정안
    사내에서는 MES 실적(코일 → 주문 → 버킷 매핑)과 설비정지 예정을 actual로 넣는다. */
 (function (root) {
   const GP = root.GP || (root.GP = {});
 
   // timeLimit 1e7초 = 사실상 무제한: 재계획은 오래 걸려도 최적 증명까지(시간 제한에 걸리면 최적이 아닌 해가 조용히 나옴). phase2Mode 'exact' = 2단계도 전체 탐색
-  GP.REPLAN_DEFAULTS = { freezeDays: 2, allowLate: true, maxLate: 14, lateW: 0.01, shortW: 1000, stabW: 0.1, stabW2: 500, timeLimit: 1e7, phase2Mode: 'exact' };
+  GP.REPLAN_DEFAULTS = { lockMC: true, freezeDays: 2, allowLate: true, maxLate: 14, lateW: 0.01, shortW: 1000, stabW: 0.1, stabW2: 500, timeLimit: 1e7, phase2Mode: 'exact' };
 
   /* 시험용 가짜 실적: 기존 계획을 t0까지 그대로 생산했다고 보고 교란을 적용.
      교란: {type:'down', line, from, to, minutes?} 설비정지(과거면 실적 감소, 미래면 가동가능시간 차감, minutes 없으면 종일)
@@ -40,6 +42,27 @@
     return { t0, rows, state, extraDown, notes };
   };
 
+  /* M/C 고정 조건: 기준 계획(R.cal)에서 t0 다음 날부터 강종이 바뀌는 날 = 확정 M/C(또는 S/D 재가동 강종 변경).
+     현재 강종이 기준 계획과 같으면 다음 날부터 고정, 다르면(현장이 계획과 다르게 운영) 다음 확정 M/C 날부터 고정하고 그 전은 자유.
+     확정 M/C 날에 추가 정지가 겹쳐 전환 더미를 넣을 수 없으면 그 라인은 고정하지 않음(알림). */
+  GP.mcLock = function (P, H, R, act, notes) {
+    const base = {};
+    for (const c of R.cal) base[`${c.line}|${c.date}`] = c.fam;
+    const ds = GP.dateRange(act.t0, H.D1), XD = act.extraDown || {}, lock = {};
+    for (const l of P.lines) {
+      const days = {};
+      for (let i = 1; i < ds.length; i++) { const a = base[`${l}|${ds[i - 1]}`], b = base[`${l}|${ds[i]}`]; if (a && b && a !== b) days[ds[i]] = b; }
+      const sw = Object.keys(days).sort();
+      const clash = sw.find((d) => (XD[`${l}|${d}`] || 0) > 1440 - P.equipDown[l] - Math.max(P.switchDummy[l], P.restartFamchg[l]));
+      if (clash) { notes.push(`${l} 확정 M/C ${GP.md(clash)}에 추가 정지가 겹쳐 이 라인은 M/C 고정 안 함 — 일정 재검토`); continue; }
+      const onPlan = act.state[l] === base[`${l}|${act.t0}`];
+      if (!onPlan) notes.push(`${l} 현재 강종 ${act.state[l]} ≠ 계획 ${base[`${l}|${act.t0}`]}` + (sw.length ? ` — ${GP.md(sw[0])} 확정 M/C 전까지는 강종 자유` : ' — 남은 확정 M/C 없음, 고정 안 함'));
+      const from = onPlan ? ds[1] : sw[0];
+      if (from) lock[l] = { from, days };
+    }
+    return lock;
+  };
+
   /* R: 기준 계획 결과, act: {t0, rows, state, extraDown, notes}. 반환: 같은 형식의 결과(과거=실적 + 미래=재계획) */
   GP.DEPTS_ALL = ['도금수출', '자동차수출', '도금국내', '자동차내수', '자가재'];   // report.js DEPTS 와 같은 순서(워커엔 report.js 없음)
   GP.replan = function (highs, R, act, opts = {}, log) {
@@ -56,9 +79,28 @@
     const baseState = {};
     for (const c of R.cal) baseState[`${c.line}|${c.date}`] = c.fam;
     const MO = { t0: act.t0, init: act.state, freezeUntil: O.freezeDays > 0 ? GP.addDays(act.t0, O.freezeDays) : null, baseState, allowLate: O.allowLate, maxLate: O.maxLate, lateW: O.lateW, shortW: O.shortW, stabW: O.stabW, stabW2: O.stabW2, extraDown: act.extraDown || {} };
+    const lockNotes = [];
+    if (O.lockMC) MO.lock = GP.mcLock(P, H, R, act, lockNotes);
     log && log(`실적 ${GP.fmt(GP.sum(act.rows, (r) => r[4]))}t 반영(~${GP.md(act.t0)}), 남은 수요 ${GP.fmt(GP.sum(rem, (b) => b.orig))}t, 강종 동결 ~${MO.freezeUntil ? GP.md(MO.freezeUntil) : '없음'}`);
     const PS = Object.assign({}, P, { timeLimit1: O.timeLimit, timeLimit2: O.timeLimit, phase2Mode: O.phase2Mode });
-    const milp = GP.runMILP(highs, rem, PS, log, MO);
+    let milp, proposal = null;
+    try { milp = GP.runMILP(highs, rem, PS, log, MO); }
+    catch (e) {
+      if (!MO.lock) throw e;
+      lockNotes.push(`M/C 고정으로는 풀리지 않아 고정을 풀고 계산(${String(e.message || e).slice(0, 80)}) — M/C 일정 변경 검토 필요`);
+      log && log(lockNotes[lockNotes.length - 1]);
+      delete MO.lock; milp = GP.runMILP(highs, rem, PS, log, MO);
+    }
+    if (MO.lock && (milp.late > 0.5 || milp.short > 0.5)) {
+      // 고정안에 지연·결품 → M/C 를 옮기면 얼마나 줄어드는지 계산(게시하지 않음, 사람이 결정)
+      log && log(`M/C 고정안: 지연 ${GP.fmt(milp.late)}톤·일, 결품 ${GP.fmt(milp.short)}t → 고정을 푼 경우 계산(제안용)`);
+      const free = GP.runMILP(highs, rem, PS, log, Object.assign({}, MO, { lock: null }));
+      const sw = (st) => { const o = []; for (const l of P.lines) { const ds = GP.dateRange(act.t0, H.D1); for (let i = 1; i < ds.length; i++) { const a = st[`${l}|${ds[i - 1]}`], b = st[`${l}|${ds[i]}`]; if (a && b && a !== b) o.push(`${ds[i]}|${l}|${a}→${b}`); } } return o; };
+      const A = sw(milp.state), B = sw(free.state);
+      proposal = { lockedLate: milp.late, lockedShort: milp.short, lockedK: milp.K, freeLate: free.late, freeShort: free.short, freeK: free.K,
+        drop: A.filter((x) => !B.includes(x)), add: B.filter((x) => !A.includes(x)) };
+      log && log(`이동 제안: M/C ${milp.K}→${free.K}회, 지연 ${GP.fmt(milp.late)}→${GP.fmt(free.late)}톤·일, 결품 ${GP.fmt(milp.short)}→${GP.fmt(free.short)}t (빼기 ${proposal.drop.join(', ') || '-'} / 넣기 ${proposal.add.join(', ') || '-'})`);
+    }
     const lev = GP.runLevel(highs, rem, PS, milp.state, log, MO);
     const rows = act.rows.concat(lev.rows).sort((p, q) => (p.join('\u0001') < q.join('\u0001') ? -1 : 1));
     const actDay = {};
@@ -79,14 +121,26 @@
       t0: act.t0, freezeUntil: MO.freezeUntil, notes: act.notes || [], actualT: GP.sum(act.rows, (r) => r[4]),
       planToDateT: GP.sum(R.rows.filter((r) => r[0] <= act.t0), (r) => r[4]),
       removed: before.filter((x) => !after.includes(x)), added: after.filter((x) => !before.includes(x)),
-      over, shortBy, late: milp.late, baseMC: R.milp && R.milp.K, options: O, optimal: !!(milp.optimal1 && milp.optimal2 && milp.phase2Exact),
+      over, shortBy, late: milp.late, baseMC: R.milp && R.milp.K, options: O, lockMC: !!MO.lock, lockNotes, proposal, optimal: !!(milp.optimal1 && milp.optimal2 && milp.phase2Exact),
     };
     // 계획 대비 실적(대시보드): 라인×일, 부서 누계
     replan.vsPlan = [];
     for (const d of GP.dateRange(H.D0, act.t0)) for (const l of P.lines) replan.vsPlan.push([d, l, GP.round(planDay[`${l}|${d}`] || 0, 1), GP.round(actDay[`${l}|${d}`] || 0, 1)]);
     replan.byDept = GP.DEPTS_ALL.map((c) => [c, GP.round(GP.sum(R.rows.filter((r) => r[0] <= act.t0 && r[3] === c), (r) => r[4]), 1), GP.round(GP.sum(act.rows.filter((r) => r[3] === c), (r) => r[4]), 1)]);
+    log && log(`M/C 고정 ${MO.lock ? '켬' : '끔'}` + (lockNotes.length ? ' — ' + lockNotes.join(' / ') : ''));
     log && log(`재계획${replan.optimal ? '(최적 증명)' : '(최적 미증명 — 시간 제한)'}: M/C(남은 기간) ${milp.K}회, 지연 ${GP.fmt(milp.late)}톤·일, 결품 ${GP.fmt(milp.short)}t, 전환 변경 −${replan.removed.length}/+${replan.added.length}`);
     return Object.assign({}, R, { rows, cal, dest: dest.rows, destBad: dest.bad, slack: lev.slack, milp: Object.assign({}, milp, { base: R.milp }), replan });
+  };
+  /* 화면·보고 공용 문구: M/C 고정 상태와 이동 제안 */
+  GP.lockLines = function (rp) {
+    if (!rp || rp.lockMC == null) return [];
+    const ev = (x) => { const [d, l, e] = x.split('|'); return `${GP.md(d)} ${l} ${e}`; };
+    const o = [rp.lockMC ? 'M/C 고정: 확정된 M/C·S/D 재가동 날짜를 바꾸지 않고 계산(인원 편성 유지)' : 'M/C 고정: 꺼짐 — M/C 날짜가 바뀌었을 수 있음'];
+    for (const n of rp.lockNotes || []) o.push('⚠ ' + n);
+    const q = rp.proposal;
+    if (q) o.push(`검토 요청 — M/C 이동 시: M/C ${q.lockedK}→${q.freeK}회, 지연 ${GP.fmt(q.lockedLate)}→${GP.fmt(q.freeLate)}톤·일, 결품 ${GP.fmt(q.lockedShort)}→${GP.fmt(q.freeShort)}t`
+      + ` (빼기 ${q.drop.map(ev).join(', ') || '-'} / 넣기 ${q.add.map(ev).join(', ') || '-'}). 게시 계획은 고정안 — 바꾸려면 결정 후 기준 계획 수정`);
+    return o;
   };
   if (typeof module !== 'undefined') module.exports = GP;
 })(typeof self !== 'undefined' ? self : globalThis);

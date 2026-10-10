@@ -126,6 +126,7 @@
     if (R.replan) {
       const rp = R.replan, ev = (x) => { const [d, l, e] = x.split('|'); return `${GP.md(d)} ${l} ${e}`; };
       lines.unshift(`• 재계획: ${GP.md(rp.t0)}까지 실적 반영(${rp.notes.join(' / ')}). 전환 변경 — 취소 ${rp.removed.map(ev).join(', ') || '없음'}, 신규 ${rp.added.map(ev).join(', ') || '없음'}. 지연 ${GP.fmt(rp.late)}톤·일.`);
+      if (GP.lockLines) GP.lockLines(rp).reverse().forEach((t) => lines.splice(1, 0, '• ' + t));
     }
     if (!R.milp.optimal1 || !R.milp.optimal2) lines.push('• ⚠ 시간 제한으로 최적성 증명 전에 멈춘 단계가 있음 — 결과는 그때까지 찾은 최선해(다시 실행하면 달라질 수 있음).');
     return lines;

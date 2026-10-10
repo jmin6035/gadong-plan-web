@@ -103,7 +103,7 @@
     const ev = (x) => { const [d, l, e] = x.split('|'); return `${GP.md(d)} ${l} ${esc(e)}`; };
     el.hidden = false;
     el.innerHTML = `<h2>실적 반영 재계획 <small class="muted">— ${GP.md(rp.t0)}까지 실적, ${rp.freezeUntil ? GP.md(rp.freezeUntil) + '까지 강종 동결' : '동결 없음'}</small></h2>
-      <ul class="changes">${rp.notes.map((n) => `<li>${esc(n)}</li>`).join('')}
+      <ul class="changes">${rp.notes.concat(GP.lockLines ? GP.lockLines(rp) : []).map((n) => `<li>${esc(n)}</li>`).join('')}
       <li>실적 ${GP.fmt(rp.actualT)}t / 같은 기간 계획 ${GP.fmt(rp.planToDateT)}t (${rp.actualT >= rp.planToDateT ? '+' : ''}${GP.fmt(rp.actualT - rp.planToDateT)}t)</li>
       <li>전환 일정: ${rp.removed.length || rp.added.length ? `<b>취소</b> ${rp.removed.map(ev).join(', ') || '-'} · <b>신규</b> ${rp.added.map(ev).join(', ') || '-'}` : '변경 없음'}</li>
       <li>지연 ${GP.fmt(rp.late)}톤·일 · 결품 ${rp.shortBy.length ? rp.shortBy.map(esc).join(', ') : '없음'}</li></ul>` + vsPlanHtml(rp);

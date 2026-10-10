@@ -69,7 +69,7 @@
   // ---------------- MILP ----------------
   /* O(선택, 롤링 재계획용): t0 = 실적이 끝난 날(이날 강종 O.init 고정, 생산 변수 없음), freezeUntil = 이날까지 강종 동결(O.baseState),
      allowLate/maxLate/lateW = 지연 허용(톤·일당 M/C 환산 가중), shortW = 결품(톤당), stabW/stabW2 = 기존 계획과 다른 라인·일 벌점(1·2단계),
-     extraDown = {"라인|날짜": 분} 추가 정지. O가 없으면 분기 계획(v30과 동일한 모델). */
+     extraDown = {"라인|날짜": 분} 추가 정지, lock = M/C 고정(아래). O가 없으면 분기 계획(v30과 동일한 모델). */
   GP.planDays = (P, H, O) => (O && O.t0 ? GP.dateRange(O.t0, H.D1) : H.days);
   function xAllowed(P, b, l, d, O) {
     if (GP.isBlackout(P, l, d)) return false;
@@ -153,6 +153,19 @@
     }
     const base = O.baseState || {};
     if (O.freezeUntil) for (const l of L) for (const d of prodDays) if (d <= O.freezeUntil && base[`${l}|${d}`]) lp.fix(z[`${l}|${base[`${l}|${d}`]}|${d}`], 1, 1);
+    // M/C 고정(재계획, 강제 조건): O.lock = {라인: {from, days: {날짜: 강종}}}. from 이후에는 days 의 날에만 강종이 바뀌고(그날 강종 = 확정 계획),
+    // 그 밖의 날은 M/C·S/D 재가동 강종 변경 금지. 인원 편성이 끝난 M/C 를 재계획이 옮기지 않게 함(바꿀지는 사람이 결정 → replan.proposal)
+    if (O.lock) for (const l of L) {
+      const k = O.lock[l];
+      if (!k) continue;
+      for (const d of days.slice(1)) {
+        if (d < k.from || blk(l, d)) continue;
+        const key = `${l}|${d}`;
+        if (k.days[d]) lp.fix(z[`${l}|${k.days[d]}|${d}`], 1, 1);
+        else if (sr[key]) lp.fix(sr[key], 0, 0);
+        else lp.fix(s[key], 0, 0);
+      }
+    }
     // 안정성: 동결 뒤 날짜에서 기존 계획 강종을 유지하면 보상(= 다르면 벌점, 상수항 생략)
     const STAB = [];
     for (const l of L) for (const d of prodDays) if (base[`${l}|${d}`] && !(O.freezeUntil && d <= O.freezeUntil)) STAB.push(z[`${l}|${base[`${l}|${d}`]}|${d}`]);
