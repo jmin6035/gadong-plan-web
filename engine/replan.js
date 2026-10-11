@@ -43,7 +43,7 @@
   };
 
   /* M/C 고정 조건: 기준 계획(R.cal)에서 t0 다음 날부터 강종이 바뀌는 날 = 확정 M/C(또는 S/D 재가동 강종 변경).
-     현재 강종이 기준 계획과 같으면 다음 날부터 고정, 다르면(현장이 계획과 다르게 운영) 다음 확정 M/C 날부터 고정하고 그 전은 자유.
+     현재 강종이 기준 계획과 같은 라인만 다음 날부터 고정, 다르면(현장이 기준 계획과 어긋남) 고정하지 않고 알림.
      확정 M/C 날에 추가 정지가 겹쳐 전환 더미를 넣을 수 없으면 그 라인은 고정하지 않음(알림). */
   GP.mcLock = function (P, H, R, act, notes) {
     const base = {};
@@ -55,10 +55,8 @@
       const sw = Object.keys(days).sort();
       const clash = sw.find((d) => (XD[`${l}|${d}`] || 0) > 1440 - P.equipDown[l] - Math.max(P.switchDummy[l], P.restartFamchg[l]));
       if (clash) { notes.push(`${l} 확정 M/C ${GP.md(clash)}에 추가 정지가 겹쳐 이 라인은 M/C 고정 안 함 — 일정 재검토`); continue; }
-      const onPlan = act.state[l] === base[`${l}|${act.t0}`];
-      if (!onPlan) notes.push(`${l} 현재 강종 ${act.state[l]} ≠ 계획 ${base[`${l}|${act.t0}`]}` + (sw.length ? ` — ${GP.md(sw[0])} 확정 M/C 전까지는 강종 자유` : ' — 남은 확정 M/C 없음, 고정 안 함'));
-      const from = onPlan ? ds[1] : sw[0];
-      if (from) lock[l] = { from, days };
+      if (act.state[l] !== base[`${l}|${act.t0}`]) { notes.push(`${l} 현재 강종 ${act.state[l]} ≠ 기준 계획 ${base[`${l}|${act.t0}`]} — 이 라인 M/C 고정 안 함(기준 계획 재수립 필요)`); continue; }
+      lock[l] = { from: ds[1], days };
     }
     return lock;
   };
@@ -94,7 +92,7 @@
     if (MO.lock && (milp.late > 0.5 || milp.short > 0.5)) {
       // 고정안에 지연·결품 → M/C 를 옮기면 얼마나 줄어드는지 계산(게시하지 않음, 사람이 결정)
       log && log(`M/C 고정안: 지연 ${GP.fmt(milp.late)}톤·일, 결품 ${GP.fmt(milp.short)}t → 고정을 푼 경우 계산(제안용)`);
-      const free = GP.runMILP(highs, rem, PS, log, Object.assign({}, MO, { lock: null }));
+      const free = GP.runMILP(highs, rem, Object.assign({}, PS, { timeLimit1: 120, timeLimit2: 120, phase2Mode: 'fast' }), log, Object.assign({}, MO, { lock: null }));   // 제안용 — 2분 제한
       const sw = (st) => { const o = []; for (const l of P.lines) { const ds = GP.dateRange(act.t0, H.D1); for (let i = 1; i < ds.length; i++) { const a = st[`${l}|${ds[i - 1]}`], b = st[`${l}|${ds[i]}`]; if (a && b && a !== b) o.push(`${ds[i]}|${l}|${a}→${b}`); } } return o; };
       const A = sw(milp.state), B = sw(free.state);
       proposal = { lockedLate: milp.late, lockedShort: milp.short, lockedK: milp.K, freeLate: free.late, freeShort: free.short, freeK: free.K,
