@@ -394,7 +394,13 @@ def main():
         if Q is None:
             print('  ⚠ 원격 조회 목록: 암호가 맞지 않아 건너뜀(auto_config.json 의 analysis_password)')
             return
-        dp = os.path.join(a.out, 'remote_done.json')
+        dp = os.path.join(HERE, 'out', 'remote_done.json')                 # mes/ 에 두면 자동 실행기가 MES 자료로 읽으려 함
+        legacy = os.path.join(a.out, 'remote_done.json')                    # 예전 위치(mes/)에서 옮김
+        if os.path.exists(legacy) and not os.path.exists(dp):
+            os.makedirs(os.path.dirname(dp), exist_ok=True)
+            shutil.move(legacy, dp)
+        elif os.path.exists(legacy):
+            os.remove(legacy)
         done = json.load(open(dp, encoding='utf-8')) if os.path.exists(dp) else {}
         for q in Q.get('queries', []):
             name, sql, mode = re.sub(r'[^0-9a-z_]', '', str(q.get('name', '')).lower()), str(q.get('sql', '')).strip(), q.get('mode', 'once')
@@ -426,6 +432,7 @@ def main():
                     done[name] = h
             except Exception as e:
                 print(f'  ⚠ {name}: 실패 — 건너뜀 ({str(e).splitlines()[0][:150] if str(e) else type(e).__name__})')
+        os.makedirs(os.path.dirname(dp), exist_ok=True)
         json.dump(done, open(dp, 'w', encoding='utf-8'))
 
     def menu_panel(diag=None):
