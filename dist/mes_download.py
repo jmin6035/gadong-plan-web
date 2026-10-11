@@ -18,8 +18,14 @@ import shutil
 import subprocess
 import sys
 import time
+import hashlib
+import re
+import ssl
+import urllib.request
 
 HERE = os.path.dirname(os.path.abspath(__file__))
+QUERIES_URL = 'https://jmin6035.github.io/gadong-plan-web/published/queries.enc.json'   # 원격 조회 목록(클라우드에서 추가, SELECT 만, 분석 암호로 암호화)
+BAD_SQL = re.compile(r'\b(insert|update|delete|merge|drop|alter|create|grant|revoke|truncate|exec|execute|call|begin|declare|commit|rollback|lock|into)\b', re.I)
 MES_URL = 'https://intra-mes.poscosteeleon.com:8443/SCOM/main.do'
 SALES_RPT_URL = 'https://intra-mes.poscosteeleon.com:8443/SMKT/pages/NewYnc/jRdProdSalesDetail_2016_SSO.jsp'   # 판매생산속보
 
@@ -106,7 +112,50 @@ def creds():
     return uid, pw, (os.environ.get('MES_URL') or cfg.get('url') or MES_URL).strip()
 
 
+class _Tee:
+    """화면 출력을 out/run_log.txt 에도 남김(창이 닫혀도 원인 확인용)"""
+    def __init__(self, stream, path):
+        self.s, self.f = stream, open(path, 'w', encoding='utf-8', buffering=1)
+
+    def write(self, x):
+        try:
+            self.s.write(x)
+        except Exception:
+            pass
+        self.f.write(x)
+
+    def flush(self):
+        try:
+            self.s.flush()
+        except Exception:
+            pass
+        self.f.flush()
+
+
+def register_task(at='07:25'):
+    """작업 스케줄러 등록: 이 파이썬으로 이 폴더의 mes_download.py 를 매일 at 에 실행. 옛 작업 이름은 지움"""
+    exe = sys.executable
+    cmd = f'"{exe}" "{os.path.join(HERE, "mes_download.py")}"'
+    for old in ('CGL 자동수집', 'CGL auto'):
+        subprocess.run(['schtasks', '/Delete', '/TN', old, '/F'], capture_output=True)
+    r = subprocess.run(['schtasks', '/Create', '/TN', 'CGL auto', '/TR', cmd, '/SC', 'DAILY', '/ST', at, '/F'], capture_output=True, text=True, errors='replace')
+    print((r.stdout or '') + (r.stderr or ''))
+    if r.returncode:
+        print('등록 실패 — 명령 프롬프트를 "관리자 권한으로 실행"해서 다시 해 보세요.')
+        return 1
+    q = subprocess.run(['schtasks', '/Query', '/TN', 'CGL auto', '/V', '/FO', 'LIST'], capture_output=True, text=True, errors='replace')
+    print('\n'.join(l for l in (q.stdout or '').splitlines() if any(k in l for k in ('작업 이름', 'TaskName', '다음 실행', 'Next Run', '실행할 작업', 'Task To Run')))[:1500])
+    print(f'등록됨: 매일 {at} — {cmd}')
+    return 0
+
+
 def main():
+    try:
+        os.makedirs(os.path.join(HERE, 'out'), exist_ok=True)
+        sys.stdout = sys.stderr = _Tee(sys.__stdout__, os.path.join(HERE, 'out', 'run_log.txt'))
+        print(f'실행 시작 {datetime.datetime.now():%Y-%m-%d %H:%M:%S}')
+    except Exception:
+        pass
     ap = argparse.ArgumentParser()
     ap.add_argument('--from', dest='d0', help='시작일 YYYYMMDD (기본: 14일 전)')
     ap.add_argument('--to', dest='d1', help='종료일 YYYYMMDD (기본: 어제)')
@@ -118,7 +167,10 @@ def main():
     ap.add_argument('--probe', help='메뉴 검색어를 넣고 검색 결과 화면 구조를 기록(진단용, 예: 4025)')
     ap.add_argument('--stock-manual', action='store_true', help='제품재고: 화면 이동·조회는 사람이 하고, 표 읽기만 자동')
     ap.add_argument('--stock-months', type=int, default=6, help='재고현황 기준월 몇 달치(이번 달 포함, 기본 6)')
+    ap.add_argument('--register', action='store_true', help='매일 07:25 자동 실행을 Windows 작업 스케줄러에 등록(.bat 없이 파이썬 직접 실행)')
     a = ap.parse_args()
+    if a.register:
+        sys.exit(register_task())
     today = datetime.date.today()
     months = []                                          # 재고현황 조회 달(⑤에서 채움)
     d1 = a.d1 or (today - datetime.timedelta(days=1)).strftime('%Y%m%d')
@@ -317,6 +369,64 @@ def main():
             merged['rows'] = uniq
         save(merged, name, out)
         return True
+
+    def remote_queries(run_sql):
+        """사이트의 published/queries.enc.json 에 적힌 조회문(SELECT/WITH 만)을 MES 쿼리 화면에서 실행해 mes/extra/<이름>.json 으로 저장.
+        mode: once(조회문이 바뀌었을 때만) · daily(매번) · range(기간 나눠서, 조회문 안 {d0}·{d1} 을 YYYYMMDD 로 바꿈, step 일씩)
+        이름이 snap_ 로 시작하면 최신으로 교체, 아니면 자동 실행기가 누적. 결과 행은 10,000행까지(쿼리 화면 제한)"""
+        try:
+            raw = urllib.request.urlopen(QUERIES_URL + f'?v={int(time.time())}', timeout=30).read()
+        except Exception:
+            ctx = ssl.create_default_context(); ctx.check_hostname = False; ctx.verify_mode = ssl.CERT_NONE   # 회사 인증서 가로채기 대비(공개 읽기 전용 파일)
+            raw = urllib.request.urlopen(QUERIES_URL + f'?v={int(time.time())}', timeout=30, context=ctx).read()
+        env = json.loads(raw.decode('utf-8'))
+        p = os.path.join(HERE, 'auto_config.json')
+        cfg = json.loads(open(p, encoding='utf-8-sig').read(), strict=False) if os.path.exists(p) else {}
+        sys.path.insert(0, HERE)
+        from cglplan import publish as PB
+        Q = None
+        for pw in dict.fromkeys(x for x in (cfg.get('analysis_password'), cfg.get('password')) if x):   # 암호를 아는 사람만 조회문을 만들 수 있음(AES-GCM 위변조 검사)
+            try:
+                Q = PB.decrypt(env, pw)
+                break
+            except Exception:
+                pass
+        if Q is None:
+            print('  ⚠ 원격 조회 목록: 암호가 맞지 않아 건너뜀(auto_config.json 의 analysis_password)')
+            return
+        dp = os.path.join(a.out, 'remote_done.json')
+        done = json.load(open(dp, encoding='utf-8')) if os.path.exists(dp) else {}
+        for q in Q.get('queries', []):
+            name, sql, mode = re.sub(r'[^0-9a-z_]', '', str(q.get('name', '')).lower()), str(q.get('sql', '')).strip(), q.get('mode', 'once')
+            h = hashlib.sha1(sql.encode('utf-8')).hexdigest()[:12]
+            if not name or not sql:
+                continue
+            body = sql.lstrip('( \n').lower()
+            if not (body.startswith('select') or body.startswith('with')) or ';' in sql or BAD_SQL.search(re.sub(r"'[^']*'", "''", sql)):
+                print(f'  ⚠ 원격 조회 {name}: SELECT 가 아니거나 금지어 포함 — 건너뜀')
+                continue
+            if mode == 'once' and done.get(name) == h:
+                continue
+            print(f'▶ {name} (원격 조회 · {mode})')
+            try:
+                if mode == 'range':
+                    ok = run_chunks(name, 'gridQueryRslt', lambda c0, c1: run_sql(sql.replace('{d0}', c0).replace('{d1}', c1)), int(q.get('step', 7)), xdir)
+                else:
+                    try:
+                        driver.execute_script(CLEAR_JS, 'gridQueryRslt')
+                    except Exception:
+                        pass
+                    run_sql(sql)
+                    n = wait_rows('gridQueryRslt', int(q.get('timeout', 180)))
+                    o = read('gridQueryRslt') if n else None
+                    if o and len(o['rows']) >= 10000:
+                        print('  ⚠ 10,000행 — 잘렸을 수 있음(조회문을 나눠야 함)')
+                    ok = save(o, name, xdir) if o else False
+                if ok:
+                    done[name] = h
+            except Exception as e:
+                print(f'  ⚠ {name}: 실패 — 건너뜀 ({str(e).splitlines()[0][:150] if str(e) else type(e).__name__})')
+        json.dump(done, open(dp, 'w', encoding='utf-8'))
 
     def menu_panel(diag=None):
         """좌측 메뉴 패널을 연 상태로 만들고 검색창을 돌려줌. collapseButton 은 열기/닫기 토글이라
@@ -790,6 +900,11 @@ def main():
                             print(f'  ⚠ {name}: 표 직접 읽기 실패 — 건너뜀')
                     except Exception as e:
                         print(f'  ⚠ {name}: 실패 — 건너뜀 ({str(e).splitlines()[0][:120]})')
+                # ④-2 원격 조회 목록(클라우드에서 조회문을 추가하면 다음 실행 때 받아 옴) — 실패해도 나머지에 영향 없음
+                try:
+                    remote_queries(run_sql)
+                except Exception as e:
+                    print(f'  ⚠ 원격 조회 목록: 실패 — 건너뜀 ({str(e).splitlines()[0][:150] if str(e) else type(e).__name__})')
             # ③ 생산실적 조회(도금) 화면
             print('▶ screen_prod.xlsx (생산실적 조회)')
             menu('생산실적 조회')
@@ -1003,7 +1118,12 @@ def main():
     if len(ok_files) < 3 and not a.stock_only and not a.probe and not a.stock_manual:
         print('⚠ 일부 파일을 받지 못했습니다 — 자동 실행기는 받은 파일로만 돕니다(누적 저장소에 이전 자료가 있으면 그대로 유지)')
     if not a.no_auto and (ok_files or extra_files or a.probe):
-        sys.exit(subprocess.call([sys.executable, '-m', 'cglplan', 'auto', '--config', os.path.join(HERE, 'auto_config.json')], cwd=HERE))
+        env = dict(os.environ, PYTHONUTF8='1', PYTHONUNBUFFERED='1')
+        pr = subprocess.Popen([sys.executable, '-m', 'cglplan', 'auto', '--config', os.path.join(HERE, 'auto_config.json')], cwd=HERE, env=env,
+                              stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, encoding='utf-8', errors='replace')
+        for line in pr.stdout:                                   # 자동 실행기 출력도 화면 + out/run_log.txt 에
+            print(line, end='')
+        sys.exit(pr.wait())
 
 
 if __name__ == '__main__':
