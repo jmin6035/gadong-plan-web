@@ -53,6 +53,43 @@
       <div class="exl">${E.map((e, i) => `<a class="ex ${e.lvl}" href="${e.link}"><span class="no">${i + 1}</span><span class="ar">${esc(e.area)}</span><span>${esc(e.text)}</span><span class="who">${esc(e.who)} →</span></a>`).join('') || '<p class="lead">기준을 넘은 항목이 없습니다.</p>'}</div>
       <p class="small" style="margin-top:10px">기준: 실적 자료 2일 이상 멈춤 · 도금 라인 이틀 연속 계획 90% 미만 · 3일 안 납기 1일 이내 생산 · 컬러 라인 지난주 −20% 이하 또는 월 진도 95% 미만 · 1순위 발주 시한 3일 안 · 재고가 목표의 70% 미만/130% 초과</p>`;
   }
+  // 마케팅 그룹별 이번 달 진도: 몇 톤 했나 · 얼마 남았나 · 하루 얼마 필요한가 · 남은 계획대로면 월말 얼마 — 문장으로
+  function grpCard(O) {
+    const G = (O.groups || []).filter((g) => UI.inScope(g.pl));
+    if (!G.length) return '';
+    const dim = (m) => new Date(+m.slice(0, 4), +m.slice(5, 7), 0).getDate();
+    const pc = (a, b) => (b > 0 ? Math.round(a / b * 100) : 0);
+    const sg = (v) => `<span class="${v < 0 ? 'neg' : 'pos'}">${v < 0 ? '−' : '+'}${n0(Math.abs(v))}t</span>`;
+    const row = (g) => {
+      const P = g.prod, m = P.asOf.slice(0, 7), D = dim(m), el = +P.asOf.slice(8, 10), rem = D - el;
+      const left = Math.max(0, P.month - P.actual), avg = el ? P.actual / el : 0, need = rem ? left / rem : 0;
+      const proj = P.actual + (P.after || 0), r = P.month > 0 ? proj / P.month : 1;   // 월말 예상 = 실적 + 남은 계획(재계획·편성) — 균등 속도 가정은 캠페인 생산과 안 맞아 쓰지 않음
+      const st = left <= 0 ? ['good', '이달 계획 달성'] : r >= 0.98 ? ['good', '계획대로면 달성'] : r >= 0.9 ? ['warn', `월말 ${pc(proj, P.month)}% 예상`] : ['bad', `월말 ${pc(proj, P.month)}% 예상`];
+      const w = Math.max(P.month, proj, 1) * 1.02;
+      const S = g.ship;
+      return `<div class="gp" data-dom="${g.pl}" data-pl="${g.pl}">
+        <div><div class="nm">${esc(g.name)}<small>${g.pl === 'G' ? '도금' : '컬러'} · 생산 ${md(P.asOf)}까지</small></div><span class="st ${st[0]}">${st[1]}</span></div>
+        <div><div class="k">생산</div>
+          <div class="big"><b>${n0(P.actual)}</b>t 했음 / ${+m.slice(5)}월 계획 ${n0(P.month)}t <span class="muted">(${pc(P.actual, P.month)}%)</span></div>
+          <div class="bar" title="실적 ${n0(P.actual)}t · 남은 계획대로면 월말 ${n0(proj)}t · 월 계획 ${n0(P.month)}t"><i style="width:${P.actual / w * 100}%"></i><u style="left:${P.actual / w * 100}%;width:${Math.max(0, proj - P.actual) / w * 100}%"></u><em style="left:${P.month / w * 100}%"></em></div>
+          <div class="ln">남은 <b>${n0(left)}t</b> → 남은 ${rem}일 동안 <b>하루 ${n0(need)}t</b> 필요 (지금까지 하루 ${n0(avg)}t)<br>${esc(P.afterSrc || '계획')}대로면 이후 ${n0(P.after || 0)}t 더 → 월말 <b>${n0(proj)}t</b> (계획의 ${pc(proj, P.month)}% ${sg(proj - P.month)})</div></div>
+        <div><div class="k">출하 <span style="font-weight:600">(판매생산속보)</span></div>${S ? `
+          <div class="big"><b>${n0(S.actual)}</b>t 출하 / 월차 ${n0(S.month)}t <span class="muted">(${pc(S.actual, S.month)}%)</span></div>
+          <div class="ln">남은 <b>${n0(Math.max(0, S.month - S.actual))}t</b> · 일정 누계 ${n0(S.sched)}t 대비 ${sg(S.actual - S.sched)}</div>` : `<div class="ln muted">${g.key === 'G자가재' ? '출하 없음 — 컬러 공장에 소재로 넘어감' : '속보에 별도 항목 없음'}</div>`}</div>
+      </div>`;
+    };
+    const P0 = G[0].prod, S0 = (G.find((g) => g.ship) || {}).ship;
+    const sec = (pl, t) => { const L = G.filter((g) => g.pl === pl); return L.length ? `<div class="gp-sec" data-dom="${pl}">${t}</div>` + L.map(row).join('') : ''; };
+    const gl = G.find((g) => g.pl === 'G'), cl = G.find((g) => g.pl === 'C');
+    return `<h2>마케팅 그룹별 이번 달 진도 <small>몇 톤 했고 · 얼마 남았고 · 하루 얼마 필요한지</small><span class="unit">단위: 톤</span></h2>
+      <div class="gp-head">${gl ? `<span>도금 생산 <b>${md(gl.prod.asOf)}</b>까지</span>` : ''}${cl ? `<span>컬러 생산 <b>${md(cl.prod.asOf)}</b>까지</span>` : ''}${S0 ? `<span>출하 <b>${esc(String(S0.asOf).slice(5, 16))}</b> 속보</span>` : ''}</div>
+      ${sec('G', '도금')}${sec('C', '컬러')}
+      <p class="gp-note">· 생산 실적 = MES 코일 무게(도금은 더미 제외), 그룹 = MES 판매그룹. 계획 = 도금 확정 ${esc(O.rec)} 일별 합, 컬러 = 통합 계획 편성(${O.colorPlanFrom ? md(O.colorPlanFrom) + '까지 실적 + 이후 편성' : ''}).
+        <br>· 하루 필요량 = 남은 양 ÷ 남은 날(달력일). 월말 예상 = 실적 + 남은 계획(도금 = 매일 재계획, 컬러 = 편성). 줄무늬 = 남은 계획분, 세로선 = 월 계획.
+        <br>· 도금은 캠페인(강종 묶음)으로 돌아 그룹마다 만드는 시기가 몰려 있음 — 하루 평균을 그대로 늘린 예측은 쓰지 않음. 재계획 정확도는 홈 '계획 정확도' 참고.
+        <br>· 날짜별 계획 누계와는 비교하지 않음 — 계획은 마감일만 지키면 부서를 어느 날 만들지가 정해지지 않아 그룹별 일자 비교는 의미가 없음.
+        <br>· 출하 = 판매생산속보 숫자 그대로(내수 송장, 수출 B/L 기준). 컬러 생산 합계는 MES 코일 합이라 속보 누계와 다를 수 있음(확인 중).</p>`;
+  }
   function accCard(O) {
     const A = O.acc || {}; const L = Object.keys(A);
     if (!L.length) return '<h2>계획 정확도</h2><p class="small">이력이 아직 없습니다.</p>';
@@ -99,6 +136,7 @@
         ${kpi(q.check ? 'warn' : 'good', '기발주 확인 (2~4주)', `<b data-count="${q.check}" data-ck="qc">0</b><small>건</small>`, '리드타임 안쪽 수량', '', 'qc')}</div>
       <p class="small" style="margin-top:10px">조달 판단 화면의 기본값(여유 5일, 기발주 미입력) 기준 — 입력한 기발주·판단은 <a href="procure.html">조달 판단</a>에서 확인</p>`;
     $('h-ex').innerHTML = exCard(O); $('h-ex').hidden = false;
+    const gh = grpCard(O); $('h-grp').innerHTML = gh; $('h-grp').hidden = !gh;
     $('h-acc').innerHTML = accCard(O);
     $('h-detail').hidden = false;
     UI.reveal(document); UI.count(document);

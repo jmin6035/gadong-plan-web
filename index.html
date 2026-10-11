@@ -72,6 +72,27 @@ table.acc td.l b { font-size: 16px; } .accd { display: flex; gap: 6px; flex-wrap
 .crow.hd { font-size: 13px; color: var(--ink-3); font-weight: 700; margin-bottom: 0; } .crow.hd span { text-align: center; }
 #h-due table.t td.l { white-space: normal; }
 #h-due table.t { font-size: 14px; }
+/* 마케팅 그룹별 진도 */
+.gp-head { display: flex; flex-wrap: wrap; gap: 6px 18px; font-size: 15px; color: var(--ink-2); margin: -4px 0 14px; }
+.gp-head b { color: var(--ink); }
+.gp-sec { font-size: 14px; font-weight: 800; letter-spacing: .04em; margin: 16px 0 8px; display: flex; align-items: center; gap: 8px; }
+.gp-sec::before { content: ""; width: 14px; height: 14px; border-radius: 3px; background: var(--gc); }
+.gp-sec[data-dom] { color: var(--gc); }
+.gp { display: grid; grid-template-columns: 190px minmax(0, 1.25fr) minmax(0, 1fr); gap: 10px 22px; align-items: start; padding: 14px 16px; border: 1px solid var(--line); border-left: 5px solid var(--gc); border-radius: 0 8px 8px 0; background: var(--surface); margin-bottom: 8px; }
+.gp .nm { font-size: 18px; font-weight: 800; line-height: 1.3; }
+.gp .nm small { display: block; font-size: 12.5px; font-weight: 600; color: var(--ink-3); margin-top: 3px; }
+.gp .st { display: inline-block; margin-top: 6px; font-size: 13px; font-weight: 800; padding: 2px 9px; border-radius: 999px; }
+.gp .st.good { background: var(--good-bg); color: var(--good); } .gp .st.warn { background: var(--warn-bg); color: var(--warn); } .gp .st.bad { background: var(--bad-bg); color: var(--bad); }
+.gp .k { font-size: 12.5px; font-weight: 800; color: var(--ink-3); letter-spacing: .05em; margin-bottom: 4px; }
+.gp .big { font-size: 17px; } .gp .big b { font-size: 22px; font-weight: 800; color: var(--ink); letter-spacing: -.5px; }
+.gp .bar { position: relative; height: 14px; border-radius: 4px; background: var(--grid); margin: 8px 0 7px; overflow: visible; }
+.gp .bar i { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 4px; background: var(--gc); }
+.gp .bar u { position: absolute; top: 0; bottom: 0; border-radius: 0 4px 4px 0; background: repeating-linear-gradient(135deg, color-mix(in srgb, var(--gc) 40%, transparent) 0 4px, transparent 4px 8px); }
+.gp .bar em { position: absolute; top: -4px; bottom: -4px; width: 2px; background: var(--ink); }
+.gp .ln { font-size: 15px; line-height: 1.65; color: var(--ink-2); } .gp .ln b { color: var(--ink); }
+.gp .ln .neg { color: var(--bad); font-weight: 700; } .gp .ln .pos { color: var(--good); font-weight: 700; }
+.gp-note { font-size: 13px; color: var(--ink-3); margin-top: 10px; line-height: 1.7; }
+@media (max-width: 900px) { .gp { grid-template-columns: 1fr; gap: 8px; } }
 </style>
 </head>
 <body>
@@ -80,7 +101,8 @@ table.acc td.l b { font-size: 16px; } .accd { display: flex; gap: 6px; flex-wrap
   <div class="docmeta" id="h-meta"></div>
   <div class="pagebar noprint"><span class="lbl">보는 사람</span><div class="tabs" id="h-role" role="group" aria-label="역할"></div><span class="small" id="h-rolehint"></span></div>
 
-  <section class="card" id="h-today" style="margin-top:12px">
+  <section class="card" id="h-grp" style="margin-top:12px" hidden></section>
+  <section class="card" id="h-today">
     <h2>오늘의 핵심 <small id="h-asof"></small><span class="unit">단위: 톤</span></h2>
     <div id="h-kpis" class="kpis hero-kpis">
       <div class="skel" style="grid-column:1/-1"><i style="width:30%"></i><i></i><i style="width:70%"></i></div>
