@@ -128,7 +128,7 @@
       <div class="legend"><span><i class="box h-ok"></i>목표 부근</span><span><i class="box h-warn"></i>목표의 90% 미만</span><span><i class="box h-bad"></i>안전재고 미만·부족</span><span><i class="box h-over"></i>목표의 130% 초과</span></div>
       <div class="scroll"><table class="t heat"><thead>${head}</thead><tbody>${body}
       </tbody></table></div><p class="small">구매 소재(F/H · 컬러 소재)의 입고·발주는 <a href="procure.html">소재 발주</a> 캘린더에서.</p>
-      <p class="small">제품 = 9월말 재고 + 생산(컬러 실적·계획, 도금 계획) − 판매(컬러 = 월 판매 ÷ 일수, 도금 = 판매계획 품목이 납기일에 나감). 자가재 = 9월말 + 도금 자가재 − 컬러 필요(생산일 − 5일). 소재 = 9월말 + 입고 필요 − 사용.</p>`) };
+      <p class="small">제품 = 9월말 재고 + 생산(컬러 실적·계획, 도금 계획) − 판매(컬러 = 월 판매 ÷ 일수, 도금 = 판매계획 품목이 납기일에 출고). 자가재 = 9월말 + 도금 자가재 − 컬러 필요(생산일 − 5일). 소재 = 9월말 + 입고 필요 − 사용.</p>`) };
   }
 
   // ---------- ③ 일별 가동(달력 표) ----------

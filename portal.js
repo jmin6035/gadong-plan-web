@@ -20,11 +20,11 @@
     mail: svg('<rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 6 9-6"/>'),
   };
   const GROUPS = [
-    ['가동계획', [['supply.html', 'plan', '수급 캘린더', '일별 가동·자가재·구매 소재(발주·입고·재고)·제품 재고', true], ['integrated.html', 'plan', '재고 추이', '확정 계획 기준 주별 제품·자가재 재고와 배치 기준'], ['report.html', 'report', '주간 보고', '도금·컬러 주간 계획 대비 실적 보고 양식']]],
+    ['종합', [['supply.html', 'plan', '수급 캘린더', '일별 가동·자가재·구매 소재(발주·입고·재고)·제품 재고', true], ['integrated.html', 'plan', '재고 추이', '확정 계획 기준 주별 제품·자가재 재고와 배치 기준'], ['report.html', 'report', '주간 보고', '도금·컬러 주간 계획 대비 실적 보고 양식']]],
     ['도금', [['status.html', 'gantt', '가동 현황', '1·2CGL 월별 간트, 강종 전환, 부서별 물량', 0, 'G'], ['rolling.html', 'calc', '계획 계산', '도금 실적을 넣어 다시 계산하고 게시', 0, 'G'], ['analysis.html', 'chart', '조건 분석', 'MES 실적으로 속도·M/C 손실·정지를 다시 재서 계획 조건과 비교', 0, 'G'], ['plating_actual.html', 'chart', '도금 실적', '진도·일별·주별 생산·속도·강종·휴지·강종 전환', 0, 'G']]],
     ['컬러', [['color_status.html', 'gantt', '가동 현황', '1~4CCL 월별 간트, 라인 한도·편성, 그룹별 물량, 미편성', true, 'C'], ['color_analysis.html', 'chart', '조건 분석', 'MES 실적으로 라인·품명 t/hr 를 다시 재서 계획 조건과 비교', true, 'C'], ['color_actual.html', 'chart', '컬러 실적', '진도·일별·주별 생산·속도·품명·휴지', 0, 'C'], ['planstock.html', 'box', '계획재', '계획재 운영안 187개 사양 재고·생산·판매 진도와 월말 재고 예측', true, 'C']]],
     ['소재', [['procure.html', 'truck', '소재 발주', '날짜별 발주 마감·입고 필요 캘린더, 업체 판단, 구매 요청서', true]]],
-    ['자료', [['decisions.html', 'report', '결정 기록', '누가·무엇을·언제까지 — 결정과 할 일 추적', true], ['health.html', 'help', '자료 상태', '원천 자료별 마지막 날짜·화면별 게시 시각 — 자동 실행 점검'], ['doc.html?d=glossary', 'book', '용어·정의 · 확인 대기', '숫자 정의 사전과 아직 확인 안 된 가정 목록', true], ['doc.html?d=conditions', 'book', '계획 조건식', '컬러·도금·소재 계산식과 보완할 점'], ['doc.html?d=procure_guide', 'help', '발주 검토 사용법', '사용 순서 10단계와 계산 조건'], ['doc.html?d=requests', 'mail', '협조 요청 메일', '전산·구매·판매·생산 요청 사항']]],
+    ['관리', [['decisions.html', 'report', '결정 기록', '누가·무엇을·언제까지 — 결정과 할 일 추적', true], ['health.html', 'help', '자료 상태', '원천 자료별 마지막 날짜·화면별 게시 시각 — 자동 실행 점검'], ['doc.html?d=glossary', 'book', '용어·정의 · 확인 대기', '숫자 정의 사전과 아직 확인 안 된 가정 목록', true], ['doc.html?d=conditions', 'book', '계획 조건식', '컬러·도금·소재 계산식과 보완할 점'], ['doc.html?d=procure_guide', 'help', '발주 검토 사용법', '사용 순서 10단계와 계산 조건'], ['doc.html?d=requests', 'mail', '협조 요청 메일', '전산·구매·판매·생산 요청 사항']]],
   ];
 
   $('h-groups').innerHTML = GROUPS.map(([g, L]) => `<div><h3>${g}</h3>${L.map(([u, ic, t, d, nw, only]) => `<a href="${u}" title="${esc(d)}"${only ? ` data-only="${only}"` : ''}>${IC[ic]}${t}</a>`).join('')}</div>`).join('');

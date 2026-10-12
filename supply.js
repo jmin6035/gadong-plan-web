@@ -121,13 +121,13 @@
     sec('가동 (생산량)', 'G');
     for (const l of ['1CGL', '2CGL']) row(l, (d) => { const x = D.pl[`${l}|${d}`]; if (!x) return { x: '·', c: 'z' }; const mc = /M\/C|재가동/.test(x.ev); return { x: x.t > 0.5 ? n0(x.t) : (mc ? 'M/C' : '·'), n: x.t, c: `f${x.fam} ${mc ? 'mc' : ''}`, tip: `${md(d)} ${l} ${x.fam} ${n0(x.t)}t ${x.ev}` }; });
     for (const l of ['1CCL', '2CCL', '3CCL', '4CCL']) row(l, (d) => { const x = D.co[`${l}|${d}`]; if (!x || x.t < 0.5) return { x: '·', c: 'z' }; return { x: n0(x.t), n: x.t, c: x.act ? 'act' : '', tip: `${md(d)} ${l} ${n0(x.t)}t${x.act ? ' (실적)' : ''} · ${Object.entries(x.g).map(([k, v]) => k + ' ' + n0(v)).join(', ')}` }; }, null, 'sub');
-    sec('제품 재고 (그날 끝, 추정)', 'G');
+    sec('제품 재고 (기말 추정)', 'G');
     for (const g of D.groups) row(g, (d) => { const x = D.sw[`${g}|${d}`]; if (!x) return { x: '' }; return { x: n0(x.v), c: x.tgt && x.v > x.tgt * 1.3 ? 'hi' : '', tip: `${md(d)} ${g} 재고 ${n0(x.v)}t / 목표 ${n0(x.tgt)}t (${Math.round(x.v / x.tgt * 100)}%)` }; }, false, 'sub');
     tg = 'b';
-    sec('자가재 재고 (도금 → 컬러 소재, 그날 끝)', 'C');
+    sec('자가재 재고 (도금 → 컬러 소재, 기말)', 'C');
     for (const a of ['AZ', 'MAC', 'AL']) row(`자가재 ${a}`, (d) => { const x = D.self[`${a}|${d}`]; if (!x) return {}; const nx = useNext(a, d, 3); return { x: n0(x.stock), c: (x.stock < 0 ? 'neg' : nx > 0 && x.stock < nx ? 'lo' : '') + (d >= D.selfEst ? ' est' : ''), tip: `${d >= D.selfEst ? '[추정: 1월 초 컬러 사용 = 12월 하루 평균] ' : ''}${md(d)} 자가재 ${a}: 도금 생산 +${n0(x.prod)} · 컬러 사용 −${n0(x.use)} → 재고 ${n0(x.stock)}t (다음 3일 사용 ${n0(nx)}t)` }; }, false, 'sub');
     if (PM && PM.length) {
-      sec('구매 소재 (그날 끝 예상 재고 — 새 발주 없다고 볼 때)', 'M');
+      sec('구매 소재 (기말 예상 재고 — 추가 발주 없음 가정)', 'M');
       for (const m of PM) {
         if (!UI.inScope(m.plant)) continue;
         row(`${m.nm}`, (d) => {
@@ -226,14 +226,14 @@
     const ccard = (l) => { const x = D.co[`${l}|${d}`]; if (!x || x.t < 0.5) return ''; const fu = D.fUse[`${l}|${d}`] || []; return `<section class="card rv wide" data-noexport data-dom="C"><h3>${l} · ${n0(x.t)}t ${x.act ? '<small>(실적)</small>' : ''}</h3>
       ${fu.length ? `<div class="fin">${fu.map(([f, t]) => `<span>자가재 ${esc(f.a)} ${n0(t)}t ← 도금 ${span(f.made)}</span>`).join('')}</div>` : ''}
       ${x.rows.length ? `<table class="dt mt"><thead><tr><th>구분 · 품명</th><th>고객·지역</th><th class="r">톤</th><th>요청 납기</th><th>소재</th><th>공급 · 발주</th><th>입고</th><th>판정</th></tr></thead><tbody>${x.rows.slice(0, 12).map((r) => { const ML = x.act ? [] : matLine(r, d, l); const n = Math.max(1, ML.length); const due = r[9] ? `${md(r[9])} <small>(${Math.round((new Date(r[9]) - new Date(d)) / 864e5)}일 뒤)</small>` : esc(r[4] || '-'); return ML.length ? ML.map((m, k) => `<tr class="${k ? 'cont' : ''}"${r[8] ? ` title="배치 이유: ${esc(r[8])}"` : ''}>${k ? '' : `<td rowspan="${n}"><b>${esc(r[1])}</b> <small>${esc(r[0] === '주문재' ? '건재 주문재' : r[0])}</small></td><td rowspan="${n}">${esc([r[13] || r[2], r[3]].filter(Boolean).join(' · '))}</td><td class="r" rowspan="${n}">${n0(r[5])}</td><td rowspan="${n}">${due}</td>`}<td><small>${m.kind}</small> ${m.what}</td><td>${m.src}${m.ord !== '-' ? ` <small>· 발주 시한 ${m.ord}</small>` : ''}</td><td>${m.inb}</td><td class="st ${m.st[0]}">${m.st[1]}</td></tr>`).join('') : `<tr><td><b>${esc(r[1])}</b> <small>${esc(r[0] === '주문재' ? '건재 주문재' : r[0])}</small></td><td>${esc([r[13] || r[2], r[3]].filter(Boolean).join(' · '))}</td><td class="r">${n0(r[5])}</td><td>${due}</td><td colspan="4" class="small">실적일</td></tr>`; }).join('')}</tbody></table>${x.rows.length > 12 ? `<div class="why">외 ${x.rows.length - 12}건</div>` : ''}` : `<div class="why">${Object.entries(x.g).map(([k, v]) => `${esc(k)} ${n0(v)}t`).join(' · ')}</div>`}</section>`; };
-    const sc = `<section class="card rv" data-noexport data-dom="C"><h3>자가재 (그날)</h3><table class="dt"><thead><tr><th>강종</th><th class="r">도금 생산</th><th class="r">컬러 사용</th><th class="r">재고</th><th class="r">다음 3일 사용</th></tr></thead><tbody>${['AZ', 'MAC', 'AL'].map((a) => { const x = D.self[`${a}|${d}`] || {}; return `<tr><td>${a}</td><td class="r">${n0(x.prod)}</td><td class="r">${n0(x.use)}</td><td class="r"><b>${n0(x.stock)}</b></td><td class="r">${n0(useNext(a, d, 3))}</td></tr>`; }).join('')}</tbody></table></section>`;
-    const mc = PM && PM.length ? `<section class="card rv" data-noexport data-dom="M"><h3>구매 소재 (그날, 새 발주 없다고 볼 때)</h3><table class="dt"><thead><tr><th>소재</th><th class="r">사용</th><th class="r">입고(기발주)</th><th class="r">재고</th><th>발주 마감</th></tr></thead><tbody>${PM.filter((m) => UI.inScope(m.plant)).slice(0, 10).map((m) => `<tr><td>${esc(m.nm)}</td><td class="r">${d < today ? '-' : n0(m.use[d] || 0)}</td><td class="r">${m.arr[d] ? n0(m.arr[d]) : ''}</td><td class="r">${d < today ? '-' : `<b class="${m.stock[d] < 0 ? 'neg' : ''}">${n0(m.stock[d])}</b>`}</td><td>${m.dl ? md(m.dl) : '-'}</td></tr>`).join('')}</tbody></table><div class="why">자세한 업체 판단·구매 요청은 <a href="procure.html">소재 발주</a></div></section>` : '';
+    const sc = `<section class="card rv" data-noexport data-dom="C"><h3>자가재 (당일)</h3><table class="dt"><thead><tr><th>강종</th><th class="r">도금 입고</th><th class="r">컬러 출고</th><th class="r">기말 재고</th><th class="r">향후 3일 출고</th></tr></thead><tbody>${['AZ', 'MAC', 'AL'].map((a) => { const x = D.self[`${a}|${d}`] || {}; return `<tr><td>${a}</td><td class="r">${n0(x.prod)}</td><td class="r">${n0(x.use)}</td><td class="r"><b>${n0(x.stock)}</b></td><td class="r">${n0(useNext(a, d, 3))}</td></tr>`; }).join('')}</tbody></table></section>`;
+    const mc = PM && PM.length ? `<section class="card rv" data-noexport data-dom="M"><h3>구매 소재 (당일, 추가 발주 없음 가정)</h3><table class="dt"><thead><tr><th>소재</th><th class="r">사용</th><th class="r">입고(기발주)</th><th class="r">재고</th><th>발주 마감</th></tr></thead><tbody>${PM.filter((m) => UI.inScope(m.plant)).slice(0, 10).map((m) => `<tr><td>${esc(m.nm)}</td><td class="r">${d < today ? '-' : n0(m.use[d] || 0)}</td><td class="r">${m.arr[d] ? n0(m.arr[d]) : ''}</td><td class="r">${d < today ? '-' : `<b class="${m.stock[d] < 0 ? 'neg' : ''}">${n0(m.stock[d])}</b>`}</td><td>${m.dl ? md(m.dl) : '-'}</td></tr>`).join('')}</tbody></table><div class="why">자세한 업체 판단·구매 요청은 <a href="procure.html">소재 발주</a></div></section>` : '';
     $('s-det').innerHTML = `<div class="dethd g">${md(d)}(${WD[wd(d)]}) 가동 상세 <small>도금·컬러 라인별 품목 · 납기 · 소재 연결 — 소재 재고는 아래 소재 캘린더에서 날짜를 누르세요</small></div>` + ['1CGL', '2CGL'].map(pcard).join('') + ['1CCL', '2CCL', '3CCL', '4CCL'].map(ccard).join('');
     UI.reveal($('s-det'));
   }
 
 
-  // ---------- 소재 상세(소재 캘린더에서 날짜를 누를 때): 자가재 흐름 · 구매 소재 재고·입고·발주 마감 · 그날 컬러가 쓰는 소재 ----------
+  // ---------- 소재 상세(소재 캘린더에서 날짜를 누를 때): 자가재 입출고 · 구매 소재 재고·입고·발주 마감 · 당일 투입 소재 ----------
   function matDetail(d) {
     const M = D.W.mat || {};
     // ① 자가재: 그날 도금 생산(라인) → 언제 컬러에 투입 / 그날 컬러 사용(라인) ← 언제 도금 생산
@@ -241,13 +241,13 @@
       const made = ['1CGL', '2CGL'].flatMap((l) => (D.fMade[`${l}|${d}`] || []).filter(([f]) => f.a === a).map(([f, t]) => `${l} ${n0(t)}t → 컬러 ${span(f.use)}`));
       const used = ['1CCL', '2CCL', '3CCL', '4CCL'].flatMap((l) => (D.fUse[`${l}|${d}`] || []).filter(([f]) => f.a === a).map(([f, t]) => `${l} ${n0(t)}t ← 도금 ${span(f.made)}`));
       return `<tr><td><b>${a}</b></td><td>${n0(x.prod)}</td><td>${n0(x.use)}</td><td class="${x.stock < 0 ? 'neg' : ''}"><b>${n0(x.stock)}</b></td><td>${n0(useNext(a, d, 3))}</td><td class="para">${made.join('<br>') || '-'}</td><td class="para">${used.join('<br>') || '-'}</td></tr>`; }).join('');
-    const sc = `<section class="card rv wide" data-noexport><h3>자가재 (도금 → 컬러)</h3><div class="scroll"><table class="dt"><thead><tr><th>강종</th><th>도금 생산(입고)</th><th>재고에서 나감 <small>(컬러 생산 5일 전)</small></th><th>그날 끝 재고</th><th>다음 3일 나감</th><th>그날 도금 생산분 → 컬러 생산</th><th>그날 컬러 생산분 ← 도금 생산</th></tr></thead><tbody>${selfRows}</tbody></table></div></section>`;
+    const sc = `<section class="card rv wide" data-noexport><h3>자가재 (도금 → 컬러)</h3><div class="scroll"><table class="dt"><thead><tr><th>강종</th><th>입고 <small>(도금 생산)</small></th><th>출고 <small>(컬러 투입 5일 전)</small></th><th>기말 재고</th><th>향후 3일 출고</th><th>당일 입고분 → 컬러 투입일</th><th>당일 컬러 투입분 ← 도금 생산일</th></tr></thead><tbody>${selfRows}</tbody></table></div></section>`;
     // ② 구매 소재: 전 소재
     const pm = (PM || []).filter((m) => UI.inScope(m.plant)).map((m) => { const past = d < today, v = m.stock[d], u = m.use[d] || 0, a = m.arr[d] || 0;
       const left = !past && m.u28 > 0 ? Math.round(v / m.u28) : null;
       const flags = [a > 0.5 ? `<span class="tag good">입고 ${n0(a)}t</span>` : '', d === m.dl ? '<span class="tag bad">발주 마감</span>' : '', m.run && !past && d >= m.run ? '<span class="tag bad">바닥</span>' : ''].filter(Boolean).join(' ');
       return `<tr><td><b>${esc(m.nm)}</b> <small class="muted">${PLN[m.plant]}</small></td><td>${past ? '-' : n0(u)}</td><td>${past ? '-' : `<b class="${v < 0 ? 'neg' : ''}">${n0(v)}</b>`}</td><td>${left != null ? left + '일' : '-'}</td><td>${m.run ? md(m.run) : '없음'}</td><td>${m.dl ? md(m.dl) : '-'}</td><td>${m.sup ? `${esc(m.sup.name)} · ${m.sup.lt}일` : '-'}</td><td>${flags || '-'}</td></tr>`; }).join('');
-    const mc = PM && PM.length ? `<section class="card rv wide" data-noexport><h3>구매 소재 <small>${d < today ? '지난 날 — 예상 재고는 오늘부터' : '새 발주가 없다고 볼 때'}</small></h3><div class="scroll"><table class="dt"><thead><tr><th>소재</th><th>그날 사용</th><th>그날 끝 재고</th><th>남은 재고 일수</th><th>바닥나는 날</th><th>발주 마감</th><th>1순위 업체 · 리드타임</th><th>그날 일</th></tr></thead><tbody>${pm}</tbody></table></div></section>` : '';
+    const mc = PM && PM.length ? `<section class="card rv wide" data-noexport><h3>구매 소재 <small>${d < today ? '지난 날 — 예상 재고는 오늘부터' : '추가 발주 없음 가정'}</small></h3><div class="scroll"><table class="dt"><thead><tr><th>소재</th><th>당일 사용</th><th>기말 재고</th><th>재고 일수</th><th>바닥나는 날</th><th>발주 마감</th><th>1순위 업체 · 리드타임</th><th>당일 조치</th></tr></thead><tbody>${pm}</tbody></table></div></section>` : '';
     // ③ 그날 컬러가 쓰는 소재(라인 × 소재): 자가재 = 품명별 강종 비중, 구매 = 품명 → 소재 코드 비중(13주 실적)
     const use = {}, lines = ['1CCL', '2CCL', '3CCL', '4CCL'];
     for (const l of lines) { const x = D.co[`${l}|${d}`]; if (!x) continue;
@@ -256,8 +256,8 @@
         const mix = (M.codeMix || {})[base] || (M.codeMix || {})[String(base).slice(0, 3)] || null;
         if (1 - sh > 0.02) { if (mix) for (const [c, w] of Object.entries(mix)) { const k = (M.matCode || {})[c] || c; (use[k] = use[k] || {})[l] = (use[k][l] || 0) + t * (1 - sh) * w; } else { (use['소재 미확인'] = use['소재 미확인'] || {})[l] = (use['소재 미확인'][l] || 0) + t * (1 - sh); } } } }
     const keys = Object.keys(use).sort((a, b) => lines.reduce((s_, l) => s_ + (use[b][l] || 0), 0) - lines.reduce((s_, l) => s_ + (use[a][l] || 0), 0)).filter((k) => lines.reduce((s_, l) => s_ + (use[k][l] || 0), 0) >= 0.5);
-    const uc = keys.length ? `<section class="card rv wide" data-noexport><h3>그날 컬러 생산에 들어가는 소재 <small>라인별 · 제품 톤 기준(품명별 소재 비중) — 자가재 표의 '재고에서 나감'은 5일 앞선 날짜 기준이라 숫자가 다름</small></h3><div class="scroll"><table class="dt"><thead><tr><th>소재</th>${lines.map((l) => `<th>${l}</th>`).join('')}<th>합계</th></tr></thead><tbody>${keys.map((k) => `<tr><td><b>${esc(k)}</b></td>${lines.map((l) => `<td>${use[k][l] ? n0(use[k][l]) : ''}</td>`).join('')}<td><b>${n0(lines.reduce((s_, l) => s_ + (use[k][l] || 0), 0))}</b></td></tr>`).join('')}</tbody></table></div></section>` : '';
-    $('s-det2').innerHTML = `<div class="dethd m">${md(d)}(${WD[wd(d)]}) 소재 상세 <small>자가재 흐름 · 구매 소재 재고·입고·발주 마감 · 그날 컬러가 쓰는 소재 — 라인별 품목은 위 가동 캘린더에서 날짜를 누르세요</small></div>` + sc + mc + uc;
+    const uc = keys.length ? `<section class="card rv wide" data-noexport><h3>당일 컬러 생산 투입 소재 <small>라인별 · 제품 톤 기준(품명별 소재 비중) — 자가재 표의 출고는 투입 5일 전 기준이라 수치가 다름</small></h3><div class="scroll"><table class="dt"><thead><tr><th>소재</th>${lines.map((l) => `<th>${l}</th>`).join('')}<th>합계</th></tr></thead><tbody>${keys.map((k) => `<tr><td><b>${esc(k)}</b></td>${lines.map((l) => `<td>${use[k][l] ? n0(use[k][l]) : ''}</td>`).join('')}<td><b>${n0(lines.reduce((s_, l) => s_ + (use[k][l] || 0), 0))}</b></td></tr>`).join('')}</tbody></table></div></section>` : '';
+    $('s-det2').innerHTML = `<div class="dethd m">${md(d)}(${WD[wd(d)]}) 소재 상세 <small>자가재 입출고 · 구매 소재 재고·입고·발주 마감 · 당일 투입 소재 — 라인별 품목은 위 가동 캘린더에서 날짜를 누르세요</small></div>` + sc + mc + uc;
     UI.reveal($('s-det2'));
     $('s-det2').scrollIntoView({ behavior: 'smooth', block: 'start' });
   }

@@ -1,4 +1,4 @@
-/* 공통 셸: 헤더(워드마크·메뉴·화면 모드) + 움직임 도우미(UI.reveal / UI.count / UI.toast)
+/* 공통 셸: 왼쪽 메뉴(마크·메뉴·보기·화면 모드) + 화면 머리 + 움직임 도우미(UI.reveal / UI.count / UI.toast)
    페이지: <header id="shell" data-page="procure" data-crumb="소재" data-title="소재 발주 검토" data-sub="..."></header> */
 (function () {
   'use strict';
@@ -42,30 +42,64 @@
     el.innerHTML = `<div><b>이 화면은 ${SCN[only]} 자료만 있습니다.</b> 현재 '${SCN[scope]}' 보기라 내용이 없습니다 — <button type="button" data-sc="${only}">${SCN[only]} 보기로</button> 또는 <a href="index.html">홈</a>에서 ${SCN[scope]} 화면을 고르세요.</div>`;
     el.querySelector('button').onclick = () => setScope(only);
   }
+  /* 메뉴 아이콘(선 아이콘, 24 격자) */
+  const IC = {
+    home: 'M3 10.5 12 3l9 7.5V20a1 1 0 0 1-1 1h-5v-6h-6v6H4a1 1 0 0 1-1-1z',
+    supply: 'M4 5h16v15H4zM4 9h16M8 3v4M16 3v4M8 13h3M13 13h3M8 16.5h3',
+    integrated: 'M4 19V5M4 19h16M7 15l4-4 3 3 5-6',
+    report: 'M6 3h9l4 4v14H6zM14 3v5h5M9 12h7M9 16h7',
+    status: 'M4 5h16M4 5v14M8 9h7M10 13h8M6 17h6',
+    colorstat: 'M4 5h16M4 5v14M8 9h7M10 13h8M6 17h6',
+    rolling: 'M5 3h14v18H5zM8 7h8M8 11h2M12 11h2M16 11h0M8 15h2M12 15h2M8 18h6',
+    analysis: 'M10.5 4a6.5 6.5 0 1 0 0 13 6.5 6.5 0 0 0 0-13zM15.5 15.5 20 20M8 12.5v-2M10.5 12.5V8M13 12.5v-3',
+    coloranal: 'M10.5 4a6.5 6.5 0 1 0 0 13 6.5 6.5 0 0 0 0-13zM15.5 15.5 20 20M8 12.5v-2M10.5 12.5V8M13 12.5v-3',
+    platact: 'M4 20h16M6 20v-6M10 20V9M14 20v-8M18 20V5',
+    coloract: 'M4 20h16M6 20v-6M10 20V9M14 20v-8M18 20V5',
+    planstock: 'M12 3 20 7.5v9L12 21l-8-4.5v-9zM4 7.5l8 4.5 8-4.5M12 12v9',
+    procure: 'M3 4h2.5l2.2 11h10.6L20 7H6.6M9 19.5h.01M17 19.5h.01',
+    decisions: 'M5 21V4M5 4h11l-2 4 2 4H5',
+    health: 'M3 12h4l2.5-6 4 12 2.5-6H21',
+    docs: 'M5 4h10l4 4v12H5zM9 12h6M9 16h6M9 8h3',
+  };
+  const icon = (k) => `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="${IC[k] || IC.docs}"/></svg>`;
+  /* 마크: 겹친 강판 띠(도금층·도장층)를 형상화한 자체 도안 — 공식 CI 파일을 받으면 여기만 바꾸면 됨 */
+  const MARK = '<svg class="mk" viewBox="0 0 40 40" aria-hidden="true"><defs><clipPath id="mkc"><rect width="40" height="40" rx="11"/></clipPath></defs><g clip-path="url(#mkc)"><rect width="40" height="40" fill="#1b3f5f"/><path d="M-6 30 30-6h9L3 30z" fill="#3774a1"/><path d="M4 40 40 4v9L13 40z" fill="#6cb1d8"/><path d="M17 40 40 17v8L25 40z" fill="#ffffff" opacity=".92"/></g></svg>';
+  const GRPCLR = { 도금: 'var(--gc-g)', 컬러: 'var(--gc-c)', 소재: 'var(--gc-m)' };
   function build() {
     const h = document.getElementById('shell'); if (!h) return;
     const d = h.dataset, esc = (s) => String(s || '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
-    const nav = NAV.map((x) => (typeof x === 'string' ? `<span class="sep" aria-hidden="true"></span>${x.length > 1 ? `<span class="grp">${x.slice(1)}</span>` : ''}` : `<a href="${x[1]}"${x[0] === d.page || (x[0] === 'docs' && DOCS.includes(d.page)) ? ' aria-current="page"' : ''}${ONLY[x[0]] ? ` data-only="${ONLY[x[0]]}"` : ''}>${x[2]}</a>`)).join('');   // 같은 이름(가동 현황·조건 분석·실적)은 앞의 묶음 이름(도금·컬러)으로 구분
+    let grp = '종합';
+    const nav = NAV.map((x) => {
+      if (typeof x === 'string') { grp = x.slice(1) || '관리'; return `<div class="nv-grp"${GRPCLR[grp] ? ` style="--gk:${GRPCLR[grp]}"` : ''}>${grp}</div>`; }
+      const on = x[0] === d.page || (x[0] === 'docs' && DOCS.includes(d.page));
+      return `<a href="${x[1]}"${on ? ' aria-current="page"' : ''}${ONLY[x[0]] ? ` data-only="${ONLY[x[0]]}"` : ''}>${icon(x[0])}<span>${x[2]}</span></a>`;
+    }).join('');
+    const TH = { auto: '자동', light: '밝게', dark: '어둡게' };
     h.className = 'shell-top';
-    h.innerHTML = `<div class="sheen" aria-hidden="true"></div><div class="wrap">
-      <div class="shell-bar"><a class="wordmark" href="index.html"><span class="mk" aria-hidden="true"><i></i></span><b>POSCO STEELEON</b><span>도금·컬러 가동계획</span></a>
-        <div class="shell-tools noprint"><a class="fresh" id="ui-fresh" href="health.html" hidden></a><button type="button" id="ui-theme" aria-label="화면 모드">${{ auto: '◐ 자동', light: '☀ 밝게', dark: '☾ 어둡게' }[theme]}</button></div></div>
-      <div class="shell-head"><div class="sh-l">${d.crumb ? `<div class="crumb">${esc(d.crumb)}</div>` : ''}<h1>${esc(d.title || document.title)}</h1>${d.sub != null ? `<p class="sub" id="ui-sub">${esc(d.sub)}</p>` : ''}${HELP[d.page] ? `<p class="help"><b>이 화면에서</b> ${esc(HELP[d.page])}</p>` : ''}</div>
-        <div class="scope noprint"><span>보기</span><div class="scope-seg" role="group" aria-label="공정 보기">${Object.entries(SCN).map(([k, n]) => `<button type="button" data-sc="${k}" aria-pressed="${k === scope}">${n}</button>`).join('')}</div></div></div>
-      <nav class="shell-nav" aria-label="메뉴">${nav}<span class="ink" aria-hidden="true"></span></nav></div>`;
-    const ink = h.querySelector('.ink'), cur = h.querySelector('.shell-nav a[aria-current]'), navEl = h.querySelector('.shell-nav');
-    const place = (a) => { if (!a) { ink.style.width = 0; return; } ink.style.left = (a.offsetLeft + 10) + 'px'; ink.style.top = (a.offsetTop + a.offsetHeight - 6) + 'px'; ink.style.width = (a.offsetWidth - 20) + 'px'; };
-    requestAnimationFrame(() => { place(cur); if (cur) cur.scrollIntoView({ block: 'nearest', inline: 'center' }); });
-    navEl.addEventListener('mouseover', (e) => { const a = e.target.closest('a'); if (a) place(a); });
-    navEl.addEventListener('mouseleave', () => place(cur));
-    addEventListener('resize', () => place(cur));
-    addEventListener('load', () => place(cur)); if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => place(cur));   // 글꼴이 늦게 오면 메뉴 폭이 바뀜
+    h.innerHTML = `<div class="topbar noprint"><button type="button" class="hamb" aria-label="메뉴 열기" aria-expanded="false"><i></i><i></i><i></i></button><a class="brand" href="index.html">${MARK}<span class="bt"><b>POSCO STEELEON</b><small>도금·컬러 가동계획</small></span></a><a class="fresh" id="ui-fresh-m" href="health.html" hidden></a></div>
+      <aside class="side" aria-label="메뉴">
+        <a class="brand" href="index.html">${MARK}<span class="bt"><b>POSCO STEELEON</b><small>도금·컬러 가동계획</small></span></a>
+        <nav class="shell-nav"><div class="nv-grp first">종합</div>${nav}</nav>
+        <div class="side-foot noprint">
+          <div class="scope"><span>보기</span><div class="scope-seg" role="group" aria-label="공정 보기">${Object.entries(SCN).map(([k, n]) => `<button type="button" data-sc="${k}" aria-pressed="${k === scope}">${n}</button>`).join('')}</div></div>
+          <div class="sf-row"><a class="fresh" id="ui-fresh" href="health.html" hidden></a><button type="button" id="ui-theme" class="thm" aria-label="화면 모드">${TH[theme]}</button></div>
+        </div>
+      </aside>
+      <div class="scrim noprint" aria-hidden="true"></div>
+      <div class="wrap shell-head"><div class="sh-l">${d.crumb ? `<div class="crumb">${esc(d.crumb)}</div>` : ''}<div class="h1row"><h1>${esc(d.title || document.title)}</h1>${HELP[d.page] ? '<button type="button" class="hbtn noprint" aria-expanded="false" aria-controls="ui-help" title="이 화면 사용법">?</button>' : ''}</div>${d.sub != null ? `<p class="sub" id="ui-sub">${esc(d.sub)}</p>` : ''}${HELP[d.page] ? `<p class="help" id="ui-help" hidden><b>이 화면에서</b>${esc(HELP[d.page])}</p>` : ''}</div></div>`;
+    document.body.classList.add('has-side');
+    const hb = h.querySelector('.hbtn'); if (hb) hb.addEventListener('click', () => { const p = h.querySelector('#ui-help'), v = p.hidden; p.hidden = !v; hb.setAttribute('aria-expanded', String(v)); });
+    const open = (v) => { document.body.classList.toggle('nav-open', v); h.querySelector('.hamb').setAttribute('aria-expanded', String(v)); };
+    h.querySelector('.hamb').addEventListener('click', () => open(!document.body.classList.contains('nav-open')));
+    h.querySelector('.scrim').addEventListener('click', () => open(false));
+    addEventListener('keydown', (e) => { if (e.key === 'Escape') open(false); });
+    const cur = h.querySelector('.shell-nav a[aria-current]'); if (cur) requestAnimationFrame(() => cur.scrollIntoView({ block: 'nearest' }));
     h.querySelectorAll('.scope-seg button').forEach((b) => b.addEventListener('click', () => { if (b.dataset.sc !== scope) setScope(b.dataset.sc); }));
     h.querySelectorAll('.shell-nav a[data-only]').forEach((a) => a.classList.toggle('dim', scope !== 'all' && !a.dataset.only.includes(scope)));
     notice();
     h.querySelector('#ui-theme').addEventListener('click', (e) => {
       theme = { auto: 'light', light: 'dark', dark: 'auto' }[theme]; try { localStorage.setItem(TKEY, theme); } catch (x) { /* 무시 */ }
-      applyTheme(theme); e.currentTarget.textContent = { auto: '◐ 자동', light: '☀ 밝게', dark: '☾ 어둡게' }[theme];
+      applyTheme(theme); e.currentTarget.textContent = TH[theme];
     });
   }
 
@@ -87,6 +121,7 @@
     el.hidden = false; el.className = 'fresh ' + (age <= 1 ? 'ok' : age <= 2 ? 'warn' : 'bad');
     el.title = `${want} 마지막 날짜 · 게시 ${String(S.runAt || '').replace('T', ' ').slice(0, 16)}`;
     el.innerHTML = `<i></i>자료 ~${+f.last.slice(5, 7)}/${+f.last.slice(8, 10)}${age >= 1 ? ` · ${age}일 전` : ''}`;
+    const m = document.getElementById('ui-fresh-m'); if (m) { m.hidden = false; m.className = el.className; m.title = el.title; m.innerHTML = el.innerHTML; }
     if (age >= 2 && h.dataset.page !== 'health' && !document.getElementById('ui-stale')) {
       const b = document.createElement('div'); b.id = 'ui-stale'; b.className = 'wrap stale-band';
       b.innerHTML = `<div>⚠ <b>자료가 ${age}일 전(${f.last})에서 멈춰 있습니다.</b> 숫자는 그날 기준입니다 — 사내 PC 자동 실행을 확인하세요. <a href="health.html">자료 상태 보기 →</a></div>`;
