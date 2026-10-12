@@ -32,7 +32,7 @@ details.tv { margin-top: 12px; } details.tv summary { cursor: pointer; color: va
 .tipbox { position: fixed; pointer-events: none; background: var(--surface); color: var(--ink); border: 1px solid var(--line); border-radius: 8px; padding: 9px 12px; font-size: 14.5px; line-height: 1.55; box-shadow: var(--shadow-up); z-index: 40; display: none; }
 </style>
 </head>
-<body>
+<body data-plant="C">
 <header id="shell" data-page="coloract" data-crumb="실적 · 컬러" data-title="컬러 실적" data-sub="컬러 1~4CCL — 이번 달 진도, 일별·주별 생산, 속도, 품명, 휴지 (MES 원자료 재계산)"></header>
 <main class="wrap">
   <div class="docmeta" id="ca-meta"></div>
@@ -45,10 +45,10 @@ details.tv { margin-top: 12px; } details.tv summary { cursor: pointer; color: va
     </section>
   </div>
 </main>
-<footer class="foot"><div class="wrap"><span>원자료: MES 컬러 생산·휴지 실적, 판매생산속보 · 계산: tools/color_actual.py</span><span>POSCO STEELEON 도금·컬러 가동계획</span></div></footer>
+<footer class="foot"><div class="wrap"><span>원자료: MES 컬러 생산·휴지 실적, 판매생산속보 · 계산: cglplan/pages.py</span><span>POSCO STEELEON 도금·컬러 가동계획</span></div></footer>
 <div class="tipbox" id="ca-tip" role="tooltip"></div>
 <script src="ui/shell.js"></script>
 <script src="engine/crypto.js"></script>
-<script src="color_actual.js"></script>
+<script src="actual.js"></script>
 </body>
 </html>
