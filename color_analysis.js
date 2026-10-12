@@ -23,10 +23,7 @@
       <dt>휴지 구성</dt><dd>${x.stops.map(([c, h]) => `${esc(c)} ${fmt(h, 1)}h`).join(' · ') || '-'}</dd></dl></div>`).join('');
     const warn = Object.entries(a.lines).filter(([, x]) => x.idx4 != null && Math.abs(x.idx4 - 1) >= 0.05).map(([l, x]) => `${l} 최근 4주 속도가 계획 조건보다 ${pc(x.idx4 - 1)} — 계획 조건 조정 검토`);
     $('a-warns').innerHTML = warn.map((m) => `<li class="warn">경고 · ${esc(m)}</li>`).join('');
-    const v = (c, x) => (x == null ? '-' : c.kind === 'line' ? fmt(x * 100, 1) + '%' : fmt(x, 2));
-    $('a-cands').innerHTML = '<tr><th>항목</th><th>계획</th><th>실적(4주)</th><th>차이</th><th>근거</th><th>판정</th></tr>' + a.cands.map((c) =>
-      `<tr><td>${esc(c.label)} <small class="muted">${esc(c.unit)}</small></td><td class="n">${v(c, c.cur)}</td><td class="n"><b>${v(c, c.act)}</b></td><td class="n ${c.flag ? 'neg' : ''}">${pc(c.diff)}</td>`
-      + `<td class="muted">${esc(c.basis || '')}</td><td>${c.apply ? '<span class="pill warn">반영 권장</span>' : c.flag ? '<span class="pill">검토</span>' : '유지'}</td></tr>`).join('');
+    renderCands(a);
     renderWeekly(a);
     const lines = Object.keys(a.lines), weeks = a.weeks.slice(-13);
     $('a-events').innerHTML = `<tr><th>주</th>${lines.map((l) => `<th>${l}</th>`).join('')}</tr>` + weeks.map((w) => `<tr><td>${md(w)}~</td>${lines.map((l) => {
@@ -38,6 +35,40 @@
       `<tr><td>${x.line}</td><td>${esc(x.kind)}</td><td>${a.hasNames ? esc(x.reason) : `코드 ${esc(x.code)} <small class="muted">예: ${esc(x.reason)}</small>`}</td><td class="n">${fmt(x.minutes)}</td><td class="n">${x.n}</td><td class="n">${fmt(x.minutes / days[x.line], 1)}</td></tr>`).join('');
     if (!a.hasNames) $('a-rs-note').textContent += ' 사유 코드 이름은 다음 자동 갱신부터 표시(현재는 코드와 메모 예시).';
     if (window.UI) UI.reveal(document.querySelector('main'));
+  }
+
+  /* 계획 조건 후보: 라인 카드(품목 구성 감안 속도, ±5% 허용 띠) + 라인별 품명 막대(계획보다 빠름/느림, 4주 시간 영향 순) */
+  let cf = 'act', cl = null;
+  function renderCands(a) {
+    const C = a.cands, LN = Object.keys(a.lines);
+    cl = cl || LN[0];
+    const verdict = (c) => (c.apply ? ['반영 권장', 'warn'] : c.flag ? ['검토', 'info'] : ['유지', '']);
+    const tons = (c) => c.t4 != null ? c.t4 : +((String(c.basis).match(/4주 ([\d,]+)t/) || [])[1] || '0').replace(/,/g, '');
+    const lineCard = (l) => { const c = C.find((x) => x.kind === 'line' && (x.line === l || x.label.startsWith(l))); if (!c) return '';
+      const d = c.diff || 0, pos = Math.max(-15, Math.min(15, d * 100)), vd = verdict(c), np = C.filter((x) => x.kind !== 'line' && (x.line || x.label.split(' ')[0]) === l && x.apply).length;
+      return `<button type="button" class="cc-line${l === cl ? ' on' : ''}" data-l="${l}"><div class="cc-h"><b>${l}</b><span class="tag ${vd[1]}">${vd[0]}</span></div>
+        <div class="cc-v ${Math.abs(d) >= 0.05 ? (d > 0 ? 'pos' : 'neg') : ''}">${d >= 0 ? '+' : ''}${fmt(d * 100, 1)}<small>%</small></div><p>계획 대비 실제 속도(품목 구성 감안)</p>
+        <div class="cc-scale"><span class="band"></span><span class="mid"></span><i style="left:${50 + pos / 15 * 50}%"></i></div><div class="cc-ax"><span>-15%</span><span>±5% 허용</span><span>+15%</span></div>
+        <p class="cc-n">반영 권장 품명 <b>${np}</b>개 · ${esc(c.basis.replace('최근 4주 ', '4주 '))}</p></button>`; };
+    const P = C.filter((x) => x.kind !== 'line' && (x.line || x.label.split(' ')[0]) === cl && x.diff != null)
+      .map((x) => ({ ...x, prod: x.prod || x.label.split(' ')[1], t: tons(x), h: x.hLoss != null ? x.hLoss : null }))
+      .filter((x) => cf === 'all' || (cf === 'act' ? x.flag : cf === 'apply' ? x.apply : !x.flag))
+      .sort((p, q) => Math.abs(q.h || 0) - Math.abs(p.h || 0) || q.t - p.t);
+    const big = P.filter((x) => x.t >= 150), small = P.filter((x) => x.t < 150);
+    const row = (x) => { const d = Math.max(-0.4, Math.min(0.4, x.diff)), w = Math.abs(d) / 0.4 * 50, vd = verdict(x);
+      return `<div class="cp-row ${x.apply ? 'ap' : x.flag ? '' : 'ok'}"><div class="cp-n"><b>${esc(x.prod)}</b><small>4주 ${fmt(x.t)}t</small></div>
+        <div class="cp-bar"><span class="mid"></span><span class="band"></span><i class="${x.diff >= 0 ? 'p' : 'n'}" style="${x.diff >= 0 ? 'left:50%' : `left:${50 - w}%`};width:${w}%"></i><em style="${x.diff >= 0 ? `left:calc(${50 + w}% + 6px)` : `right:calc(${50 + w}% + 6px)`}">${x.diff >= 0 ? '+' : ''}${fmt(x.diff * 100, 1)}%</em></div>
+        <div class="cp-v">${fmt(x.cur, 2)} → <b>${fmt(x.act, 2)}</b> <small>t/hr</small>${x.v12 != null ? `<small class="muted"> · 앞 12주 ${fmt(x.v12, 2)}</small>` : ''}</div>
+        <div class="cp-h">${x.h != null ? `${x.h > 0 ? '+' : ''}${fmt(x.h, 1)}h` : '-'}</div><div class="cp-s"><span class="tag ${vd[1]}">${vd[0]}</span></div></div>`; };
+    const F = [['act', '반영 권장·검토'], ['apply', '반영 권장만'], ['ok', '유지'], ['all', '전체']];
+    $('a-cands').innerHTML = `<div class="cc-lines">${LN.map(lineCard).join('')}</div>
+      <div class="cp-bar0"><b>${cl} 품명별 속도</b><div class="seg" id="a-cf">${F.map(([k, n]) => `<button type="button" data-f="${k}" aria-pressed="${k === cf}">${n}</button>`).join('')}</div></div>
+      <div class="cp-head"><span>품명</span><span>계획 대비 실제 속도 <small>(왼쪽 = 느림, 오른쪽 = 빠름 · 회색 띠 = ±5%)</small></span><span>계획 → 실제</span><span>4주 시간 영향</span><span>판정</span></div>
+      ${big.map(row).join('') || '<p class="hint" style="padding:12px 0">해당 품명 없음</p>'}
+      ${small.length ? `<details class="cp-more"><summary>4주 물량 150t 미만 품명 ${small.length}개 — 표본이 작아 참고만</summary>${small.map(row).join('')}</details>` : ''}
+      <p class="hint">시간 영향 = 최근 4주 물량을 실제 속도로 만든 시간 − 계획 속도로 만든 시간(+ = 계획보다 더 걸림). 반영 권장 = 차이 5% 이상 · 4주 150t 이상 · 앞 12주도 같은 방향. 반영은 다음 통합 계획 계산 때 함께 합니다.</p>`;
+    $('a-cands').querySelectorAll('.cc-line').forEach((b) => b.onclick = () => { cl = b.dataset.l; renderCands(a); });
+    $('a-cands').querySelectorAll('#a-cf button').forEach((b) => b.onclick = () => { cf = b.dataset.f; renderCands(a); });
   }
 
   function renderWeekly(a) {

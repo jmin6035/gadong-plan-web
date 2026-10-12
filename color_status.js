@@ -126,23 +126,32 @@
 
   function renderNow() {
     const d = $('d-date').value; if (!d) return;
-    const m = d.slice(0, 7);
+    const m = d.slice(0, 7), mm = +m.slice(5), nd = daysOf(m).length, el = +d.slice(8) / nd;
+    const dd = (x) => Math.round((new Date(x) - new Date(d)) / 864e5);
     $('d-now').innerHTML = LINES.map((l) => {
-      const c = by[`${l}|${d}`], T = c ? tot(c) : 0;
-      const gs = c ? Object.entries(c.g).filter(([, v]) => v > 0.5).sort((a, b) => b[1] - a[1]).map(([k, v]) => `${GL(k)} ${fmt(v)}t`).join(', ') : '';
-      const items = c ? c.rows.slice(0, 4).map((r) => `${esc(r[1])}${r[2] ? ' ' + esc(r[2]) : ''} ${fmt(r[5])}t`).join(', ') : '';
-      const toDate = sum(O.color.filter((x) => x.l === l && x.d.startsWith(m) && x.d <= d), tot);
+      const c = by[`${l}|${d}`], T = c ? tot(c) : 0, hrs = c ? (c.min || 0) / 60 : 0;
+      const gs = c ? Object.entries(c.g).filter(([, v]) => v > 0.5).sort((a, b) => b[1] - a[1]) : [];
+      const pa = {}; if (c) for (const r of c.rows) pa[r[1]] = (pa[r[1]] || 0) + (+r[5] || 0);
+      const items = Object.entries(pa).sort((a, b) => b[1] - a[1]).slice(0, 3).map(([k, v]) => `<li><span>${esc(k)}</span><b>${fmt(v)}t</b></li>`).join('');
+      const toDate = sum(O.color.filter((x) => x.l === l && x.d.startsWith(m) && x.d <= d), tot), mPlan = monT(m, l), mc = cap(m, l);
       const next = O.color.filter((x) => x.l === l && x.d > d && tot(x) < 0.5).map((x) => x.d)[0];
-      const state = !c || T < 0.5 ? '<span class="pill">가동 없음</span>' : `<span class="pill ${c.act ? '' : 'warn'}">${c.act ? '실적' : '계획'}</span>`;
-      return `<div class="line-card"><h3>${l} ${state}</h3><dl>
-        <dt>${c && c.act ? '생산 실적' : '계획 생산'}</dt><dd>${T < 0.5 ? '-' : `${fmt(T)}t (가동 ${fmt((c.min || 0) / 60, 1)}h)`}</dd>
-        <dt>그룹별</dt><dd>${gs || '-'}</dd>
-        <dt>주요 품목</dt><dd>${items || '-'}</dd>
-        <dt>휴지계획</dt><dd>${esc(dnTxt(l, d)) || '-'}</dd>
-        <dt>다음 S/D·수리</dt><dd>${(() => { const nx = (O.colorDown || []).filter((x) => x[1] === l && x[0] > d && HARD.includes(x[2])).sort((a, b) => (a[0] < b[0] ? -1 : 1))[0]; return nx ? `${md(nx[0])} ${KN[nx[2]]} (D-${Math.round((new Date(nx[0]) - new Date(d)) / 864e5)})` : '4분기 중 없음'; })()}</dd>
-        <dt>다음 비가동일</dt><dd>${next ? `${md(next)} (D-${Math.round((new Date(next) - new Date(d)) / 864e5)})` : '4분기 중 없음'}</dd>
-        <dt>${+m.slice(5)}월 누계</dt><dd>${fmt(toDate)} / ${fmt(monT(m, l))}t · 월차 ${fmt(cap(m, l))}t</dd>
-      </dl></div>`;
+      const nx = (O.colorDown || []).filter((x) => x[1] === l && x[0] > d && HARD.includes(x[2])).sort((a, b) => (a[0] < b[0] ? -1 : 1))[0];
+      const off = !c || T < 0.5, st = off ? ['비가동', 'bad'] : c.act ? ['실적', 'good'] : ['계획', 'info'];
+      const pr = mc ? Math.min(1, toDate / mc) : 0;
+      const chips = [dnTxt(l, d) ? `<span class="tag warn">당일 ${esc(dnTxt(l, d))}</span>` : '',
+        nx ? `<span class="tag ${dd(nx[0]) <= 7 ? 'bad' : ''}">${KN[nx[2]]} ${md(nx[0])} · D-${dd(nx[0])}</span>` : '<span class="tag">4분기 S/D·수리 없음</span>',
+        next ? `<span class="tag">비가동 ${md(next)} · D-${dd(next)}</span>` : ''].filter(Boolean).join('');
+      return `<div class="ln-card${off ? ' off' : ''}"><div class="ln-h"><b>${l}</b><span class="tag ${st[1]}">${st[0]}</span></div>
+        <div class="ln-big">${off ? '-' : fmt(T)}<small>t</small><span>${off ? '당일 생산 없음' : `가동 ${fmt(hrs, 1)}h / 24h`}</span></div>
+        <div class="ln-gauge" title="가동시간"><i style="width:${Math.min(100, hrs / 24 * 100)}%"></i></div>
+        <p class="ln-l">그룹 구성</p>
+        <div class="ln-mix">${gs.length ? gs.map(([g, v]) => `<i style="flex:${v};background:${GVAR[g]}" title="${GL(g)} ${fmt(v)}t"></i>`).join('') : '<i style="flex:1;background:var(--grid)"></i>'}</div>
+        <div class="ln-mixl">${gs.map(([g, v]) => `<span><i style="background:${GVAR[g]}"></i>${GL(g)} ${fmt(v)}t</span>`).join('') || '<span class="muted">-</span>'}</div>
+        ${items ? `<p class="ln-l">주요 품목</p><ul class="ln-items">${items}</ul>` : ''}
+        <p class="ln-l">${mm}월 진도 <span>${fmt(toDate)} / 월차 ${fmt(mc)}t · ${Math.round(pr * 100)}%</span></p>
+        <div class="ln-prog" title="세로선 = 경과일 ${Math.round(el * 100)}%"><i style="width:${pr * 100}%"></i><u style="left:${el * 100}%"></u></div>
+        <p class="ln-sub">계획 편성 ${fmt(mPlan)}t · 세로선 = 경과일(${Math.round(el * 100)}%)</p>
+        <div class="ln-chips">${chips}</div></div>`;
     }).join('');
   }
   $('d-date').onchange = () => O && renderNow();
@@ -150,11 +159,14 @@
   function renderDept() {
     const t = {}; for (const c of O.color) for (const [g, v] of Object.entries(c.g)) { const k = `${g}|${c.d.slice(0, 7)}`; t[k] = (t[k] || 0) + v; }
     const un = {}; for (const u of O.colorUnplaced) un[u.g] = (un[u.g] || 0) + u.t;
-    const mx = Math.max(...Object.values(t), 1);
-    const cell = (v) => `<td class="n bar-cell"><i style="width:${(v / mx) * 100}%"></i><span>${fmt(v)}</span></td>`;
-    $('d-dept').innerHTML = `<tr><th>그룹</th>${MONTHS.map((m) => `<th>${+m.slice(5)}월</th>`).join('')}<th>분기 생산</th><th>미편성</th><th>계획 물량(생산 + 미편성)</th></tr>`
-      + CG.map((g) => { const v = MONTHS.map((m) => t[`${g}|${m}`] || 0); return `<tr><td><i class="sw" style="background:${GVAR[g]}"></i> ${GL(g)}</td>${v.map(cell).join('')}<td class="n"><b>${fmt(sum(v))}</b></td><td class="n">${fmt(un[g] || 0)}</td><td class="n">${fmt(sum(v) + (un[g] || 0))}</td></tr>`; }).join('')
-      + `<tr><td><b>합계</b></td>${MONTHS.map((m) => `<td class="n"><b>${fmt(monT(m))}</b></td>`).join('')}<td class="n"><b>${fmt(sum(MONTHS, (m) => monT(m)))}</b></td><td class="n">${fmt(unT())}</td><td class="n">${fmt(sum(MONTHS, (m) => monT(m)) + unT())}</td></tr>`;
+    const rows = CG.map((g) => { const v = MONTHS.map((m) => t[`${g}|${m}`] || 0); return { g, v, s: sum(v), u: un[g] || 0 }; });
+    const mx = Math.max(...rows.map((r) => r.s + r.u), 1);
+    const SH = [0.45, 0.7, 1];                                        // 10·11·12월 = 같은 그룹색의 옅음→진함
+    $('d-dept').innerHTML = `<div class="gm-leg">${MONTHS.map((m, i) => `<span><i style="background:var(--ink-2);opacity:${SH[i]}"></i>${+m.slice(5)}월</span>`).join('')}<span><i class="hatch"></i>미편성</span></div>`
+      + rows.map((r) => `<div class="gm-row"><div class="gm-n"><i style="background:${GVAR[r.g]}"></i>${GL(r.g)}</div>
+        <div class="gm-bar">${r.v.map((v, i) => (v > 0 ? `<i style="width:${v / mx * 100}%;background:color-mix(in srgb, ${GVAR[r.g]} ${SH[i] * 100}%, var(--surface));color:${i < 2 ? 'var(--ink)' : '#fff'};text-shadow:${i < 2 ? 'none' : ''}" title="${GL(r.g)} ${+MONTHS[i].slice(5)}월 ${fmt(v)}t">${v / mx > 0.07 ? fmt(v) : ''}</i>` : '')).join('')}${r.u > 0.5 ? `<i class="hatch" style="width:${r.u / mx * 100}%" title="미편성 ${fmt(r.u)}t">${r.u / mx > 0.07 ? fmt(r.u) : ''}</i>` : ''}</div>
+        <div class="gm-t"><b>${fmt(r.s)}t</b>${r.u > 0.5 ? `<span class="neg">미편성 ${fmt(r.u)}t</span>` : '<span class="muted">미편성 없음</span>'}</div></div>`).join('')
+      + `<div class="gm-row gm-tot"><div class="gm-n">합계</div><div class="gm-sum">${MONTHS.map((m) => `<span>${+m.slice(5)}월 <b>${fmt(monT(m))}t</b></span>`).join('')}</div><div class="gm-t"><b>${fmt(sum(MONTHS, (m) => monT(m)))}t</b><span class="neg">미편성 ${fmt(unT())}t</span></div></div>`;
   }
   function renderEarly() {
     const U = O.colorUnplaced.slice().sort((a, b) => (a.ym < b.ym ? -1 : a.ym > b.ym ? 1 : b.t - a.t));
