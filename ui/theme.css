@@ -220,6 +220,8 @@ table.t input[type=number] { width: 88px; text-align: right; }
 .rv { animation: rise .55s var(--ease) both; animation-delay: calc(var(--i, 0) * 60ms); }
 .fade { animation: fade .35s ease both; }
 .drop { animation: drop .32s var(--ease) both; }
+.rv-wait, .rv-wait * { animation-play-state: paused !important; }      /* 화면 밖 카드: 보일 때까지 멈춤(ui/shell.js) */
+@media print { .rv-wait, .rv-wait * { animation: none !important; } }   /* 인쇄·PDF 는 전부 바로 보이게 */
 @keyframes rise { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: none; } }
 @keyframes fade { from { opacity: 0; } to { opacity: 1; } }
 @keyframes drop { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: none; } }
@@ -774,8 +776,8 @@ html .cc-line:hover { border-color: var(--brand-2); } html .cc-line.on { border-
 :root { --gap: 18px; --gap-s: 12px; }
 .kpis { grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: var(--gap-s); }
 .kstrip, .lines { gap: var(--gap-s); }                               /* 홈 KPI 띠·라인 띠(6칸 고정) */
-.cc-lines, .ln-grid, .sum-tiles, .cc-steps, .up { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: var(--gap-s); }
-.dc-grid, .dl { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: var(--gap); }
+.cc-lines, .ln-grid, .sum-tiles, .cc-steps, div.up { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: var(--gap-s); }
+.dc-grid, div.dl { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: var(--gap); }
 .g2, .grid2, .two, .row3, .det, .chartrow, .wk-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--gap); align-items: stretch; margin-bottom: var(--gap); }
 .row2 { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--gap); margin-bottom: var(--gap); }
 :is(.g2, .grid2, .two, .row2, .row3, .det, .chartrow, .wk-grid) > * { min-width: 0; }
@@ -783,3 +785,11 @@ html .cc-line:hover { border-color: var(--brand-2); } html .cc-line.on { border-
 .card :is(.g2, .grid2, .two, .wk-grid) { margin-bottom: 0; }    /* 카드 안의 반반(표 두 개·라인 미니 그래프)은 카드 여백만 */
 @media (max-width: 1000px) { .g2, .grid2, .two, .row3, .det, .chartrow, .wk-grid { grid-template-columns: 1fr; } }
 @media print { .g2, .grid2, .two, .row3, .det, .chartrow, .wk-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+
+/* 접는 카드(details.card.more) — 전 화면 공통 */
+details.more > summary { list-style: none; cursor: pointer; }
+details.more > summary::-webkit-details-marker { display: none; }
+details.more > summary h2 { display: inline; font-size: 16px; color: var(--brand); margin: 0; }
+details.more > summary::before { content: '▸ '; color: var(--brand); }
+details.more[open] > summary::before { content: '▾ '; }
+details.more[open] > summary { margin-bottom: 12px; }

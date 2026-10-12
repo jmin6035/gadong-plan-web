@@ -34,6 +34,7 @@ i.hatch { background: repeating-linear-gradient(135deg, color-mix(in srgb, var(-
 .gm-t { display: flex; flex-direction: column; text-align: right; } .gm-t b { font-size: 17px; font-variant-numeric: tabular-nums; } .gm-t span { font-size: 12.5px; }
 .gm-tot { border-bottom: 0; } .gm-sum { display: flex; gap: 18px; font-size: 14px; color: var(--ink-2); }
 @media (max-width: 760px) { .gm-row { grid-template-columns: 1fr; gap: 6px; } .gm-t { text-align: left; flex-direction: row; gap: 10px; } }
+#d-load { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 8px 28px; } #d-load > .hint { grid-column: 1 / -1; }   /* 월별 부하: 라인 4개 나란히 */
 </style>
 </head>
 <body class="dash">
@@ -65,20 +66,9 @@ i.hatch { background: repeating-linear-gradient(135deg, color-mix(in srgb, var(-
       </div>
       <div class="glegend" id="g-legend"></div>
       <div class="gtable-wrap"><table class="gtable" id="g-table"></table></div>
-      <p class="hint">숫자 단위: 톤. 라인 행 = 당일 라인 생산 합계, 그룹 행 = 당일 그룹별 물량, 가동시간 = 작업 + 정지(색상교체·청소 등) 시간. 과거 일자 = MES 실적. 건재 주문재 = 판매계획의 '주문재'(컬러건재 국내 고객 주문 생산, 계획재 아님). 노란색 = 휴지계획이 있는 날(S/D·청소·Test·샘플), 회색 블록 = 종일 정지(수리·계획휴지), 옅은 회색 = 가동 없음. 칸 선택 시 당일 품목 표시.</p>
+      <p class="hint">숫자 단위: 톤. 라인 행 = 당일 라인 생산 합계, 그룹 행 = 당일 판매 그룹별 물량, 가동시간 = 작업 + 정지(색상교체·청소 등) 시간. 과거 일자 = MES 실적. 건재 주문재 = 판매계획의 '주문재'(컬러건재 국내 고객 주문 생산, 계획재 아님). 노란색 = 휴지계획이 있는 날(S/D·청소·Test·샘플), 회색 블록 = 종일 정지(수리·계획휴지), 옅은 회색 = 가동 없음. 칸 선택 시 당일 품목 표시.</p>
     </section>
 
-    <div class="two">
-      <section class="card">
-        <h2>라인별 편성 / MES 월차 한도</h2>
-        <table class="data evt" id="d-events"></table>
-        <p class="hint">편성 = 계획 반영 물량(과거 일자는 실적). 한도 미달 라인 = 해당 라인 배정 가능 물량 부족.</p>
-      </section>
-      <section class="card">
-        <h2>월별 부하</h2>
-        <div id="d-load"></div>
-      </section>
-    </div>
 
     <section class="card">
       <div class="head-row">
@@ -95,10 +85,21 @@ i.hatch { background: repeating-linear-gradient(135deg, color-mix(in srgb, var(-
 
     <details class="card more">
       <summary><h2>상세: 미편성 목록 · 일별 품목</h2></summary>
-      <h3>미편성 (가능 라인의 월 한도·가동시간 초과로 미편성된 물량)</h3>
+      <h3>미편성 — 판매계획에 있지만 만들 수 있는 라인이 그 달 한도(MES 월차)·가동시간을 다 써서 일정에 못 넣은 물량. 이대로면 그 달 판매계획 미달</h3>
       <div class="scroll"><table class="data" id="d-early"></table></div>
-      <p class="hint">일별 품목과 배치 사유는 <a href="supply.html">수급 캘린더</a>의 가동 캘린더에서 날짜 선택 시 확인.</p>
+      <p class="hint">일별 품목과 배치 사유는 <a href="supply.html">가동·재고 캘린더</a>의 가동 캘린더에서 날짜 선택 시 확인.</p>
     </details>
+    <div class="row2">
+      <section class="card">
+        <h2>라인별 편성 / MES 월차 한도</h2>
+        <table class="data evt" id="d-events"></table>
+        <p class="hint">편성 = 일정에 넣은 물량(지난 날은 실적), 한도 = MES 월차(라인별 월 생산 목표 톤). "남음" = 한도까지 덜 채운 양 — <b>배정할 물량 없음</b>: 이 라인에서 만들 수 있는 판매계획을 다 넣었음, <b>가동시간 부족</b>: 수리·정지로 시간이 모자라 이 라인 품목 일부가 미편성.</p>
+      </section>
+      <section class="card">
+        <h2>월별 부하</h2>
+        <div id="d-load"></div>
+      </section>
+    </div>
   </div>
 </main>
 <div id="tip" class="tip" role="tooltip" hidden></div>

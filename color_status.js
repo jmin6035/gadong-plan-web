@@ -43,11 +43,11 @@
     let mx = 0, mxK = ''; for (const l of LINES) MONTHS.forEach((m) => { const v = load(m, l); if (v > mx) { mx = v; mxK = `${+m.slice(5)}월 ${l}`; } });
     $('d-kpis').innerHTML = [
       [`${fmt(q)}t`, '4분기 컬러 생산', MONTHS.map((m) => `${+m.slice(5)}월 ${fmt(monT(m))}`).join(' · ')],
-      [`${fmt(unT())}t`, '미편성', MONTHS.map((m) => `${+m.slice(5)}월 ${fmt(unT(m))}`).join(' · '), unT() > 500],
+      [`${fmt(unT())}t`, '미편성(일정에 못 넣은 판매계획)', MONTHS.map((m) => `${+m.slice(5)}월 ${fmt(unT(m))}`).join(' · ') + ' — 라인 한도·가동시간 부족', unT() > 500],
       [`${fmt(pl)}t`, '계획재', `4분기 생산의 ${fmt(pl / q * 100)}%`],
       [`${fmt(mx * 100, 1)}%`, '최대 월 부하', `${mxK} (편성 ÷ MES 월차)`, mx > 0.995],
     ].map(([v, l, sub, bad]) => `<div class="kpi ${bad ? 'bad' : ''}"><span class="kl">${l}</span><b>${v}</b><span class="ks">${sub}</span></div>`).join('');
-    const leg = CG.map((g) => `<span><i class="sw" style="background:${GVAR[g]}"></i>${GL(g)}</span>`).join('') + '<span><i class="sw" style="background:var(--mc)"></i>휴지계획(S/D·청소·Test·샘플, 마우스를 올리면 시간)</span><span><i class="sw" style="background:var(--sd)"></i>종일 정지(수리·계획휴지) · 가동 없음</span>';
+    const leg = '<span><i class="sw" style="background:var(--mc)"></i>휴지계획(S/D·청소·Test·샘플, 마우스를 올리면 시간)</span><span><i class="sw" style="background:var(--sd)"></i>종일 정지(수리·계획휴지) · 가동 없음</span>';
     $('g-legend').innerHTML = leg;
     $('g-tabs').innerHTML = MONTHS.map((m, i) => `<button type="button" data-g="${i}">${+m.slice(5)}월</button>`).join('');
     const t0 = localToday(), ti = MONTHS.indexOf(t0.slice(0, 7)), la = MONTHS.indexOf(lastAct.slice(0, 7));
@@ -61,8 +61,8 @@
 
   function renderExec() {
     const risks = [];
-    for (const l of LINES) MONTHS.forEach((m) => { const g = cap(m, l) - placed(m, l); if (g > 50) risks.push(`${+m.slice(5)}월 ${l} 편성 ${fmt(placed(m, l))}t — MES 월차 ${fmt(cap(m, l))}t 대비 ${fmt(g)}t 미달(해당 라인 배정 물량 부족)`); });
-    MONTHS.forEach((m) => { const u = unT(m); if (u > 50) risks.push(`${+m.slice(5)}월 미편성 ${fmt(u)}t — 가능 라인 월 한도·가동시간 초과(${[...new Set(O.colorUnplaced.filter((x) => x.ym === m).map((x) => x.g))].join('·')})`); });
+    for (const l of LINES) MONTHS.forEach((m) => { const g = cap(m, l) - placed(m, l); if (g > 50) risks.push(`${+m.slice(5)}월 ${l} 편성 ${fmt(placed(m, l))}t — MES 월차 ${fmt(cap(m, l))}t까지 ${fmt(g)}t 남음(${shortWhy(m, l) === '가동시간 부족' ? '수리·정지로 가동시간 부족' : '이 라인에서 만들 수 있는 판매계획 물량이 더 없음'})`); });
+    MONTHS.forEach((m) => { const u = unT(m); if (u > 50) risks.push(`${+m.slice(5)}월 미편성 ${fmt(u)}t — 만들 수 있는 라인이 그 달 한도·가동시간을 다 써서 일정에 못 넣음, 이대로면 판매계획 미달(${[...new Set(O.colorUnplaced.filter((x) => x.ym === m).map((x) => x.g))].join('·')})`); });
     const q = sum(MONTHS, (m) => monT(m));
     $('d-exec').innerHTML = `<p class="headline">4분기 <b>${fmt(q)}t</b> · 미편성 <b>${fmt(unT())}t</b> · 계획재 <b>${fmt(sum(O.color, (c) => c.g['계획재'] || 0))}t</b> · 실적 ~${md(lastAct)}</p>`
       + (risks.length ? risks.map((t) => `<p class="risk">⚠ ${esc(t)}</p>`).join('') : '<p class="ok">✓ 미편성 없음, 모든 라인 월차 한도까지 편성</p>');
@@ -82,7 +82,7 @@
       rows.forEach((r, ri) => {
         h += `<tr class="r-${r.k}${ri === 0 ? ' first' : ''}">`;
         if (ri === 0) h += `<th class="c0 line" rowspan="${rows.length}">${l}</th>`;
-        h += `<th class="c1">${r.k === 'fam' ? '<b>합계</b>' : r.k === 'dep' ? `<i class="sw" style="background:${GVAR[r.g]}"></i>${GL(r.g)}` : '가동시간(h)'}</th>`;
+        h += `<th class="c1">${r.k === 'fam' ? '<b>합계</b>' : r.k === 'dep' ? GL(r.g) : '가동시간(h)'}</th>`;
         let t = 0;
         const fdIdx = ds.map((d, i) => (fullDay(l, d) ? i : -1)).filter((i) => i >= 0);
         const runs = []; fdIdx.forEach((i) => { const r0 = runs[runs.length - 1]; if (r0 && r0[1] === i - 1) r0[1] = i; else runs.push([i, i]); });
@@ -112,9 +112,11 @@
   $('g-tabs').onclick = (ev) => { if (ev.target.dataset.g != null) renderGantt(+ev.target.dataset.g); };
   $('g-table').addEventListener('click', (ev) => { const td = ev.target.closest('td[data-d]'); if (!td) return; $('d-date').value = td.dataset.d; renderNow(); $('d-now').scrollIntoView({ behavior: 'smooth', block: 'center' }); });
 
+  // 한도까지 못 채운 이유: 이 라인에서 만들 수 있는 품목이 미편성으로 남아 있으면 '가동시간 부족'(수리·정지 등), 아니면 '배정 가능 물량 없음'
+  const shortWhy = (m, l) => (O.colorUnplaced || []).some((x) => x.ym === m && String(x.lines).split('·').includes(l)) ? '가동시간 부족' : '배정할 물량 없음';
   function renderEvents() {                                      // 도금 '강종 전환 일정' 자리: 라인별 편성 / MES 월차 한도
     $('d-events').innerHTML = `<tr><th>라인</th>${MONTHS.map((m) => `<th>${+m.slice(5)}월 편성 / 한도</th>`).join('')}</tr>`
-      + LINES.map((l) => `<tr class="evrow"><td>${l}</td>${MONTHS.map((m) => { const g = cap(m, l) - placed(m, l); return `<td>${fmt(placed(m, l))} / ${fmt(cap(m, l))}${g > 50 ? ` <span class="pill warn">−${fmt(g)}</span>` : ''}</td>`; }).join('')}</tr>`).join('')
+      + LINES.map((l) => `<tr class="evrow"><td>${l}</td>${MONTHS.map((m) => { const g = cap(m, l) - placed(m, l); return `<td>${fmt(placed(m, l))} / ${fmt(cap(m, l))}${g > 50 ? ` <span class="pill warn" title="MES 월차까지 ${fmt(g)}t 남음 — ${shortWhy(m, l)}">${fmt(g)}t 남음 · ${shortWhy(m, l)}</span>` : ''}</td>`; }).join('')}</tr>`).join('')
       + `<tr class="evrow"><td><b>계</b></td>${MONTHS.map((m) => `<td><b>${fmt(sum(LINES, (l) => placed(m, l)))}</b> / ${fmt(sum(LINES, (l) => cap(m, l)))}</td>`).join('')}</tr>`;
   }
   function renderLoad() {

@@ -120,7 +120,7 @@
     const tok = $('p-token').value.trim();
     try { if ($('p-save').checked) localStorage.setItem(PUB_KEY, JSON.stringify(Object.assign(ps, { token: tok }))); } catch (e) { /* 무시 */ }
     if (!tok) { $('p-msg').textContent = '⚠ "게시 설정"에 토큰을 넣거나 "게시용 파일 받기"를 쓰세요.'; document.querySelector('#c-pub details').open = true; return; }
-    if (!confirm('이 결과로 컬러 계획을 게시합니다. 컬러 가동 현황 · 수급 캘린더 · 재고 추이가 바뀝니다. 진행할까요?')) return;
+    if (!confirm('이 결과로 컬러 계획을 게시합니다. 컬러 가동 현황 · 가동·재고 캘린더 · 재고 추이가 바뀝니다. 진행할까요?')) return;
     $('p-go').disabled = true; $('p-msg').textContent = '암호화·게시 중…';
     try {
       const [a, b] = await envelopes();

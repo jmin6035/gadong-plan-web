@@ -3,7 +3,7 @@
 (function () {
   'use strict';
   const NAV = [
-    ['home', 'index.html', '홈'], ['supply', 'supply.html', '수급 캘린더'], ['integrated', 'integrated.html', '재고 추이'], ['report', 'report.html', '주간 보고'],
+    ['home', 'index.html', '홈'], ['supply', 'supply.html', '가동·재고 캘린더'], ['integrated', 'integrated.html', '재고 추이'], ['report', 'report.html', '주간 보고'],
     '|도금', ['status', 'status.html', '가동 현황'], ['analysis', 'analysis.html', '조건 분석'], ['platact', 'plating_actual.html', '실적'],
     '|컬러', ['colorstat', 'color_status.html', '가동 현황'], ['coloranal', 'color_analysis.html', '조건 분석'], ['coloract', 'color_actual.html', '실적'], ['planstock', 'planstock.html', '계획재'],
     '|소재', ['procure', 'procure.html', '소재 발주'],
@@ -135,7 +135,7 @@
   /* 화면 한 줄 도움말 */
   const HELP = {
     home: '매일 아침: 금일 확인 사항 → 주요 지표 → 필요한 화면으로 이동. 역할과 보기(도금/컬러)를 선택하면 해당 항목만 표시',
-    integrated: '확정 계획 기준 주별 제품·자가재 재고 추이와 일별 배치 기준. 날짜별 가동은 수급 캘린더, 라인별 일정은 가동 현황에서',
+    integrated: '확정 계획 기준 주별 제품·자가재 재고 추이와 일별 배치 기준. 날짜별 가동은 가동·재고 캘린더, 라인별 일정은 가동 현황에서',
     status: '도금 1·2CGL 게시 계획(매일 재계획)의 월별 간트·강종 전환·부서별 물량',
     rolling: '판매계획·자가재계획 엑셀로 도금 계획을 새로 계산하거나 실적으로 재계획하고 게시(담당자용). 정기수리를 추가하면 정지 시나리오도 볼 수 있음',
     analysis: '(계획 담당자용) MES 도금 실적으로 속도·M/C 손실·정지를 재산출해 계획 조건과 비교 — 반영권장 값은 계획 계산에 넣을 후보',
@@ -181,6 +181,9 @@
   /* 처음 보이는 카드만 차례로 떠오르게(다시 그려도 반복하지 않음) */
   const seen = new Set();
   /* 그래프 눈금(전 화면 공통): 1·2·5 × 10^k 간격, 4~6칸 — 625·1,875·2.6k 같은 어색한 눈금이 안 나오게 */
+  /* 판매 그룹 키 → 화면 이름(전 화면 공통): C=컬러, G=도금 */
+  const GRP = { G수출: '도금 수출', G국내: '도금 국내', G자동차: '도금 자동차', G자가재: '도금 자가재', C수출: '컬러 수출', C건재: '컬러 건재', C수요: '컬러 수요개발' };
+  UI.grp = (k) => GRP[k] || String(k).replace(/^C(?=[가-힣])/, '컬러 ').replace(/^G(?=[가-힣])/, '도금 ');
   UI.niceStep = (raw) => {
     if (!(raw > 0)) return 1;
     const p = Math.pow(10, Math.floor(Math.log10(raw))), m = raw / p;
@@ -201,6 +204,21 @@
       el.style.setProperty('--i', i++); el.classList.add('rv');
     });
   };
+
+  /* 화면 아래쪽 카드는 보일 때 움직임 시작: 처음 그릴 때 화면 밖이던 카드(와 그 안의 막대·선·행 애니메이션)를 멈춰 두었다가
+     스크롤해서 들어오면 재생 — 전부 한꺼번에 재생되면 아래쪽은 내려가 볼 때 이미 끝나 있어 움직임이 안 보였음 */
+  const io = 'IntersectionObserver' in window ? new IntersectionObserver((es) => es.forEach((e) => { if (e.isIntersecting) { e.target.classList.remove('rv-wait'); io.unobserve(e.target); } }), { threshold: 0.06, rootMargin: '0px 0px -40px 0px' }) : null;
+  const hold = (el) => {
+    if (!io || el.dataset.rvq) return;
+    el.dataset.rvq = '1';
+    const r = el.getBoundingClientRect();
+    if (r.top > innerHeight - 40 || (!r.width && !r.height)) { el.classList.add('rv-wait'); io.observe(el); }   // 화면 아래 또는 아직 숨김(자료 오기 전) → 보일 때 재생
+  };
+  const scan = (root) => (root.querySelectorAll ? root.querySelectorAll('main .card, main .kpis, main .kstrip, main .lines, main .wk-card, main section') : []).forEach(hold);
+  if (io) {
+    const go = () => { scan(document); new MutationObserver((ms) => ms.forEach((m) => m.addedNodes.forEach((n) => { if (n.nodeType === 1) { if (n.matches && n.matches('main .card, main section')) hold(n); scan(n); } }))).observe(document.body, { childList: true, subtree: true }); };
+    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', go); else go();
+  }
 
   /* 숫자 카운트업: <b data-count="1234" data-ck="key"> — 같은 key 의 이전 값에서 새 값으로 */
   const last = {};

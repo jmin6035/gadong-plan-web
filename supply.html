@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>수급 캘린더</title>
+<title>가동·재고 캘린더</title>
 <meta name="description" content="일별 가동 · 자가재 · 구매 소재(발주·입고·재고) · 제품 재고를 한 달력에서">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 40'><defs><clipPath id='c'><rect width='40' height='40' rx='11'/></clipPath></defs><g clip-path='url(%23c)'><rect width='40' height='40' fill='%231b3f5f'/><path d='M-6 30 30-6h9L3 30z' fill='%233774a1'/><path d='M4 40 40 4v9L13 40z' fill='%236cb1d8'/><path d='M17 40 40 17v8L25 40z' fill='%23fff'/></g></svg>">
 <link rel="stylesheet" href="ui/theme.css">
@@ -90,7 +90,7 @@ table.sc td.nd { color: var(--ink-3); }
 </style>
 </head>
 <body>
-<header id="shell" data-page="supply" data-crumb="종합" data-title="수급 캘린더" data-sub="일별 가동 · 자가재 · 구매 소재(발주·입고·재고) · 제품 재고"></header>
+<header id="shell" data-page="supply" data-crumb="종합" data-title="가동·재고 캘린더" data-sub="일별 가동 · 자가재 · 구매 소재(발주·입고·재고) · 제품 재고"></header>
 <main class="wrap">
   <section class="card lock" id="lock" style="margin-top:16px" hidden>
     <h2>분석 암호를 입력하세요</h2>
@@ -106,9 +106,12 @@ table.sc td.nd { color: var(--ink-3); }
     </section>
     <div class="det" id="s-det"></div>
     <div class="band band-m"><b>소재</b> 자가재(도금 → 컬러)·구매 소재 — 재고 소진 시점과 발주 마감 기한</div>
-    <section class="card matcal"><h2>소재 캘린더 <small>기말 재고 — 자가재는 계획 기준, 구매 소재는 추가 발주 없음 가정. ▲ = 입고(기발주), 붉은 테 = 발주 마감</small><span class="unit">톤</span></h2>
+    <section class="card matcal"><h2>소재 캘린더 <small>그날 할 일 — 입고(기발주) · 발주 마감 · 부족 주의 · 소진. 날짜를 누르면 아래에 그날 소재 상세</small></h2>
+      <div id="s-mcal"></div>
+      <details class="tv"><summary>일별 재고 표 보기 <small class="muted">기말 재고(톤) — 자가재는 계획 기준, 구매 소재는 추가 발주 없음 가정. ▲ = 입고(기발주), 붉은 테 = 발주 마감</small></summary>
       <div class="calw" id="s-calw2"><table class="sc" id="s-cal2"></table></div>
-      <div class="lg"><span><i style="background:color-mix(in srgb,#1660c9 25%,#fff)"></i>AL</span><span><i style="background:color-mix(in srgb,#e8590c 25%,#fff)"></i>AZ</span><span><i style="background:color-mix(in srgb,#0a9e8f 25%,#fff)"></i>MAC</span><span><i style="background:#fff;box-shadow:inset 0 -3px 0 #c98b00"></i>M/C</span><span><i style="background:var(--warn-bg)"></i>재고 부족 주의(3일분 미만)</span><span><i style="background:var(--bad-bg)"></i>재고 소진·목표 130% 초과</span></div>
+      <div class="lg"><span><i style="background:color-mix(in srgb,#1660c9 25%,#fff)"></i>AL</span><span><i style="background:color-mix(in srgb,#e8590c 25%,#fff)"></i>AZ</span><span><i style="background:color-mix(in srgb,#0a9e8f 25%,#fff)"></i>MAC</span><span><i style="background:#fff;box-shadow:inset 0 -3px 0 #c98b00"></i>M/C</span><span><i style="background:var(--warn-bg)"></i>재고 부족 주의(자가재 3일분 · 구매 소재 7일분 미만)</span><span><i style="background:var(--bad-bg)"></i>재고 소진·목표 130% 초과</span></div>
+      </details>
     </section>
     <div class="det" id="s-det2"></div>
     <section class="card" id="s-mat"></section>
@@ -128,6 +131,7 @@ table.sc td.nd { color: var(--ink-3); }
 <div class="tipbox" id="s-tip" role="tooltip"></div>
 <script src="ui/shell.js"></script>
 <script src="engine/crypto.js"></script>
+<script src="ui/cal.js"></script>
 <script src="supply.js"></script>
 </body>
 </html>

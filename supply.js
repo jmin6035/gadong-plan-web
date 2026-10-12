@@ -1,4 +1,4 @@
-/* 수급 캘린더: published/integrated.enc.json(확정 통합 계획 V1) — 일별 가동·자가재·구매 소재(발주·입고·재고)·제품 재고 + 날짜 상세 */
+/* 가동·재고 캘린더: published/integrated.enc.json(확정 통합 계획 V1) — 일별 가동·자가재·구매 소재(발주·입고·재고)·제품 재고 + 날짜 상세 */
 (function () {
   'use strict';
   const $ = (id) => document.getElementById(id);
@@ -83,7 +83,7 @@
       if (x.stock < 0) { A.push(['bad', d, `자가재 ${a} 재고 소진(${n0(x.stock)}t) — 컬러 생산 차질 우려`]); break; }
       const nx = useNext(a, d, 3); if (nx > 0 && x.stock < nx) { A.push(['warn', d, `자가재 ${a} 재고 ${n0(x.stock)}t — 향후 3일 소요 ${n0(nx)}t 대비 부족`]); break; }
     }
-    for (const g of D.groups) { const w = D.W.weeks.find((w) => w >= add(today, -6) && D.sw[`${g}|${w}`] && D.sw[`${g}|${w}`].tgt && D.sw[`${g}|${w}`].v > D.sw[`${g}|${w}`].tgt * 1.3); if (w) A.push(['bad', w, `${g} 제품 재고 ${n0(D.sw[`${g}|${w}`].v)}t — 목표 ${n0(D.sw[`${g}|${w}`].tgt)}t의 ${Math.round(D.sw[`${g}|${w}`].v / D.sw[`${g}|${w}`].tgt * 100)}%`]); }
+    for (const g of D.groups) { const w = D.W.weeks.find((w) => w >= add(today, -6) && D.sw[`${g}|${w}`] && D.sw[`${g}|${w}`].tgt && D.sw[`${g}|${w}`].v > D.sw[`${g}|${w}`].tgt * 1.3); if (w) A.push(['bad', w, `${UI.grp(g)} 제품 재고 ${n0(D.sw[`${g}|${w}`].v)}t — 목표 ${n0(D.sw[`${g}|${w}`].tgt)}t의 ${Math.round(D.sw[`${g}|${w}`].v / D.sw[`${g}|${w}`].tgt * 100)}%`]); }
     A.sort((a, b) => (a[1] < b[1] ? -1 : 1));
     $('s-top').innerHTML = `<h2>향후 리스크 <small>자가재 재고 부족 · 제품 재고 목표 초과 — 선택 시 해당 일자로 이동</small></h2>
       <div class="alerts">${A.map(([l, d, t]) => `<div class="al ${l}" data-d="${d}"><i></i><b>${md(d)}(${WD[wd(d)]})</b><span>${esc(t)}</span></div>`).join('') || '<p class="small" style="margin:6px 0 0">앞으로 기준을 넘는 위험 없음</p>'}</div>
@@ -107,6 +107,31 @@
       <div class="scroll"><table class="t"><thead><tr><th>소재</th><th>현재 재고</th><th>일평균 소요(최근 4주)</th><th>재고 일수</th><th>소진 예정일</th><th>기발주 입고</th><th>발주 마감 (1순위 업체 · 리드타임)</th><th>판정</th></tr></thead><tbody>${self}${buy}</tbody></table></div>
       <p class="small">발주 마감 = 소진 예정일 − 투입 여유(컬러 7일·도금 5일) − 1순위 업체 리드타임. '마감 지남' = 기발주 자료가 없어 이미 냈어야 할 발주로 보이는 것 — 실제 기발주 여부 확인. * = 이미 들어온 수입 FH 기발주(현재 재고에 포함). 구매 소재 재고: 컬러 = 소재재고List, 도금 FH = 월말 재고 − 이후 사용 + 수입 FH 기발주(국내 FH 입고 자료 없음 → 실제보다 적게 보일 수 있음). 기발주 입력·업체 변경은 <a href="procure.html">소재 발주</a>에서.</p>`;
   }
+  // ---------- 소재 월 캘린더(계획재 소재 발주 캘린더와 같은 모양): 그날 할 일만 칩으로 ----------
+  const MK = { order: { name: '발주 마감', color: 'var(--bad)' }, arrive: { name: '입고(기발주)', color: 'var(--good)' }, low: { name: '부족 주의 시작', color: 'var(--warn)' }, out: { name: '소진', color: '#7a1f1f' } };
+  function matCal() {
+    if (!window.UI || !UI.cal || !$('s-mcal')) return;
+    const ev = [], fut = D.days.filter((d) => d >= today);
+    for (const a of ['AZ', 'MAC', 'AL']) {                               // 자가재: 3일분 미만 시작일 · 바닥(음수) 시작일
+      if (!UI.inScope('C') && !UI.inScope('G')) continue;
+      const lo = fut.find((d) => { const x = D.self[`${a}|${d}`]; const nx = useNext(a, d, 3); return x && nx > 0 && x.stock < nx && x.stock >= 0; });
+      const ng = fut.find((d) => (D.self[`${a}|${d}`] || {}).stock < 0);
+      if (lo) ev.push({ d: lo, kind: 'low', chip: `자가재 ${a} 3일분 미만`, tone: 'warn' });
+      if (ng) ev.push({ d: ng, kind: 'out', chip: `자가재 ${a} 부족`, tone: 'bad' });
+    }
+    for (const m of PM || []) {
+      if (!UI.inScope(m.plant)) continue;
+      for (const a of m.known) if (a.date >= today) ev.push({ d: a.date, kind: 'arrive', chip: `${m.nm} +${n0(a.t)}t` });
+      if (m.dl) ev.push({ d: m.dl < today ? today : m.dl, kind: 'order', chip: `${m.nm} 발주${m.dl < today ? ' (마감 지남)' : ''}`, tone: m.dl < today ? 'bad' : (new Date(m.dl) - new Date(today)) / 864e5 <= 14 ? 'warn' : '' });
+      const lo = fut.find((d) => m.stock[d] >= 0 && m.stock[d] < (m.use[d] || 0) * 7);
+      if (lo && lo !== m.run) ev.push({ d: lo, kind: 'low', chip: `${m.nm} 7일분 미만`, tone: 'warn' });
+      if (m.run) ev.push({ d: m.run, kind: 'out', chip: `${m.nm} 소진`, tone: 'bad' });
+    }
+    UI.cal($('s-mcal'), { months: D.months, month: mon, kinds: MK, events: ev, today, maxChips: 4,
+      note: '발주 마감 = 소진 예정일 − 투입 여유(컬러 7일 · 도금 5일) − 1순위 업체 리드타임. 구매 소재는 추가 발주 없음 가정, 자가재는 도금 계획대로 보충. 마감이 이미 지난 발주는 오늘 칸에 표시.',
+      detail: (d) => { pick(d, 'm'); return `<p class="small">${md(d)} 소재 상세는 바로 아래에 표시됩니다.</p>`; } });
+  }
+
   // ---------- 캘린더 ----------
   function tabs() {
     $('s-mon').innerHTML = D.months.map((m) => `<button type="button" data-m="${m}" aria-pressed="${m === mon}">${+m.slice(5)}월</button>`).join('');
@@ -122,7 +147,7 @@
     for (const l of ['1CGL', '2CGL']) row(l, (d) => { const x = D.pl[`${l}|${d}`]; if (!x) return { x: '·', c: 'z' }; const mc = /M\/C|재가동/.test(x.ev); return { x: x.t > 0.5 ? n0(x.t) : (mc ? 'M/C' : '·'), n: x.t, c: `f${x.fam} ${mc ? 'mc' : ''}`, tip: `${md(d)} ${l} ${x.t > 0.5 ? `${x.fam} ${n0(x.t)}t` : '생산 없음'} ${x.ev}` }; });
     for (const l of ['1CCL', '2CCL', '3CCL', '4CCL']) row(l, (d) => { const x = D.co[`${l}|${d}`]; if (!x || x.t < 0.5) return { x: '·', c: 'z' }; return { x: n0(x.t), n: x.t, c: x.act ? 'act' : '', tip: `${md(d)} ${l} ${n0(x.t)}t${x.act ? ' (실적)' : ''} · ${Object.entries(x.g).map(([k, v]) => k + ' ' + n0(v)).join(', ')}` }; }, null, 'sub');
     sec('제품 재고 (기말 추정)', 'G');
-    for (const g of D.groups) row(g, (d) => { const x = D.sw[`${g}|${d}`]; if (!x) return { x: '' }; return { x: n0(x.v), c: x.tgt && x.v > x.tgt * 1.3 ? 'hi' : '', tip: `${md(d)} ${g} 재고 ${n0(x.v)}t / 목표 ${n0(x.tgt)}t (${Math.round(x.v / x.tgt * 100)}%)` }; }, false, 'sub');
+    for (const g of D.groups) row(UI.grp(g), (d) => { const x = D.sw[`${g}|${d}`]; if (!x) return { x: '' }; return { x: n0(x.v), c: x.tgt && x.v > x.tgt * 1.3 ? 'hi' : '', tip: `${md(d)} ${UI.grp(g)} 재고 ${n0(x.v)}t / 목표 ${n0(x.tgt)}t (${Math.round(x.v / x.tgt * 100)}%)` }; }, false, 'sub');
     tg = 'b';
     sec('자가재 재고 (도금 → 컬러 소재, 기말)', 'C');
     for (const a of ['AZ', 'MAC', 'AL']) row(`자가재 ${a}`, (d) => { const x = D.self[`${a}|${d}`]; if (!x) return {}; const nx = useNext(a, d, 3); return { x: n0(x.stock), c: (x.stock < 0 ? 'neg' : nx > 0 && x.stock < nx ? 'lo' : '') + (d >= D.selfEst ? ' est' : ''), tip: `${d >= D.selfEst ? '[추정: 1월 초 컬러 출고 = 12월 일평균] ' : ''}${md(d)} 자가재 ${a}: 도금 입고 +${n0(x.prod)} · 컬러 출고 −${n0(x.use)} → 기말 재고 ${n0(x.stock)}t (향후 3일 소요 ${n0(nx)}t)` }; }, false, 'sub');
@@ -296,7 +321,7 @@
     mon = D.months.includes(today.slice(0, 7)) ? today.slice(0, 7) : D.months[0];
     $('s-meta').innerHTML = `기준 <b>확정 계획</b> · 계산 ${esc(String(W.built).replace('T', ' '))} · 실적 ~${esc(W.asOf)}`;
     $('main').hidden = false; $('lock').hidden = true;
-    tabs(); top(); matCard(); cal(); UI.reveal(document);
+    tabs(); top(); matCard(); cal(); matCal(); UI.reveal(document);
   }
   let env = null;
   async function open(pw) {
