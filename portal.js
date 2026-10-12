@@ -63,7 +63,7 @@
       ['GC', K('M', tone((sh.actual || 0) / (sh.sched || 1)), '출하 누계(전체)', sh.actual || 0, 't', `일정 ${n0(sh.sched || 0)} 대비 ${sg((sh.actual || 0) - (sh.sched || 0))} · 월차 ${n0(sh.month || 0)}`, pc(sh.actual || 0, sh.month || 1), 'report.html', 'ks')],
       ['G', K('G', now.short ? 'bad' : now.late ? 'warn' : 'good', '도금 결품 예상', now.short || 0, 't', `지연 ${n0(now.late || 0)}톤·일 · 납기 빠듯 ${pl.tightN || 0}건`, null, 'status.html', 'kx')],
       ['GC', K('M', q.near ? 'warn' : 'good', '발주 시한 2주 안', q.near || 0, '건', q.nearTop && q.nearTop[0] ? `가장 급함 ${esc(q.nearTop[0].mat)} ${md(q.nearTop[0].deadline)}` : '-', null, 'procure.html', 'kq')],
-      ['GC', K('M', (cs || 0) > 1.3 || (gs || 0) > 1.3 ? 'bad' : 'good', '제품 재고 / 목표', Math.round(((cs || 0) + (gs || 0)) / ((cs ? 1 : 0) + (gs ? 1 : 0) || 1) * 100), '%', `컬러 ${cs ? Math.round(cs * 100) + '%' : '-'} · 도금 ${gs ? Math.round(gs * 100) + '%' : '-'}`, null, 'report.html', 'kr')],
+      ['GC', (() => { const hi = (cs || 0) >= (gs || 0) ? ['컬러 제품', cs] : ['도금 제품', gs]; return K('M', (hi[1] || 0) > 1.3 || (hi[1] || 0) < 0.7 ? 'bad' : (hi[1] || 0) > 1.15 ? 'warn' : 'good', `재고 / 목표 (${hi[0]})`, Math.round((hi[1] || 0) * 100), '%', `컬러 제품 ${cs ? Math.round(cs * 100) + '%' : '-'} · 도금 제품 ${gs ? Math.round(gs * 100) + '%' : '-'}`, null, 'report.html', 'kr'); })()],
     ];
     const has = [L.some((x) => x.pl === 'G'), L.some((x) => x.pl === 'C'), !!sh.month, !!pl.now, true, !!(sr.stock || []).length];   // 예전 형식 자료(라인·속보 요약 없음)면 그 칸은 숨김
     return it.filter(([p], j) => has[j] && UI.inScope(p)).map((x) => x[1]).join('');
@@ -116,14 +116,22 @@
       ${E.length > N ? `<details class="more"><summary>${E.length - N}건 더</summary><div class="exl">${E.slice(N).map((e) => `<a class="ex ${e.lvl}" href="${e.link}"><i></i><span class="ar">${esc(e.area)}</span><span class="t">${esc(e.text)}</span></a>`).join('')}</div></details>` : ''}`;
   }
   function loadCard(O) {
-    const p = O.plating, mx = Math.max(...O.months.map((m, i) => p.g1[i] + p.g2[i])) * 1.04;
-    return `<h2>월별 도금 계획 <small>${O.rec}</small><span class="unit">톤</span></h2><div class="legend"><span><i style="background:var(--c1)"></i>1CGL</span><span><i style="background:var(--c2)"></i>2CGL</span></div>
+    const p = O.planMonth || O.plating, mx = Math.max(...O.months.map((m, i) => p.g1[i] + p.g2[i])) * 1.04;
+    return `<h2>월별 도금 계획 <small>${O.planMonth ? '실적 + 최신 재계획' : O.rec}</small><span class="unit">톤</span></h2><div class="legend"><span><i style="background:var(--c1)"></i>1CGL</span><span><i style="background:var(--c2)"></i>2CGL</span></div>
       ${O.months.map((m, i) => { const a = p.g1[i], b = p.g2[i]; return `<div class="lrow"><span>${+m.slice(5)}월</span><div class="track"><i class="seg s1" style="width:${a / mx * 100}%;--i:${i}" data-tip="${+m.slice(5)}월 1CGL ${n0(a)}t"></i><i class="seg s2" style="left:${a / mx * 100}%;width:${b / mx * 100}%;--i:${i}" data-tip="${+m.slice(5)}월 2CGL ${n0(b)}t"></i></div><span class="pct">${n0(a + b)}</span></div>`; }).join('')}`;
   }
   function colorCard(O) {
     const cl = O.color.lines;
     return `<h2>컬러 월차 편성률 <small>편성 / 월차</small></h2><div class="crow hd"><span></span>${['1CCL', '2CCL', '3CCL', '4CCL'].map((l) => `<span>${l}</span>`).join('')}</div>
       ${O.months.map((m, i) => `<div class="crow"><span>${+m.slice(5)}월</span>${['1CCL', '2CCL', '3CCL', '4CCL'].map((l, j) => { const x = (cl[m] || {})[l] || { plan: 0, placed: 0 }; const r = x.plan ? x.placed / x.plan : 0; return `<div class="cl" title="${+m.slice(5)}월 ${l} 편성 ${n0(x.placed)} / 월차 ${n0(x.plan)}t"><i class="${r < 0.995 ? 'short' : ''}" style="width:${Math.min(100, r * 100)}%;--i:${i * 4 + j}"></i><span>${(r * 100).toFixed(r < 0.995 ? 1 : 0)}%</span></div>`; }).join('')}</div>`).join('')}`;
+  }
+  function stockCard(O) {
+    const L = ((O.sr || {}).stock || []).filter((x) => x.target);
+    if (!L.length) return '';
+    const mx = Math.max(...L.map((x) => Math.max(x.current, x.target))) * 1.08;
+    return `<h2>재고 vs 목표 <small>판매생산속보</small><span class="unit">톤</span></h2>
+      ${L.map((x, i) => { const r = x.current / x.target, c = r > 1.3 || r < 0.7 ? 'var(--bad)' : r > 1.15 || r < 0.85 ? 'var(--warn)' : 'var(--good)'; return `<div class="lrow" style="grid-template-columns:96px 1fr 50px"><span style="font-size:12.5px">${esc(x.name.replace('(판매재)', ''))}</span><div class="track" style="height:16px"><i class="seg" style="left:0;width:${x.current / mx * 100}%;background:${c};border-radius:4px;--i:${i}" data-tip="${esc(x.name)} 현재 ${n0(x.current)}t / 목표 ${n0(x.target)}t"></i><em style="position:absolute;top:-3px;bottom:-3px;width:2px;background:var(--ink);left:${x.target / mx * 100}%"></em></div><span class="pct" style="color:${c}">${Math.round(r * 100)}%</span></div>`; }).join('')}
+      <p class="small" style="margin:4px 0 0">세로선 = 목표</p>`;
   }
   function dueCard(O) {
     const sc = UI.scope(), q = sc === 'all' ? O.procure : (O.procureBy || {})[sc] || O.procure;
@@ -143,7 +151,7 @@
 
   function render(O) {
     lastO = O;
-    $('h-meta').innerHTML = `실적 <b>~${md(O.asOf)}</b> · 계획 <b>${esc(O.rec)}</b> · 계산 ${esc(String(O.built).replace('T', ' ').slice(5, 16))}`;
+    $('h-meta').innerHTML = `실적 <b>~${md(O.asOf)}</b> · 계획 <b>${O.planMonth ? '기준 재수립·매일 재계획' : esc(O.rec)}</b> · 계산 ${esc(String(O.built).replace('T', ' ').slice(5, 16))}`;
     $('h-k').innerHTML = kstrip(O);
     $('h-lines').innerHTML = lines(O);
     const gh = grp(O); $('h-grp').innerHTML = gh; $('h-grp').hidden = !gh;
@@ -151,6 +159,7 @@
     $('h-load').innerHTML = loadCard(O); $('h-load').hidden = false;
     $('h-color').innerHTML = colorCard(O); $('h-color').hidden = false;
     const dc = dueCard(O); $('h-due').innerHTML = dc; $('h-due').hidden = !dc;
+    const sk = stockCard(O); $('h-stock').innerHTML = sk; $('h-stock').hidden = !sk;
     $('h-basis').innerHTML = basis(O); $('h-basis').hidden = false;
     UI.reveal(document); UI.count(document);
     const tip = $('h-tip');
