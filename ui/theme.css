@@ -706,3 +706,6 @@ html .kpi::before { background: var(--gc, var(--ps-4)); }
   html .card { padding: 22px 20px; }
   html td.pbar { min-width: 150px; } html td.pbar div { width: 76px; }
 }
+/* 카드 제목 줄이 오른쪽 위 '엑셀' 단추 밑으로 들어가지 않게 */
+html .card:has(> .xbtn) > h2 { padding-right: 92px; }
+html .card:has(> .xbtn) > h2 .unit { margin-right: 0; }

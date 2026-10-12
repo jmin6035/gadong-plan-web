@@ -58,21 +58,21 @@
     const K = ['수입 FH', 'P-FH', 'P-GI', '서림 GI'];
     const S = O.orderSum;
     const rows = K.filter((k) => S[k]).map((k) => { const x = S[k]; const sup = (O.orders.find((o) => o.kind === k) || {}).sup || '';
-      return `<tr><td><b>${k}</b></td><td>${esc(sup)}</td><td class="${x.past > 0.5 ? 'bad' : ''}"><b>${n0(x.past)}</b></td><td class="${x.soon > 0.5 ? 'warn' : ''}"><b>${n0(x.soon)}</b></td><td>${n0(x.t - x.past - x.soon)}</td><td><b>${n0(x.t)}</b></td></tr>`; }).join('');
+      return `<tr><td><b>${k}</b></td><td>${esc(sup.replace(/\s*\(자가 도금\)/, ''))}</td><td class="${x.past > 0.5 ? 'bad' : ''}"><b>${n0(x.past)}</b></td><td class="${x.soon > 0.5 ? 'warn' : ''}"><b>${n0(x.soon)}</b></td><td>${n0(x.t - x.past - x.soon)}</td><td><b>${n0(x.t)}</b></td></tr>`; }).join('');
     const next = O.orders.filter((o) => o.state === 'soon').sort((a, b) => (a.o1 < b.o1 ? -1 : 1));
     return card('ps-osum', '소재 발주 요약', `생산 일정(10월 ~ 3월) 기준 · ${md(O.asOf)} 현재`, '단위: 톤',
-      `<div class="scroll"><table class="t big"><thead><tr><th>소재</th><th>업체</th><th>시한 지남(미발주)</th><th>2주 안 마감</th><th>그 뒤</th><th>합계</th></tr></thead><tbody>${rows}</tbody></table></div>`
+      `<div class="scroll"><table class="t big"><thead><tr><th>소재</th><th>업체</th><th>시한 지남</th><th>2주 안 마감</th><th>그 뒤</th><th>합계</th></tr></thead><tbody>${rows}</tbody></table></div>`
       + (next.length ? `<p class="small"><b>가장 급한 발주:</b> ${next.slice(0, 3).map((o) => `${md(o.o1)}까지 ${o.kind} ${n0(o.t - (o.ordered || 0))}t(${md(o.arr)} 입고)`).join(' · ')}</p>` : '')
-      + '<p class="small">시한 지남 = 발주 마감이 오늘 이전인데 기발주 자료가 없는 양(수입 FH 는 기발주 반영). 실제로 이미 발주됐는지 구매와 대조 필요.</p>');
+      + '<p class="small">시한 지남 = 발주 마감이 오늘 이전인데 기발주 자료가 없는 양(미발주, 수입 FH 는 기발주 반영). FH 는 자가 도금 소재. 실제로 이미 발주됐는지 구매와 대조 필요.</p>');
   }
   function fhCard() {
     const today = O.asOf;
     const win = (m) => { const y = +m.slice(0, 4), mm = +m.slice(5); const om = mm - 2 <= 0 ? mm + 10 : mm - 2, oy = mm - 2 <= 0 ? y - 1 : y; return [`${oy}-${String(om).padStart(2, '0')}-10`, `${oy}-${String(om).padStart(2, '0')}-20`]; };
     const rows = Object.entries(O.fh).filter(([m]) => m >= '2026-10').map(([m, [need, have]]) => {
       const left = Math.max(0, need - have), [o0, o1] = win(m);
-      const st = left < 0.5 ? ['충분', 'good'] : today > o1 ? ['시한 지남 — 확인', 'bad'] : today >= o0 ? ['발주 기간 중', 'warn'] : [`${md(o0)}부터 발주`, ''];
-      return `<tr><td><b>${+m.slice(5)}월적</b>${m.slice(0, 4) !== '2026' ? ` <small>'${m.slice(2, 4)}</small>` : ''}</td><td>${md(o0)} ~ ${md(o1)}</td><td>${md(`${m}-07`)}</td><td>${n0(need)}</td><td>${n0(have)}</td><td class="${st[1] === 'bad' ? 'bad' : st[1] === 'warn' ? 'warn' : ''}"><b>${n0(left)}</b></td><td><span class="tag ${st[1]}">${st[0]}</span></td></tr>`; }).join('');
-    return card('ps-fh', '수입 FH 월적', '계획재 생산에 쓰는 수입 FH(자가 도금 소재) — 필요량 · 기발주 · 남은 발주', '단위: 톤',
+      const st = left < 0.5 ? ['충분', 'good'] : today > o1 ? ['시한 지남', 'bad'] : today >= o0 ? ['발주 기간 중', 'warn'] : [`${md(o0)}부터`, ''];
+      return `<tr><td><b>${+m.slice(5)}월적</b>${m.slice(0, 4) !== '2026' ? ` <small>'${m.slice(2, 4)}</small>` : ''}</td><td>${md(o0)}~${md(o1)}</td><td>${md(`${m}-07`)}</td><td>${n0(need)}</td><td>${n0(have)}</td><td class="${st[1] === 'bad' ? 'bad' : st[1] === 'warn' ? 'warn' : ''}"><b>${n0(left)}</b></td><td><span class="tag ${st[1]}">${st[0]}</span></td></tr>`; }).join('');
+    return card('ps-fh', '수입 FH 월적', '계획재용 수입 FH — 필요량 · 기발주 · 남은 발주', '단위: 톤',
       `<div class="scroll"><table class="t big"><thead><tr><th>월적</th><th>발주 기간</th><th>입고</th><th>필요</th><th>기발주</th><th>남은 발주</th><th>판정</th></tr></thead><tbody>${rows}</tbody></table></div>
       <p class="small">기발주 = 기초재고 파일의 수입 FH 발주량(10월적 4,600t · 11월적 1,925t). 10월적 남는 1,837t 은 11월 이후 생산에 먼저 쓸 수 있음.</p>`);
   }
