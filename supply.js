@@ -62,11 +62,14 @@
       const sup = P.suppliers.filter((x) => x.plant === plant && x.code === code).sort((a, b) => a.prio - b.prio)[0];
       const needBy = run ? add(run, -SAFE[plant]) : null, dl = needBy && sup ? add(needBy, -sup.lt) : null;
       const kg = {}; for (const a of P.known || []) if (`${a.plant}:${a.code}` === k) kg[a.date] = (kg[a.date] || 0) + a.t;
-      out.push({ k, plant, code, nm: (P.matCode || {})[code] || code, stock0: s0, past, use, arr, stock, run, u28, tot, sup, needBy, dl,
+      const rows = (P.known || []).filter((a) => `${a.plant}:${a.code}` === k && a.date > today);   // 입고 예정 발주별(업체·발주번호·근거)
+      out.push({ k, plant, code, nm: (P.matCode || {})[code] || code, stock0: s0, past, use, arr, stock, run, u28, tot, sup, needBy, dl, rows,
         known: Object.entries(kg).sort().map(([d, t]) => ({ date: d, t })) });
     }
+    SUPN = P.supNames || {};
     return out.sort((a, b) => (a.plant < b.plant ? 1 : a.plant > b.plant ? -1 : b.tot - a.tot));
   }
+  let SUPN = {};
   const PLN = { G: '도금 FH', C: '컬러 구매' };
   const calAll = (sel = '[data-d]') => document.querySelectorAll(`#s-cal ${sel}, #s-cal2 ${sel}`);
   const ordSum = (k, d) => (D.ord[k][d] || []).reduce((a, x) => a + x[1], 0);
@@ -112,24 +115,53 @@
   function matCal() {
     if (!window.UI || !UI.cal || !$('s-mcal')) return;
     const ev = [], fut = D.days.filter((d) => d >= today);
-    for (const a of ['AZ', 'MAC', 'AL']) {                               // 자가재: 3일분 미만 시작일 · 바닥(음수) 시작일
-      if (!UI.inScope('C') && !UI.inScope('G')) continue;
+    const supNm = (c) => SUPN[c] || c || '-';
+    for (const a of ['AZ', 'MAC', 'AL']) {                               // 자가재(도금이 만들어 컬러에 넣는 소재): 3일분 미만 시작일 · 바닥(음수) 시작일
       const lo = fut.find((d) => { const x = D.self[`${a}|${d}`]; const nx = useNext(a, d, 3); return x && nx > 0 && x.stock < nx && x.stock >= 0; });
       const ng = fut.find((d) => (D.self[`${a}|${d}`] || {}).stock < 0);
-      if (lo) ev.push({ d: lo, kind: 'low', chip: `자가재 ${a} 3일분 미만`, tone: 'warn' });
-      if (ng) ev.push({ d: ng, kind: 'out', chip: `자가재 ${a} 부족`, tone: 'bad' });
+      if (lo) ev.push({ d: lo, kind: 'low', chip: `자가재 ${a} 3일분 미만`, tone: 'warn', self: a });
+      if (ng) ev.push({ d: ng, kind: 'out', chip: `자가재 ${a} 부족`, tone: 'bad', self: a });
     }
     for (const m of PM || []) {
       if (!UI.inScope(m.plant)) continue;
-      for (const a of m.known) if (a.date >= today) ev.push({ d: a.date, kind: 'arrive', chip: `${m.nm} +${n0(a.t)}t` });
-      if (m.dl) ev.push({ d: m.dl < today ? today : m.dl, kind: 'order', chip: `${m.nm} 발주${m.dl < today ? ' (마감 지남)' : ''}`, tone: m.dl < today ? 'bad' : (new Date(m.dl) - new Date(today)) / 864e5 <= 14 ? 'warn' : '' });
+      const byDay = {}; for (const r of m.rows) (byDay[r.date] = byDay[r.date] || []).push(r);
+      for (const [d, rs] of Object.entries(byDay)) ev.push({ d, kind: 'arrive', chip: `${m.nm} 입고 ${n0(rs.reduce((x, r) => x + r.t, 0))}t`, m, rs });
+      if (m.dl) ev.push({ d: m.dl < today ? today : m.dl, kind: 'order', chip: `${m.nm} 발주 마감${m.dl < today ? ' 지남' : ''}`, tone: m.dl < today ? 'bad' : (new Date(m.dl) - new Date(today)) / 864e5 <= 14 ? 'warn' : '', m });
       const lo = fut.find((d) => m.stock[d] >= 0 && m.stock[d] < (m.use[d] || 0) * 7);
-      if (lo && lo !== m.run) ev.push({ d: lo, kind: 'low', chip: `${m.nm} 7일분 미만`, tone: 'warn' });
-      if (m.run) ev.push({ d: m.run, kind: 'out', chip: `${m.nm} 소진`, tone: 'bad' });
+      if (lo && lo !== m.run) ev.push({ d: lo, kind: 'low', chip: `${m.nm} 7일분 미만`, tone: 'warn', m });
+      if (m.run) ev.push({ d: m.run, kind: 'out', chip: `${m.nm} 재고 소진`, tone: 'bad', m });
     }
+    const PLN2 = { G: '도금 소재(F/H 등)', C: '컬러 구매 소재' };
+    const box = (k, title, body) => `<div class="grp" style="--kc:${MK[k].color}"><i></i>${title}</div>${body}`;
+    const detail = (d, evs) => {
+      let h = '';
+      const arr = evs.filter((e) => e.kind === 'arrive');
+      if (arr.length) {                                                  // 소재·업체별 합계 → 발주번호별은 펼쳐서
+        const od = (r) => (String(r.note || '').match(/(\d{2})\/(\d{2}) 발주/) || []), lt = (r) => (String(r.note || '').match(/리드타임 (\d+)일/) || [])[1], late = (r) => /지남/.test(r.note || '');
+        const G = {}; for (const e of arr) for (const r of e.rs) { const k = `${e.m.nm}|${r.sup}`; const g = G[k] = G[k] || { m: e.m, sup: r.sup, rs: [] }; g.rs.push(r); }
+        const gl = Object.values(G).sort((a, b) => b.rs.reduce((x, r) => x + r.t, 0) - a.rs.reduce((x, r) => x + r.t, 0));
+        const nLate = arr.reduce((x, e) => x + e.rs.filter(late).length, 0);
+        h += box('arrive', `입고 예정 — 이미 발주한 소재가 이날 들어옴 (구매할 것 아님)`, `<div class="scroll"><table class="t"><thead><tr><th class="l">소재</th><th>업체</th><th>수량(t)</th><th>발주 건수</th><th>발주일</th><th>리드타임</th><th class="l">비고</th></tr></thead><tbody>${gl.map((g) => {
+          const ds = g.rs.map((r) => od(r)).filter((x) => x[1]).map((x) => `${x[1]}${x[2]}`).sort(), L = [...new Set(g.rs.map(lt).filter(Boolean))], nl = g.rs.filter(late).length;
+          const f = (x) => `${+x.slice(0, 2)}/${+x.slice(2)}`;
+          return `<tr><td class="l"><b>${esc(g.m.nm)}</b> <small class="muted">${PLN2[g.m.plant]}</small></td><td>${esc(supNm(g.sup))}</td><td><b>${n0(g.rs.reduce((x, r) => x + r.t, 0))}</b></td><td>${g.rs.length}건</td><td>${ds.length ? (ds[0] === ds[ds.length - 1] ? f(ds[0]) : `${f(ds[0])}~${f(ds[ds.length - 1])}`) : '-'}</td><td>${L.length ? L.join('·') + '일' : '-'}</td><td class="l">${nl ? `<b class="neg">${nl}건 예정일 지남</b>(아직 미입고)` : '예정대로'}</td></tr>`;
+        }).join('')}</tbody></table></div>
+        <details class="tv"><summary>발주번호별 보기 (${arr.reduce((x, e) => x + e.rs.length, 0)}건)</summary><div class="scroll"><table class="t"><thead><tr><th class="l">소재</th><th>업체</th><th>수량(t)</th><th>발주번호</th><th>발주일</th><th>리드타임</th><th>상태</th></tr></thead><tbody>${gl.flatMap((g) => g.rs.map((r) => `<tr><td class="l">${esc(g.m.nm)}</td><td>${esc(supNm(r.sup))}</td><td>${n0(r.t)}</td><td>${esc(r.po || '-')}</td><td>${od(r)[1] ? `${+od(r)[1]}/${+od(r)[2]}` : '-'}</td><td>${lt(r) ? lt(r) + '일' : '-'}</td><td class="${late(r) ? 'neg' : ''}">${late(r) ? '예정일 지남' : '예정'}</td></tr>`)).join('')}</tbody></table></div></details>
+        <p class="small">MES 발주 중 아직 입고되지 않은 잔량. 입고일 = 발주일 + 업체 리드타임으로 추정한 날(실제 약속일 아님).${nLate ? ` <b>예정일 지남</b> = 리드타임이 지났는데 아직 안 들어온 발주 — 내일 들어온다고 보고 계산하므로 이날에 모여 보입니다. 실제 입고일은 구매팀 확인.` : ''}</p>`);
+      }
+      const ord = evs.filter((e) => e.kind === 'order');
+      if (ord.length) h += box('order', `발주 마감 — 이날까지 새로 발주해야 소진 전에 들어옴 (구매할 것)`, `<div class="scroll"><table class="t"><thead><tr><th class="l">소재</th><th>발주할 업체(1순위)</th><th>리드타임</th><th>발주 마감</th><th>입고 필요일</th><th>소진 예정일</th><th>하루 소요</th></tr></thead><tbody>${ord.map((e) => `<tr><td class="l"><b>${esc(e.m.nm)}</b> <small class="muted">${PLN2[e.m.plant]}</small></td><td>${esc(e.m.sup ? (e.m.sup.name || supNm(e.m.sup.sup)) : '등록 업체 없음')}</td><td>${e.m.sup ? e.m.sup.lt + '일' : '-'}</td><td class="${e.m.dl < today ? 'neg' : ''}"><b>${md(e.m.dl)}</b>${e.m.dl < today ? ' (지남)' : ''}</td><td>${md(e.m.needBy)}</td><td>${md(e.m.run)}</td><td>${n0(e.m.u28)}t</td></tr>`).join('')}</tbody></table></div><p class="small">지금 재고 + 이미 발주한 입고 예정으로 버티다가 <b>소진 예정일</b>에 바닥남(새 발주 없다고 가정). 투입 여유(컬러 ${SAFE.C}일 · 도금 ${SAFE.G}일) 전인 <b>입고 필요일</b>까지 들어오려면, 리드타임만큼 앞선 <b>발주 마감</b>일까지 발주해야 합니다. 수량·업체 결정은 <a href="procure.html">소재 발주</a> 판단 보드에서.${ord.some((e) => e.m.dl < today) ? ' <b>마감 지남</b> = 계산상 이미 발주했어야 하는데 그만큼의 발주가 집계되지 않은 것 — 실제로 발주했는지 구매팀 확인(8/13 이전 발주는 입고 기록이 아직 없어 집계에서 빠져 있을 수 있음).' : ''}</p>`);
+      const lw = evs.filter((e) => e.kind === 'low' || e.kind === 'out');
+      if (lw.length) h += box('low', `재고 경고 — 새 발주가 없으면 이날부터 재고가 모자람`, `<div class="scroll"><table class="t"><thead><tr><th class="l">소재</th><th>구분</th><th>이날 예상 재고</th><th>하루 소요</th><th class="l">뜻</th></tr></thead><tbody>${lw.map((e) => {
+        if (e.self) { const x = D.self[`${e.self}|${d}`] || {}, nx = useNext(e.self, d, 3); return `<tr><td class="l"><b>자가재 ${e.self}</b> <small class="muted">도금 → 컬러</small></td><td>${e.kind === 'out' ? '<b class="neg">부족</b>' : '3일분 미만'}</td><td>${n0(x.stock)}t</td><td>${n0(nx / 3)}t</td><td class="l">${e.kind === 'out' ? '도금 계획대로 만들어도 컬러 투입량을 못 채움 — 도금 일정 앞당김 검토' : '앞으로 3일 컬러 투입량보다 재고가 적음 — 도금 생산 일정 확인'}</td></tr>`; }
+        const v = e.m.stock[d], u = e.m.use[d] || e.m.u28;
+        return `<tr><td class="l"><b>${esc(e.m.nm)}</b> <small class="muted">${PLN2[e.m.plant]}</small></td><td>${e.kind === 'out' ? '<b class="neg">소진</b>' : '7일분 미만'}</td><td>${n0(v)}t</td><td>${n0(u)}t</td><td class="l">${e.kind === 'out' ? '이날 재고가 0 아래로 — 그 전에 발주분이 들어와야 함(발주 마감 칩 참고)' : `재고가 약 ${u > 0 ? Math.max(0, Math.floor(v / u)) : '-'}일분만 남음`}</td></tr>`;
+      }).join('')}</tbody></table></div>`);
+      return h;
+    };
     UI.cal($('s-mcal'), { months: D.months, month: mon, kinds: MK, events: ev, today, maxChips: 4,
-      note: '발주 마감 = 소진 예정일 − 투입 여유(컬러 7일 · 도금 5일) − 1순위 업체 리드타임. 구매 소재는 추가 발주 없음 가정, 자가재는 도금 계획대로 보충. 마감이 이미 지난 발주는 오늘 칸에 표시.',
-      detail: (d) => { pick(d, 'm'); return `<p class="small">${md(d)} 소재 상세는 바로 아래에 표시됩니다.</p>`; } });
+      note: '칩 뜻: <b>입고</b> = 이미 발주한 소재가 들어오는 날(업체·발주번호는 날짜를 누르면) · <b>발주 마감</b> = 이날까지 새로 발주해야 함 · <b>7일분 미만·소진</b> = 새 발주가 없을 때 재고가 모자라는 날. 구매 소재는 추가 발주 없음 가정, 자가재는 도금 계획대로 보충.',
+      detail });
   }
 
   // ---------- 캘린더 ----------
