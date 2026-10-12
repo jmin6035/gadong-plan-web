@@ -100,7 +100,7 @@ table.gtable { border-collapse: separate; border-spacing: 0; font-size: 12px; fo
 .gtable tr.r-fam .c1 { font-weight: 800; font-size: 13px; }
 .gtable tr.r-dep td { color: var(--ink); font-weight: 500; }
 .gtable tr.r-dep .c1 { font-weight: 500; color: var(--muted); padding-left: 16px; }
-.gtable tr.r-hrs td, .gtable tr.r-hrs .c1 { color: var(--muted); font-size: 11px; background: var(--soft); }
+.gtable tr.r-hrs td, .gtable tr.r-hrs .c1 { color: var(--muted); font-size: 12.5px; background: var(--soft); }
 .gtable td.mc { background: var(--mc); color: #1c1c1c; }
 .gtable tr.r-hrs td.mc { background: var(--mc); }
 .gtable td.down { box-shadow: inset 0 -3px 0 var(--down); }

@@ -1,5 +1,5 @@
-/* 계획재 분석·예측: published/planstock.enc.json (cglplan/planstock.py)
-   ① 핵심 지표 ② 재고 추이(실적 + 이번 달 말까지 예상) ③ 월별 예측 | 소재 구분별 ④ 위험 사양 ⑤ 기준 */
+/* 계획재: published/planstock.enc.json (cglplan/planstock.py)
+   ① 핵심 지표 ② 계획재 캘린더(생산 · 소재 발주 마감 · 입고 필요) ③ 소재 발주 요약 | 수입 FH 월적 ④ 재고 추이 ⑤ 월별 예측 | 소재 구분별 ⑥ 사양별 상세(접힘) ⑦ 기준(접힘) */
 (function () {
   'use strict';
   const $ = (id) => document.getElementById(id);
@@ -24,6 +24,58 @@
     });
   }
 
+
+  // ---------- ② 계획재 캘린더 ----------
+  const KIND = { order: { name: '소재 발주 마감', color: 'var(--bad)' }, arrive: { name: '소재 입고 필요', color: 'var(--s3)' }, prod: { name: '생산 계획', color: 'var(--s1)' }, done: { name: '생산 실적', color: 'var(--plan)' } };
+  const ST = { past: ['시한 지남 — 발주 여부 확인', 'bad'], soon: ['2주 안 마감', 'warn'], later: ['예정', ''] };
+  function orderRow(o, mode) {
+    const left = Math.max(0, o.t - (o.ordered || 0));
+    return `<tr><td><b>${esc(o.kind)}</b></td><td>${esc(o.sup)}</td><td>${o.o0 === o.o1 ? md(o.o1) : `${md(o.o0)} ~ ${md(o.o1)}`}</td><td>${md(o.arr)}</td><td>${md(o.prodFrom)} ~ ${md(o.prodTo)}</td>`
+      + `<td><b>${n0(o.t)}</b></td><td>${o.ordered != null ? n0(o.ordered) : '-'}</td><td class="${left > 0.5 && o.state !== 'later' ? 'bad' : ''}"><b>${n0(left)}</b></td><td><span class="tag ${ST[o.state][1]}">${ST[o.state][0]}</span></td></tr>`
+      + (mode === 'full' ? `<tr class="why-row"><td colspan="9" class="para">규칙: ${esc(o.rule)} · 사양(두께×폭) ${o.items.map((x) => `${x[0]} ${n0(x[1])}t`).join(', ')}</td></tr>` : '');
+  }
+  const OHEAD = '<thead><tr><th>소재</th><th>업체</th><th>발주 기간</th><th>입고일</th><th>쓰는 생산 기간</th><th>필요량</th><th>기발주</th><th>남은 발주</th><th>판정</th></tr></thead>';
+  function calInit() {
+    const ev = O.events.map((e) => {
+      if (e.kind === 'order') { const st = e.order.state; return { ...e, chip: `${e.order.kind} ${n0(e.t)}t 발주`, tone: st === 'past' ? 'bad' : st === 'soon' ? 'warn' : '' }; }
+      if (e.kind === 'arrive') return { ...e, chip: `${e.order.kind} ${n0(e.t)}t 입고` };
+      if (e.kind === 'prod') return { ...e, chip: `생산 ${n0(e.t)}t` };
+      return { ...e, chip: `실적 ${n0(e.t)}t` };
+    });
+    const months = [...new Set(ev.map((e) => e.d.slice(0, 7)))].sort().filter((m) => m >= '2026-09');
+    UI.cal($('ps-calbox'), { months, kinds: KIND, events: ev, today: O.today && O.today > O.asOf ? O.today : O.asOf,
+      note: '발주 마감 = 팀 소재 리드타임 표로 생산일에서 거꾸로 계산(GI 매주 발주 +5주 → 투입 7일 / FH 매주 발주 +5주 → 도금 5일 → 컬러 입고 1일 → 투입 7일 / 수입 FH 전전월 10~20일 발주 → 7일경 입고 / 서림 GI 27년 입고분부터). 필요량은 소재 재고를 빼기 전 값 — 발주 전 소재 재고 확인.',
+      detail: (d, evs) => {
+        let h = '';
+        const ords = evs.filter((e) => e.kind === 'order'), arr = evs.filter((e) => e.kind === 'arrive'), pr = evs.filter((e) => e.kind === 'prod' || e.kind === 'done');
+        if (ords.length) h += `<div class="grp" style="--kc:${KIND.order.color}"><i></i>소재 발주 마감 — 이 날까지 발주</div><div class="scroll"><table class="t">${OHEAD}<tbody>${ords.map((e) => orderRow(e.order, 'full')).join('')}</tbody></table></div>`;
+        if (arr.length) h += `<div class="grp" style="--kc:${KIND.arrive.color}"><i></i>소재 입고 필요 — 이 날까지 들어와야 함</div><div class="scroll"><table class="t">${OHEAD}<tbody>${arr.map((e) => orderRow(e.order)).join('')}</tbody></table></div>`;
+        for (const e of pr) h += `<div class="grp" style="--kc:${KIND[e.kind].color}"><i></i>${e.kind === 'done' ? '생산 실적' : '생산 계획'} ${n0(e.t)}t</div><div class="scroll"><table class="t"><thead><tr><th>품명</th><th>사양(두께 폭 색상)</th>${e.kind === 'prod' ? '<th>라인</th>' : ''}<th>톤</th><th>소재</th></tr></thead><tbody>${e.items.map((x) => `<tr><td><b>${esc(x[0])}</b></td><td>${esc(x[1])}</td>${e.kind === 'prod' ? `<td>${esc(x[2])}</td>` : ''}<td>${n1(x[3])}</td><td>${esc(x[4])}</td></tr>`).join('')}</tbody></table></div>`;
+        return h;
+      } });
+  }
+  function orderSum() {
+    const K = ['수입 FH', 'P-FH', 'P-GI', '서림 GI'];
+    const S = O.orderSum;
+    const rows = K.filter((k) => S[k]).map((k) => { const x = S[k]; const sup = (O.orders.find((o) => o.kind === k) || {}).sup || '';
+      return `<tr><td><b>${k}</b></td><td>${esc(sup)}</td><td class="${x.past > 0.5 ? 'bad' : ''}"><b>${n0(x.past)}</b></td><td class="${x.soon > 0.5 ? 'warn' : ''}"><b>${n0(x.soon)}</b></td><td>${n0(x.t - x.past - x.soon)}</td><td><b>${n0(x.t)}</b></td></tr>`; }).join('');
+    const next = O.orders.filter((o) => o.state === 'soon').sort((a, b) => (a.o1 < b.o1 ? -1 : 1));
+    return card('ps-osum', '소재 발주 요약', `생산 일정(10월 ~ 3월) 기준 · ${md(O.asOf)} 현재`, '단위: 톤',
+      `<div class="scroll"><table class="t big"><thead><tr><th>소재</th><th>업체</th><th>시한 지남(미발주)</th><th>2주 안 마감</th><th>그 뒤</th><th>합계</th></tr></thead><tbody>${rows}</tbody></table></div>`
+      + (next.length ? `<p class="small"><b>가장 급한 발주:</b> ${next.slice(0, 3).map((o) => `${md(o.o1)}까지 ${o.kind} ${n0(o.t - (o.ordered || 0))}t(${md(o.arr)} 입고)`).join(' · ')}</p>` : '')
+      + '<p class="small">시한 지남 = 발주 마감이 오늘 이전인데 기발주 자료가 없는 양(수입 FH 는 기발주 반영). 실제로 이미 발주됐는지 구매와 대조 필요.</p>');
+  }
+  function fhCard() {
+    const today = O.asOf;
+    const win = (m) => { const y = +m.slice(0, 4), mm = +m.slice(5); const om = mm - 2 <= 0 ? mm + 10 : mm - 2, oy = mm - 2 <= 0 ? y - 1 : y; return [`${oy}-${String(om).padStart(2, '0')}-10`, `${oy}-${String(om).padStart(2, '0')}-20`]; };
+    const rows = Object.entries(O.fh).filter(([m]) => m >= '2026-10').map(([m, [need, have]]) => {
+      const left = Math.max(0, need - have), [o0, o1] = win(m);
+      const st = left < 0.5 ? ['충분', 'good'] : today > o1 ? ['시한 지남 — 확인', 'bad'] : today >= o0 ? ['발주 기간 중', 'warn'] : [`${md(o0)}부터 발주`, ''];
+      return `<tr><td><b>${+m.slice(5)}월적</b>${m.slice(0, 4) !== '2026' ? ` <small>'${m.slice(2, 4)}</small>` : ''}</td><td>${md(o0)} ~ ${md(o1)}</td><td>${md(`${m}-07`)}</td><td>${n0(need)}</td><td>${n0(have)}</td><td class="${st[1] === 'bad' ? 'bad' : st[1] === 'warn' ? 'warn' : ''}"><b>${n0(left)}</b></td><td><span class="tag ${st[1]}">${st[0]}</span></td></tr>`; }).join('');
+    return card('ps-fh', '수입 FH 월적', '계획재 생산에 쓰는 수입 FH(자가 도금 소재) — 필요량 · 기발주 · 남은 발주', '단위: 톤',
+      `<div class="scroll"><table class="t big"><thead><tr><th>월적</th><th>발주 기간</th><th>입고</th><th>필요</th><th>기발주</th><th>남은 발주</th><th>판정</th></tr></thead><tbody>${rows}</tbody></table></div>
+      <p class="small">기발주 = 기초재고 파일의 수입 FH 발주량(10월적 4,600t · 11월적 1,925t). 10월적 남는 1,837t 은 11월 이후 생산에 먼저 쓸 수 있음.</p>`);
+  }
   function kpis() {
     const T = O.tot, M = mon(O.month);
     const k = (tone, l, v, unit, b, ck) => `<div class="kpi tone-${tone}" data-rk="k-${ck}"><div class="l">${l}</div><div class="v"><b data-count="${Math.round(v)}" data-ck="${ck}">0</b><small>${unit}</small></div><div class="b">${b}</div></div>`;
@@ -117,16 +169,22 @@
       <li><b>판정</b> 이번 달 말 결품 = 예상 &lt; 0 · 안전재고 아래 = 0 ≤ 예상 &lt; 안전재고 · 생산 일정보다 늦음 = 일정 대비 30%·5t 이상 부족 · 목표의 2배 = 예상 &gt; 목표×2(차이 10t 이상) · 빨리 팔림 = 출하가 보통 진도의 1.5배+5t 초과(10일 이후).</li></ul>`);
   }
 
+  const specDiv = () => specs().replace(/^<section class="card" id="ps-spec">/, '<div id="ps-spec">').replace(/<\/section>$/, '</div>');
   function render() {
     $('ca-main').innerHTML = `<section class="card" id="ca-kpi"><h2>핵심 <small>~${md(O.asOf)} · 계획재 운영안(TF)</small><span class="unit">단위: 톤</span></h2>${kpis()}</section>`
-      + trend() + `<div class="grid2 rowc">${months()}${byMat()}</div>` + specs() + basis();
+      + `<section class="card" id="ps-cal"><h2>계획재 캘린더 <small>언제 무엇을 만들고, 그 소재를 어느 업체에 얼마나 언제까지 발주해야 하는지 · 날짜를 누르면 상세</small><span class="unit">단위: 톤</span></h2><div id="ps-calbox"></div></section>`
+      + `<div class="grid2 rowc">${orderSum()}${fhCard()}</div>`
+      + trend() + `<div class="grid2 rowc">${months()}${byMat()}</div>`
+      + `<details class="card more" id="ps-more"><summary><h2>사양별 상세 <small>${O.n}개 사양 — 진도·월말 예상·판정</small></h2></summary>${specDiv()}</details>`
+      + `<details class="card more"><summary><h2>계산 기준</h2></summary>${basis().replace(/^<section[^>]*>/, '').replace(/<\/section>$/, '')}</details>`;
     $('ca-meta').innerHTML = `<span><b>실적</b>~${O.asOf}</span><span><b>시작 재고</b>MES ${O.stockMonth.slice(0, 4)}.${O.stockMonth.slice(4)}월말</span><span><b>기준</b>계획재 운영안 ${O.n}개 사양</span><span><b>계산</b>${String(O.built || '').replace('T', ' ')}</span>`;
+    calInit();
     UI.reveal($('ca-main')); UI.count($('ca-main')); bindTip($('ca-main'));
     wire();
   }
   function wire() {
-    document.querySelectorAll('#ps-f button').forEach((b) => b.addEventListener('click', () => { flt = b.dataset.f; $('ps-spec').outerHTML = specs(); wire(); }));
-    document.querySelectorAll('#ps-s button').forEach((b) => b.addEventListener('click', () => { sortK = b.dataset.s; $('ps-spec').outerHTML = specs(); wire(); }));
+    document.querySelectorAll('#ps-f button').forEach((b) => b.addEventListener('click', () => { flt = b.dataset.f; $('ps-spec').outerHTML = specDiv(); wire(); }));
+    document.querySelectorAll('#ps-s button').forEach((b) => b.addEventListener('click', () => { sortK = b.dataset.s; $('ps-spec').outerHTML = specDiv(); wire(); }));
   }
   let env = null;
   const envReady = GP.latest('planstock.enc.json');

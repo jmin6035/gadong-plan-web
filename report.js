@@ -58,9 +58,9 @@
     const X = (i) => L + (x.length === 1 ? (W - L - R) / 2 : (i * (W - L - R)) / (x.length - 1));
     const Y = (v) => T + (H - T - B) * (1 - (v - lo) / (hi - lo || 1));
     let g = '';
-    for (let v = lo; v <= hi + 1e-9; v += step) g += `<line x1="${L}" x2="${W - R}" y1="${Y(v)}" y2="${Y(v)}" stroke="var(--grid)"/><text x="${L - 6}" y="${Y(v) + 4}" text-anchor="end" font-size="11" fill="var(--ink-3)">${fmt(v)}</text>`;
+    for (let v = lo; v <= hi + 1e-9; v += step) g += `<line x1="${L}" x2="${W - R}" y1="${Y(v)}" y2="${Y(v)}" stroke="var(--grid)"/><text x="${L - 6}" y="${Y(v) + 4}" text-anchor="end" font-size="13" fill="var(--ink-3)">${fmt(v)}</text>`;
     const every = Math.ceil(x.length / 7);
-    x.forEach((d, i) => { if (i % every === 0 || i === x.length - 1) g += `<text x="${X(i)}" y="${H - 6}" text-anchor="middle" font-size="11" fill="var(--ink-3)">${esc(d)}</text>`; });
+    x.forEach((d, i) => { if (i % every === 0 || i === x.length - 1) g += `<text x="${X(i)}" y="${H - 6}" text-anchor="middle" font-size="13" fill="var(--ink-3)">${esc(d)}</text>`; });
     refs.forEach((r) => {
       g += `<line x1="${L}" x2="${W - R}" y1="${Y(r.v)}" y2="${Y(r.v)}" stroke="${r.color || 'var(--down)'}" stroke-width="1.5" stroke-dasharray="6 4"/>`;
       // 목표 글자는 선이 지나가지 않는 자리(오른쪽 위 → 오른쪽 아래 → 왼쪽 위 → 왼쪽 아래)에
@@ -69,10 +69,10 @@
       const hit = (x0, x1, yt, yb) => series.some((s_) => { for (let xx = x0; xx <= x1; xx += 4) { const yy = yAt(s_, xx); if (yy != null && yy >= yt - 2 && yy <= yb + 2) return true; } return false; });
       const cands = [[W - R - 4 - w_, y0 - 5], [W - R - 4 - w_, y0 + 14], [L + 4, y0 - 5], [L + 4, y0 + 14]];
       const pos = cands.find(([x0, yb]) => !hit(x0, x0 + w_, yb - 11, yb)) || cands[0];
-      g += `<text x="${pos[0]}" y="${pos[1]}" font-size="11" font-weight="600" fill="${r.color || 'var(--down)'}" paint-order="stroke" stroke="var(--surface)" stroke-width="4" stroke-linejoin="round">${esc(lab)}</text>`;
+      g += `<text x="${pos[0]}" y="${pos[1]}" font-size="13" font-weight="600" fill="${r.color || 'var(--down)'}" paint-order="stroke" stroke="var(--surface)" stroke-width="4" stroke-linejoin="round">${esc(lab)}</text>`;
     });
     const ends = series.map((s, k) => { let j = s.v.length - 1; while (j >= 0 && s.v[j] == null) j--; return { k, j, y: j >= 0 ? Y(s.v[j]) : null }; }).filter((e) => e.y != null).sort((a, b) => a.y - b.y);
-    for (let i = 1; i < ends.length; i++) if (ends[i].y - ends[i - 1].y < 13) ends[i].y = ends[i - 1].y + 13;
+    for (let i = 1; i < ends.length; i++) if (ends[i].y - ends[i - 1].y < 17) ends[i].y = ends[i - 1].y + 17;
     series.forEach((s, k) => {
       const col = s.color || `var(${SER[k]})`;
       let d = '', pen = false;
@@ -82,7 +82,7 @@
       const e = ends.find((z) => z.k === k);
       if (e) {
         g += `<circle cx="${X(e.j)}" cy="${Y(s.v[e.j])}" r="4.2" fill="${col}" stroke="var(--surface)" stroke-width="2"/>`;
-        g += `<text x="${X(e.j) + 8}" y="${e.y + 4}" font-size="11" font-weight="600" fill="var(--ink)" paint-order="stroke" stroke="var(--surface)" stroke-width="4" stroke-linejoin="round">${legendOn ? '' : esc(s.name) + ' '}${fmt(s.v[e.j])}</text>`;
+        g += `<text x="${X(e.j) + 8}" y="${e.y + 4}" font-size="13" font-weight="600" fill="var(--ink)" paint-order="stroke" stroke="var(--surface)" stroke-width="4" stroke-linejoin="round">${legendOn ? '' : esc(s.name) + ' '}${fmt(s.v[e.j])}</text>`;
       }
     });
     x.forEach((_, i) => { const w = (W - L - R) / Math.max(1, x.length - 1); g += `<rect class="hb" data-i="${i}" x="${X(i) - w / 2}" y="${T}" width="${w}" height="${H - T - B}" fill="transparent"/>`; });
@@ -98,7 +98,7 @@
     const X = (i) => L + ((i + 0.5) * (W - L - R)) / x.length;
     const Y = (v) => T + (H - T - B) * (1 - v / top);
     let g = '';
-    for (let v = 0; v <= top + 1e-9; v += step) g += `<line x1="${L}" x2="${W - R}" y1="${Y(v)}" y2="${Y(v)}" stroke="var(--grid)"/><text x="${L - 6}" y="${Y(v) + 4}" text-anchor="end" font-size="11" fill="var(--ink-3)">${fmt(v)}</text>`;
+    for (let v = 0; v <= top + 1e-9; v += step) g += `<line x1="${L}" x2="${W - R}" y1="${Y(v)}" y2="${Y(v)}" stroke="var(--grid)"/><text x="${L - 6}" y="${Y(v) + 4}" text-anchor="end" font-size="13" fill="var(--ink-3)">${fmt(v)}</text>`;
     const every = Math.ceil(x.length / 8);
     data.forEach((row, i) => {
       let acc = 0;
@@ -109,7 +109,7 @@
       });
       const show = x.length <= 14 || hi.includes(i) || i === x.length - 1;
       if (show && tot[i] > 0) g += `<text x="${X(i)}" y="${Y(tot[i]) - 4}" text-anchor="middle" font-size="10.5" ${hi.includes(i) ? 'font-weight="700" fill="var(--ink)"' : 'fill="var(--ink-2)"'}>${(totalFmt || fmt)(tot[i])}</text>`;
-      if (i % every === 0 || i === x.length - 1 || hi.includes(i)) g += `<text x="${X(i)}" y="${H - 6}" text-anchor="middle" font-size="11" fill="var(--ink-3)">${esc(x[i])}</text>`;
+      if (i % every === 0 || i === x.length - 1 || hi.includes(i)) g += `<text x="${X(i)}" y="${H - 6}" text-anchor="middle" font-size="13" fill="var(--ink-3)">${esc(x[i])}</text>`;
       g += `<rect class="hb" data-i="${i}" x="${X(i) - (W - L - R) / x.length / 2}" y="${T}" width="${(W - L - R) / x.length}" height="${H - T - B}" fill="transparent"/>`;
     });
     el.innerHTML = legend(cats.map((c) => ({ name: c, box: true }))) + `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="${esc(cats.join(', '))} 누적">${g}</svg><div class="tip"></div>`;
@@ -180,7 +180,7 @@
     let t = '<div class="scroll"><table class="t sum"><thead><tr><th>구분</th><th>상태</th><th>핵심 수치</th><th>판단</th><th>조치</th></tr></thead><tbody>';
     ['plating', 'color', 'ship', 'stock'].forEach((a) => {
       const k = K[a], s = sm[a] || {};
-      t += `<tr${a === 'plating' ? ' data-pl="G"' : a === 'color' ? ' data-pl="C"' : ''}><td class="l nm">${k.name} <span class="m-chip">${chip(s.status || k.st)}</span></td><td class="c d-chip">${chip(s.status || k.st) || '-'}</td><td class="l key">${k.key.filter(Boolean).join('<br>')}</td><td class="l wrap" data-l="판단">${esc(s.msg || '')}</td><td class="l wrap" data-l="조치">${esc(s.action || '')}</td></tr>`;
+      t += `<tr${a === 'plating' ? ' data-pl="G"' : a === 'color' ? ' data-pl="C"' : ''}><td class="l nm">${k.name} <span class="m-chip">${chip(s.status || k.st)}</span></td><td class="c d-chip">${chip(s.status || k.st) || '-'}</td><td class="l key">${k.key.filter(Boolean).join(' · ')}</td><td class="l wrap" data-l="판단">${esc(s.msg || '')}</td><td class="l wrap" data-l="조치">${esc(s.action || '')}</td></tr>`;
     });
     t += '</tbody></table></div>';
     if (N.decisions && N.decisions.length) t += `<div class="decide"><h3>결정이 필요한 사항</h3><ol>${N.decisions.map((x) => `<li>${esc(x)}</li>`).join('')}</ol></div>`;

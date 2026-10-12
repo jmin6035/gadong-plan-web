@@ -15,7 +15,7 @@
   const plantOf = (code) => (G_CODES.includes(code) ? 'G' : 'C');
   const PERIODS = [['w1', '1주차'], ['w4', '2~4주'], ['w8', '5~8주'], ['w9', '9주 이후'], ['all', '전체']];
   const STATUS = ['판단대기', '요청', '발주됨', '보류'];
-  let D = null, S = null, tab = 'board', period = 'w4', plantF = 'all', open = {}, onlyShort = true, justOpened = null, lastTab = null;
+  let D = null, S = null, tab = 'cal', period = 'w4', plantF = 'all', open = {}, onlyShort = true, justOpened = null, lastTab = null;
 
   /* ---------- 저장 상태 ---------- */
   function defaults() {
@@ -125,8 +125,8 @@
       const isOpen = open[j.key];
       return `<tr class="u ${isOpen ? 'on' : ''}" data-k="${esc(j.key)}">
         <td class="l"><button type="button" class="tg" aria-expanded="${!!isOpen}" aria-label="용도 보기">${isOpen ? '▾' : '▸'}</button> ${md(j.first)} <span class="muted">(${j.left >= 0 ? 'D-' + j.left : -j.left + '일 지남'})</span></td>
-        <td class="l">${PL[j.plant]} <b>${esc(codeNm(j.code))}</b>${j.thk ? `<br><span class="muted">${j.thk[0]}~${j.thk[1]}mm</span>` : ''}</td>
-        <td>${n0(j.t)}${j.est >= 1 ? `<br><span class="muted">추정 ${n0(j.est)}</span>` : ''}</td><td>${n0(j.cover)}</td><td><b>${j.short >= 1 ? n0(j.short) : '·'}</b></td>
+        <td class="l">${PL[j.plant]} <b>${esc(codeNm(j.code))}</b>${j.thk ? ` <span class="muted">${j.thk[0]}~${j.thk[1]}mm</span>` : ''}</td>
+        <td>${n0(j.t)}${j.est >= 1 ? ` <span class="muted">· 추정 ${n0(j.est)}</span>` : ''}</td><td>${n0(j.cover)}</td><td><b>${j.short >= 1 ? n0(j.short) : '·'}</b></td>
         <td class="l jd"><span class="st ${kc}">${kn}</span><div class="why">${why}</div></td>
         <td class="l dec">${j.short >= 1 ? `<div class="dg"><label>업체<select data-f="sup" aria-label="업체">${opts}</select></label><label>수량<input data-f="qty" type="number" min="0" step="10" value="${esc(qty)}" aria-label="수량"></label><label>상태<select data-f="status" aria-label="상태">${STATUS.map((x) => `<option ${x === (d.status || '판단대기') ? 'selected' : ''}>${x}</option>`).join('')}</select></label></div>` : '<span class="muted">발주 불필요</span>'}
           <input class="memo" data-f="memo" type="text" value="${esc(d.memo || '')}" placeholder="메모" aria-label="메모"></td></tr>
@@ -186,14 +186,59 @@
       <p class="small">저장 위치 = 이 브라우저. 다른 사람과 맞추려면 내보낸 파일을 보내 가져오기. 자료 계산 ${String(D.built).replace('T', ' ')}</p>`);
   }
 
-  const TABS = [['board', '판단 보드'], ['arr', '입고예정'], ['ord', '주문재 목록'], ['sup', '업체 기준정보'], ['basis', '계산 기준·설정']];
+  const TABS = [['cal', '발주 캘린더'], ['board', '판단 목록·구매 요청'], ['arr', '입고예정'], ['ord', '주문재 목록'], ['sup', '업체 기준정보'], ['basis', '계산 기준·설정']];
+
+  /* ---------- 발주 캘린더: 이 날 무엇을 발주하고, 무엇이 들어와야 하나 ---------- */
+  const CK = { order: { name: '발주 마감', color: 'var(--bad)' }, need: { name: '입고 필요', color: 'var(--s3)' }, arr: { name: '입고 예정(기발주)', color: 'var(--s1)' } };
+  function calTab() {
+    const J = judge().filter((j) => UI.inScope(j.plant));
+    const short = J.filter((j) => j.short >= 1 && j.kind !== 'pos');
+    const past = short.filter((j) => (j.rec ? addD(j.needBy, -j.rec.lt) : j.deadline || j.needBy) < S.today);
+    const soon = short.filter((j) => { const d = j.rec ? addD(j.needBy, -j.rec.lt) : j.deadline || j.needBy; return d >= S.today && diff(d, S.today) <= 14; });
+    const k = (tone, l, v, unit, b) => `<div class="kpi tone-${tone}"><div class="l">${l}</div><div class="v"><b data-count="${Math.round(v)}">0</b><small>${unit}</small></div><div class="b">${b}</div></div>`;
+    return `<section class="card"><h2>발주 캘린더 <small>기준일 ${S.today} · 필요 시점에서 업체 리드타임만큼 거꾸로 계산한 발주 마감 · 날짜를 누르면 상세</small><span class="unit">단위: 톤</span></h2>
+      <div class="kpis">${k(past.length ? 'bad' : 'good', '발주 마감 지남(미발주)', Math.round(past.reduce((a, j) => a + j.short, 0)), 't', `${past.length}건 — 기발주였는지 입고예정에 넣어 확인`)}
+      ${k(soon.length ? 'warn' : 'good', '2주 안 발주 마감', Math.round(soon.reduce((a, j) => a + j.short, 0)), 't', `${soon.length}건 · 가장 급한 ${soon[0] ? `${esc(codeNm(soon[0].code))} ${md(soon[0].rec ? addD(soon[0].needBy, -soon[0].rec.lt) : soon[0].deadline || soon[0].needBy)}` : '-'}`)}
+      ${k('brand', '부족(발주 필요) 합계', Math.round(short.reduce((a, j) => a + j.short, 0)), 't', `${short.length}건 · 재고·입고예정으로 채운 뒤`)}
+      ${k(S.arr.length ? 'good' : 'warn', '입고 예정 입력', S.arr.length, '건', S.arr.length ? '기발주가 충당에 반영됨' : '없음 — 입고예정 탭에 기발주를 넣어야 정확')}</div>
+      <div id="p-cal" style="margin-top:14px"></div></section>`;
+  }
+  function calInit() {
+    const J = judge().filter((j) => UI.inScope(j.plant));
+    const ev = [];
+    for (const j of J) {
+      if (j.short < 1 || j.kind === 'pos') continue;
+      const dl = j.rec ? addD(j.needBy, -j.rec.lt) : (j.deadline || j.needBy);
+      const tone = dl < S.today ? 'bad' : diff(dl, S.today) <= 14 ? 'warn' : '';
+      ev.push({ d: dl, kind: 'order', chip: `${codeNm(j.code)} ${n0(j.short)}t`, tone, j, dl });
+      ev.push({ d: j.needBy, kind: 'need', chip: `${codeNm(j.code)} ${n0(j.short)}t`, j, dl });
+    }
+    for (const a of S.arr) if (a.date) ev.push({ d: a.date, kind: 'arr', chip: `${codeNm(a.code)} ${n0(a.t)}t`, a });
+    const months = [...new Set(ev.map((e) => e.d.slice(0, 7)))].filter((m) => m >= S.today.slice(0, 7) || ev.some((e) => e.d.slice(0, 7) === m && e.tone === 'bad')).sort();
+    if (!months.includes(S.today.slice(0, 7))) months.unshift(S.today.slice(0, 7));
+    const jRow = (e) => { const j = e.j; const s = j.rec || j.cand[0];
+      return `<tr><td>${PL[j.plant]}</td><td><b>${esc(codeNm(j.code))}</b></td><td>${n0(j.t)}</td><td>${n0(j.cover)}</td><td class="${e.tone === 'bad' ? 'bad' : ''}"><b>${n0(j.short)}</b></td><td>${s ? esc(supName(s)) : '<span class="tag bad">업체 없음</span>'}</td><td>${s ? s.lt + '일' : '-'}</td><td class="${e.tone === 'bad' ? 'bad' : e.tone === 'warn' ? 'warn' : ''}"><b>${md(e.dl)}</b></td><td>${md(j.needBy)}</td><td><span class="tag ${KIND[j.kind][1]}">${KIND[j.kind][0]}</span></td></tr>`; };
+    const HEAD = '<thead><tr><th>공장</th><th>소재</th><th>필요</th><th>재고·입고 충당</th><th>부족</th><th>업체(추천)</th><th>리드타임</th><th>발주 마감</th><th>입고 필요일</th><th>판정</th></tr></thead>';
+    UI.cal($('p-cal'), { months, kinds: CK, events: ev, today: S.today, maxChips: 5,
+      note: '입고 필요일 = 그 주 첫 사용일 − 투입 여유(컬러 7일 · 도금 5일). 발주 마감 = 입고 필요일 − 추천 업체 리드타임. 빨간 칩 = 마감 지남, 진한 주황 = 2주 안.',
+      detail: (d, evs) => {
+        let h = '';
+        const o = evs.filter((e) => e.kind === 'order'), n = evs.filter((e) => e.kind === 'need'), a = evs.filter((e) => e.kind === 'arr');
+        if (o.length) h += `<div class="grp" style="--kc:${CK.order.color}"><i></i>이 날까지 발주</div><div class="scroll"><table class="t">${HEAD}<tbody>${o.map(jRow).join('')}</tbody></table></div>`;
+        if (n.length) h += `<div class="grp" style="--kc:${CK.need.color}"><i></i>이 날까지 들어와야 함</div><div class="scroll"><table class="t">${HEAD}<tbody>${n.map(jRow).join('')}</tbody></table></div>`;
+        if (a.length) h += `<div class="grp" style="--kc:${CK.arr.color}"><i></i>입고 예정(기발주)</div><div class="scroll"><table class="t"><thead><tr><th>업체</th><th>소재</th><th>수량</th><th>발주번호</th><th>메모</th></tr></thead><tbody>${a.map((e) => `<tr><td>${esc(e.a.sup || '-')}</td><td><b>${esc(codeNm(e.a.code))}</b></td><td>${n0(e.a.t)}</td><td>${esc(e.a.po || '-')}</td><td>${esc(e.a.memo || '')}</td></tr>`).join('')}</tbody></table></div>`;
+        return h + '<p class="small">업체 변경·수량·상태 결정과 구매 요청서는 <a href="#" data-tab="board">판단 목록·구매 요청</a> 탭에서.</p>';
+      } });
+  }
+
   function render() {
     const y = scrollY;
-    const body = { board, arr: arrivals, ord: orders, sup: suppliers, basis }[tab]();
+    const body = { cal: calTab, board, arr: arrivals, ord: orders, sup: suppliers, basis }[tab]();
     const fresh = lastTab !== tab; lastTab = tab;
     $('p-main').innerHTML = `<nav class="tabs big noprint">${TABS.map(([k, n]) => `<button type="button" data-tab="${k}" aria-pressed="${k === tab}">${n}</button>`).join('')}</nav><div class="${fresh ? 'fade' : ''}">${body}</div>`;
-    UI.sub(`필요 시점 → 가능한 업체 → 구매 요청 · 기준일 ${S.today} · 확정 컬러·도금 계획 연동`);
+    UI.sub(`날짜별 발주 마감 · 입고 필요 → 업체 판단 → 구매 요청 · 기준일 ${S.today} · 확정 컬러·도금 계획 기준`);
     $('p-meta').innerHTML = `<span><b>기준일</b>${S.today}</span><span><b>자료</b>확정 컬러·도금 계획 · 소재재고List · 재고현황</span><span><b>계산</b>${String(D.built).replace('T', ' ')}</span><span><b>단위</b>톤</span>`;
+    if (tab === 'cal') calInit();
     UI.reveal($('p-main')); UI.count($('p-main')); justOpened = null;
     scrollTo(0, y);
   }
@@ -296,7 +341,7 @@
   }
   $('p-form').addEventListener('submit', (e) => { e.preventDefault(); unlock($('p-pw').value); });
   envReady.then((e) => { if (!e) throw new Error();
-    env = e; $('p-lock').querySelector('h2').textContent = '소재 발주 검토 — 암호를 입력하세요';
+    env = e; $('p-lock').querySelector('h2').textContent = '소재 발주 — 암호를 입력하세요';
     let s = null; try { s = localStorage.getItem(PW_KEY); } catch (x) { /* 무시 */ }
     if (s) unlock(s); else $('p-form').hidden = false;
   }).catch(() => { $('p-msg').textContent = '자료를 찾을 수 없습니다'; });

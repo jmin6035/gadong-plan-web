@@ -226,7 +226,7 @@
         let tot = 0;
         ds.forEach((d, i) => {
           if (sdIdx.includes(i)) {
-            if (ri === 0 && i === sdIdx[0]) { const sd = P.shutdowns.find((x) => x.line === l && x.start <= d && d <= x.end); h += `<td class="sdblock" colspan="${sdIdx.length}" rowspan="${rows.length}">정기수리<br>${sd ? `${GP.md(sd.start)}~${GP.md(sd.end)}` : ''}</td>`; }
+            if (ri === 0 && i === sdIdx[0]) { const sd = P.shutdowns.find((x) => x.line === l && x.start <= d && d <= x.end); h += `<td class="sdblock" colspan="${sdIdx.length}" rowspan="${rows.length}">정기수리 ${sd ? `${GP.md(sd.start)}~${GP.md(sd.end)}` : ''}</td>`; }
             return;
           }
           const c = A.calBy[`${l}|${d}`];

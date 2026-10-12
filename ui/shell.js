@@ -3,10 +3,10 @@
 (function () {
   'use strict';
   const NAV = [
-    ['home', 'index.html', '홈'], ['supply', 'supply.html', '수급 캘린더'], ['integrated', 'integrated.html', '통합 가동계획'], ['report', 'report.html', '주간 보고'],
+    ['home', 'index.html', '홈'], ['supply', 'supply.html', '수급 캘린더'], ['integrated', 'integrated.html', '재고 추이'], ['report', 'report.html', '주간 보고'],
     '|도금', ['status', 'status.html', '가동 현황'], ['rolling', 'rolling.html', '계획 계산'], ['analysis', 'analysis.html', '조건 분석'], ['platact', 'plating_actual.html', '실적'],
     '|컬러', ['colorstat', 'color_status.html', '가동 현황'], ['coloranal', 'color_analysis.html', '조건 분석'], ['coloract', 'color_actual.html', '실적'], ['planstock', 'planstock.html', '계획재'],
-    '|소재', ['procure', 'procure.html', '발주 검토'], ['material', 'material.html', '발주 계획(월)'], '|',
+    '|소재', ['procure', 'procure.html', '소재 발주'], '|',
     ['decisions', 'decisions.html', '결정 기록'], ['health', 'health.html', '자료 상태'], ['docs', 'docs.html', '문서'],
   ];
   const TKEY = 'cgl-theme', SKEY = 'cgl-scope';
@@ -70,7 +70,7 @@
   }
 
   /* 자료 신선도: status.json(사내 PC 자동 실행기·클라우드 게시 중 최신) → 헤더 배지 + 오래되면 경고 띠 */
-  const FEED = { platact: 'MES 도금 실적', coloract: '컬러 생산 실적', planstock: '컬러 생산 실적', coloranal: '컬러 생산 실적', procure: '소재재고List(컬러)', material: '소재재고List(컬러)' };
+  const FEED = { platact: 'MES 도금 실적', coloract: '컬러 생산 실적', planstock: '컬러 생산 실적', coloranal: '컬러 생산 실적', procure: '소재재고List(컬러)' };
   async function fresh() {
     const h = document.getElementById('shell'); if (!h) return;
     const urls = ['https://gatcqxrzaonjsixajrwd.supabase.co/storage/v1/object/public/published/status.json?v=' + Date.now(), 'published/status.json'];
@@ -98,7 +98,7 @@
   /* 화면 한 줄 도움말 */
   const HELP = {
     home: '아침에 한 번: 오늘 볼 것 → 핵심 지표 → 필요한 화면으로 이동. 보는 사람(역할)과 보기(도금/컬러)를 고르면 맞는 것만 남음',
-    integrated: '확정 계획의 4분기 일별 가동(컬러·도금)과 재고 추이. 칸을 누르면 그날 품목과 이유',
+    integrated: '확정 계획 기준 주별 제품·자가재 재고 추이와 일별 배치 기준. 날짜별 가동은 수급 캘린더, 라인별 일정은 가동 현황에서',
     status: '도금 1·2CGL 게시 계획(매일 재계획)의 월별 간트·강종 전환·부서별 물량',
     rolling: '판매계획·자가재계획 엑셀로 도금 계획을 새로 계산하거나 실적으로 재계획하고 게시(담당자용). 정기수리를 추가하면 정지 시나리오도 볼 수 있음',
     analysis: '(계획 담당자용) MES 도금 실적으로 속도·M/C 손실·정지를 다시 계산해 계획 조건과 비교 — 반영권장 값은 계획 계산에 넣을 후보',
@@ -108,8 +108,7 @@
     coloranal: '(계획 담당자용) MES 컬러 실적으로 라인·품명 t/hr 를 다시 재서 계획 조건과 비교 — 라인 속도 차이가 ±5%를 넘으면 계획 조건 조정 검토',
     planstock: '계획재 운영안(TF) 187개 사양의 재고·생산·판매 진도와 월말 재고 예측. \'조치 필요\'부터 보고 담당자별로 확인',
     report: '주 1회 임원 보고 양식. 인쇄/PDF 로 그대로 씀',
-    procure: '필요 시점별로 제때 들어올 업체를 판단하고 구매 요청서를 만듦. 입고예정(기발주)을 먼저 넣어야 정확',
-    material: '업체 × 월 입고 필요량과 발주 마감(27년 3월까지) — 큰 그림. 주 단위 판단은 발주 검토에서',
+    procure: '발주 캘린더로 날짜별 발주 마감·입고 필요를 보고, 판단 목록에서 업체·수량을 정해 구매 요청서를 만듦. 기발주는 입고예정 탭에 넣어야 정확',
     decisions: '회의·보고에서 정한 것과 할 일을 남기고 기한·상태를 추적(공유 설정 후 모두가 같은 기록)',
     health: '숫자가 언제 기준인지 확인. 일일 자료가 2일 넘게 멈추면 사내 PC 자동 실행 점검',
     docs: '계획 조건식·용어 정의·사용법·요청 메일 모음',
@@ -184,4 +183,9 @@
 
   const boot = () => { build(); fresh(); watchExport(); };
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot); else boot();
+
+  /* 표 줄 번호(--ri) — 줄 나타나기 애니메이션 순서. 새로 그려지는 표도 자동 */
+  function tagRows(root) { (root || document).querySelectorAll('table tbody').forEach((tb) => { if (tb.dataset.ri) return; tb.dataset.ri = '1'; [...tb.rows].forEach((r, i) => r.style.setProperty('--ri', i)); }); }
+  const mo = new MutationObserver((ms) => { for (const m of ms) for (const n of m.addedNodes) if (n.nodeType === 1) tagRows(n.tagName === 'TBODY' ? n.parentNode : n); });
+  document.addEventListener('DOMContentLoaded', () => { tagRows(); mo.observe(document.body, { childList: true, subtree: true }); });
 })();

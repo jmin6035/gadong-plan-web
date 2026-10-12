@@ -448,8 +448,83 @@ html .bar-cell i { top: auto; bottom: 5px; height: 4px; transform: none; opacity
 /* ── 표 서식 통일: 모든 표 가운데 맞춤 · 세로 가운데 · 칸 안 줄바꿈 없음(넘치면 표 가로 스크롤).
       예외 = 문장형 설명 칸(이유·기준 설명)만 왼쪽 맞춤·줄바꿈 */
 table th, table td { text-align: center !important; vertical-align: middle !important; white-space: nowrap !important; }
-table th br, table td br { display: none; }
 table td.why, table tr.why-row td, table td.wrap, table td.para, .tip td, .tipbox td { text-align: left !important; white-space: normal !important; }
 .scroll, .gtable-wrap { overflow-x: auto; }
 table td .why, table td:has(> .why), table td .why * { white-space: normal !important; }
 table td:has(> .why) .why { text-align: center; }
+
+/* ── 공통 월 캘린더(ui/cal.js) */
+.calbar { display: flex; flex-wrap: wrap; gap: 10px 16px; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+.cal-lg { display: flex; flex-wrap: wrap; gap: 6px; }
+.cal-lg .lg { display: inline-flex; align-items: center; gap: 7px; border: 1px solid var(--line); background: var(--surface); color: var(--ink); border-radius: 999px; padding: 6px 12px; font: inherit; font-size: 14px; cursor: pointer; transition: opacity .2s, background .2s; }
+.cal-lg .lg i { width: 11px; height: 11px; border-radius: 3px; background: var(--kc); }
+.cal-lg .lg small { color: var(--ink-3); font-variant-numeric: tabular-nums; }
+.cal-lg .lg.off { opacity: .4; text-decoration: line-through; }
+.cal-note { margin: 0 0 10px; }
+.calg { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 6px; }
+.calh { text-align: center; font-size: 14px; font-weight: 700; color: var(--ink-2); padding: 6px 0; }
+.calh.we { color: var(--bad); }
+.calc { position: relative; min-height: 118px; text-align: left; display: flex; flex-direction: column; gap: 4px; padding: 8px 8px 10px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); font: inherit; color: var(--ink); cursor: pointer;
+  animation: calIn .45s var(--ease) backwards; animation-delay: calc(var(--ci) * 12ms); transition: border-color .2s, box-shadow .2s, transform .2s; }
+.calc.empty { background: transparent; border-style: dashed; border-color: color-mix(in srgb, var(--line) 50%, transparent); cursor: default; animation: none; }
+.calc.past { background: color-mix(in srgb, var(--surface) 70%, var(--grid)); }
+.calc.past .chip { opacity: .7; }
+.calc:hover { border-color: var(--brand-2); transform: translateY(-1px); box-shadow: var(--shadow-up); }
+.calc.today { border: 2px solid var(--brand-2); }
+.calc.sel { box-shadow: 0 0 0 3px color-mix(in srgb, var(--brand-2) 35%, transparent); border-color: var(--brand-2); }
+.calc .dn { font-size: 15px; font-weight: 800; color: var(--ink-2); font-variant-numeric: tabular-nums; }
+.calc .dn.we { color: var(--bad); }
+.calc.today .dn::after { content: '오늘'; margin-left: 6px; font-size: 11.5px; font-weight: 700; color: #fff; background: var(--brand-2); border-radius: 4px; padding: 1px 5px; vertical-align: 1px; }
+.calc .chip { display: block; font-size: 12.5px; line-height: 1.35; font-weight: 600; padding: 3px 7px; border-radius: 6px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  color: var(--ink); background: color-mix(in srgb, var(--kc) 15%, var(--surface)); border-left: 3px solid var(--kc); animation: chipIn .35s var(--ease) backwards; animation-delay: calc(var(--ci) * 12ms + 120ms); }
+.calc .chip.bad { background: color-mix(in srgb, var(--kc) 30%, var(--surface)); font-weight: 800; }
+.calc .chip.warn { background: color-mix(in srgb, var(--kc) 22%, var(--surface)); }
+.calc .more { font-size: 12px; color: var(--ink-3); font-weight: 600; padding-left: 4px; }
+.cal-detail { margin-top: 16px; }
+.cal-detail:empty { display: none; }
+.cal-detail h3 { margin: 0 0 10px; font-size: 19px; } .cal-detail h3 small { color: var(--ink-3); font-weight: 600; margin-left: 6px; font-size: 14px; }
+.cal-detail.in { animation: calIn .35s var(--ease) both; }
+.cal-detail .grp { margin: 14px 0 6px; font-size: 15px; font-weight: 800; display: flex; align-items: center; gap: 8px; }
+.cal-detail .grp i { width: 12px; height: 12px; border-radius: 3px; background: var(--kc); }
+@keyframes calIn { from { opacity: 0; transform: translateY(6px); } }
+@keyframes chipIn { from { opacity: 0; transform: translateX(-4px); } }
+@media (max-width: 900px) { .calc { min-height: 74px; padding: 5px; } .calc .chip { font-size: 11px; padding: 2px 4px; } .calc .chip:nth-of-type(n+3) { display: none; } }
+
+/* ══ 디자인 체계(2026-10-12 정리) — 모든 화면 공통. 위의 개별 규칙보다 우선 ══
+   글자 크기 6단계만: 13 설명 · 15 본문·표 · 14 표 머리 · 17 소제목 · 20 카드 제목 · 28 화면 제목 (+ 지표 숫자 34)
+   흐린 글자(--ink-3)는 흰 바탕 대비 4.5:1 이상으로 진하게 */
+:root { --ink-3: #66717e; }
+:root:not([data-theme="light"]) { }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --ink-3: #9aa6b2; } }
+:root[data-theme="dark"] { --ink-3: #9aa6b2; }
+body { font-size: 15px; line-height: 1.6; letter-spacing: -0.1px; }
+.shell-head h1 { font-size: 28px; }
+.shell-head .sub { font-size: 15px; }
+.card > h2 { font-size: 20px; }
+.card > h2 small { font-size: 13px; }
+.card h3, .cal-detail h3 { font-size: 17px; }
+.small, .hint, p.hint, footer.foot, .legend, .card > h2 .unit, .docmeta { font-size: 13px; }
+.kpi .l { font-size: 14px; } .kpi .v { font-size: 34px; } .kpi .b { font-size: 13px; }
+table.t, table.data, table.dt { font-size: 15px; }
+table.t th, table.data th, table.dt th { font-size: 14px; }
+table td small, table td .muted { font-size: 13px; }
+.tabs button, .seg button { font-size: 15px; }
+.tag, .pill, .st { font-size: 13px; }
+/* 옛 화면(가동 현황·조건 분석)의 글자도 같은 체계로 */
+body.dash h2 { font-size: 20px; } body.dash .hint { font-size: 13px; } body.dash table.data td, body.dash table.data th { font-size: 15px; padding: 9px 10px; }
+body.dash .line-card dl { font-size: 15px; } body.dash .line-card h3 { font-size: 17px; }
+body.dash .kpi b { font-size: 34px; } body.dash .kpi .kl { font-size: 14px; } body.dash .kpi .ks { font-size: 13px; }
+/* 표 줄 나타나기(줄마다 조금씩 늦게) — 번호(--ri)는 ui/shell.js 가 붙임 */
+@keyframes rowIn { from { opacity: 0; transform: translateY(4px); } }
+table tbody tr { animation: rowIn .38s var(--ease) backwards; animation-delay: calc(min(var(--ri, 0), 24) * 16ms); }
+table.gtable tbody tr { animation-duration: .3s; }
+/* 막대 자라기 — 모든 가로 막대 */
+@keyframes growL { from { transform: scaleX(0); } }
+.load-fill, .bul-bar, .hb > i, .hb > u, .hbar i, td.pbar i, .kpi .meter i { transform-origin: left center; animation: growL .9s var(--ease) both; animation-delay: calc(var(--i, 0) * 50ms + 120ms); }
+.bar-cell i { transform-origin: left center; animation: growBC .9s var(--ease) both .15s; }
+@keyframes growBC { from { transform: translateY(-50%) scaleX(0); } to { transform: translateY(-50%) scaleX(1); } }
+@media print { table tbody tr, .load-fill, .bul-bar, .calc, .chip { animation: none !important; } }
+[hidden] { display: none !important; }                       /* display 규칙이 hidden 을 덮지 않게 */
+.card:has(> .xbtn) > .head-row { padding-right: 92px; }                  /* 오른쪽 위 '엑셀' 단추와 겹치지 않게 */
+
+.shell-nav a { font-size: 15px; }
