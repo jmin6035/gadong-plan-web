@@ -378,10 +378,17 @@ table.t tbody tr:nth-child(22), table.mini tbody tr:nth-child(22), table.gt tbod
 table.t tbody tr:nth-child(23), table.mini tbody tr:nth-child(23), table.gt tbody tr:nth-child(23) { animation-delay: 805ms; }
 table.t tbody tr:nth-child(24), table.mini tbody tr:nth-child(24), table.gt tbody tr:nth-child(24) { animation-delay: 840ms; }
 table.t tbody tr:nth-child(n+25) { animation-delay: 850ms; }
-svg path[fill="none"], svg polyline.ln { stroke-dasharray: 4000; stroke-dashoffset: 4000; animation: draw 1.6s var(--ease) forwards .15s; }
+svg path[fill="none"], svg polyline.ln { transform-box: fill-box; transform-origin: 50% 100%; animation: draw 1.6s var(--ease) backwards .15s; }   /* 처음 상태는 keyframes 에만 → 애니메이션 끔(동작 줄이기) 설정이어도 선이 보임 */
 svg rect.bar, .chart svg rect:not(.hb):not(.hit):not([fill="none"]) { transform-box: fill-box; transform-origin: 50% 100%; animation: growy .8s var(--ease) both .1s; }
 .chart svg circle, svg.cv circle { transform-box: fill-box; transform-origin: center; animation: popin .45s var(--ease) both 1s; }
-@keyframes draw { to { stroke-dashoffset: 0; } }
+@keyframes draw { from { stroke-dasharray: 4000; stroke-dashoffset: 4000; transform: scaleY(.08); opacity: .3; } 45% { opacity: 1; } to { stroke-dasharray: 4000; stroke-dashoffset: 0; transform: none; } }   /* 바닥에서 솟아오르며 그려짐 */
+/* 진도 도넛(.ring): 처음 상태는 keyframes 에만 둠 → 동작 줄이기 설정이어도 최종 모양이 보임 */
+svg.ring { display: block; overflow: visible; }
+svg.ring circle { fill: none; stroke-width: 4.2; }
+svg.ring .rt { stroke: var(--grid); }
+svg.ring .arc { stroke: var(--brand-2); stroke-linecap: round; transform: rotate(-90deg); transform-origin: 50% 50%; transform-box: fill-box; animation: sweep 1.3s var(--ease) backwards .25s; }
+svg.ring text { font-size: 10px; font-weight: 800; text-anchor: middle; fill: var(--ink); font-variant-numeric: tabular-nums; }
+@keyframes sweep { from { stroke-dasharray: 0 100; } }
 /* 가동표(가동 현황): 오늘 = 연한 열 + 머리글 강조, M/C = 열 전체 같은 연한 노랑 + 글자 진하게 */
 html .gtable td.mc, html .gtable tr.r-hrs td.mc { background: color-mix(in srgb, #f2b705 24%, var(--surface)); color: var(--ink); }
 html .gtable td.mclab { color: #8a5a00; font-weight: 900; letter-spacing: 0; }

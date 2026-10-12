@@ -60,6 +60,14 @@ table.dt td.r, table.dt th.r { text-align: right; }
 .chartrow .card { margin: 0; }
 svg.tr { width: 100%; height: 190px; display: block; }
 svg.tr text { font-size: 11px; fill: var(--ink-3); }
+table.sc td.est { font-style: italic; opacity: .75; }
+table.sc td.fm { box-shadow: inset 0 0 0 3px #5b4bb7; font-weight: 800; }
+table.sc td.fu { box-shadow: inset 0 0 0 3px #0a9e8f; font-weight: 800; }
+table.fl tbody tr { cursor: pointer; } table.fl tbody tr:hover { background: var(--hover); } table.fl tr.on td { background: var(--tint-2); font-weight: 700; }
+.pre { display: inline-block; font-size: 11px; font-weight: 700; color: #8a5a00; background: color-mix(in srgb, #f2b705 22%, var(--surface)); border-radius: 4px; padding: 0 5px; margin-left: 4px; }
+.fto { font-size: 12px; color: #0a7d71; font-weight: 700; margin-top: 2px; }
+.fin { display: flex; flex-direction: column; gap: 2px; margin: 0 0 6px; font-size: 12.5px; color: #5b4bb7; font-weight: 700; }
+.fl-r { cursor: pointer; } .fin .fl-r:hover, tr.fl-r:hover td { text-decoration: underline; }
 @media (max-width: 900px) { .chartrow { grid-template-columns: 1fr; } }
 </style>
 </head>
@@ -78,6 +86,7 @@ svg.tr text { font-size: 11px; fill: var(--ink-3); }
       <div class="calw" id="s-calw"><table class="sc" id="s-cal"></table></div>
       <div class="lg"><span><i style="background:color-mix(in srgb,#1660c9 25%,#fff)"></i>AL</span><span><i style="background:color-mix(in srgb,#e8590c 25%,#fff)"></i>AZ</span><span><i style="background:color-mix(in srgb,#0a9e8f 25%,#fff)"></i>MAC</span><span><i style="background:#fff;box-shadow:inset 0 -3px 0 #c98b00"></i>M/C</span><span><i style="background:var(--warn-bg)"></i>재고 부족 주의(3일분 미만)</span><span><i style="background:var(--bad-bg)"></i>바닥·목표 130% 초과</span><span style="color:var(--gc-m);font-weight:800">발주 = 그날 내야 할 양</span><span style="color:var(--good);font-weight:700">입고 = 그날 들어와야 할 양</span></div>
     </section>
+    <section class="card" id="s-flow"></section>
     <div class="det" id="s-det"></div>
     <div class="chartrow" style="margin-top:12px"><section class="card" id="s-ch1"></section><section class="card" id="s-ch2"></section></div>
     <details class="basis" style="margin-top:10px;font-size:12.5px;color:var(--ink-3)"><summary style="cursor:pointer;font-weight:700;color:var(--ink-2)">숫자 기준</summary>
@@ -85,7 +94,9 @@ svg.tr text { font-size: 11px; fill: var(--ink-3); }
         <li>가동·자가재·구매 소재·제품 재고 = 확정 통합 계획 V1(10/7 계산, 실적 ~10/6) 기준. 매일 재계획과의 연결은 다음 단계.</li>
         <li>자가재 = 도금이 만든 컬러 소재(AZ·MAC·AL). 재고 = 전날 재고 + 도금 생산 − 컬러 사용(컬러 생산일 − 5일에 필요한 것으로 계산).</li>
         <li>구매 소재(F/H = 도금 소재, 컬러 소재 = 컬러가 직접 사는 소재): 재고를 목표(F/H 16,000t·컬러 15,500t) 이상으로 지키도록 '필요 입고'를 계산하고, 리드타임(F/H 32일·컬러 45일)만큼 앞당긴 날을 '발주'로 표시. 실제 발주·입고(MES)는 연결 예정.</li>
-        <li>제품 재고 = 그룹별 주 단위(그 주 첫날 기준) 추정, 목표 = 통합 속보 기준.</li>
+        <li>제품 재고 = 그룹별 그날 끝 추정(도금 = 판매계획 품목이 납기일에 한꺼번에 나간다고 봄 → 납기일에 계단처럼 줄어듦. MES 출하 실적 분포로 바꿀 예정), 목표 = 통합 속보 기준.</li>
+        <li>12월 말 기울임 숫자 = 계획 기간 밖(1월)을 추정한 값. 구매 소재 발주는 1월 이후 사용을 4분기 하루 평균으로, 자가재 12/27~31 사용은 12월 하루 평균으로 가정.</li>
+        <li>자가재 흐름 = 반순(상·중·하순) 자가재 품목별 도금 생산일·라인과, 그 반순에 소재가 필요한 컬러 생산일·라인(필요일 = 컬러 생산일 − 5일). 실적일(~10/6)의 컬러 라인은 그날 자가재 소재 실적 비중으로 나눔.</li>
       </ul></details>
   </div>
 </main>

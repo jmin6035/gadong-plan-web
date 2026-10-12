@@ -46,7 +46,12 @@
   // KPI 한 칸: 이름 · 큰 숫자 · 한 줄 보조 · 막대(진도) · 상태 점
   function K(dom, tone, l, v, unit, sub, bar, href, ck) {
     return `<a class="k" data-dom="${dom}" href="${href || '#'}"><span class="dot ${tone}"></span><div class="l">${l}</div>
-      <div class="v"><b data-count="${v}" data-ck="${ck}">0</b><small>${unit}</small></div><div class="s">${sub}</div>${bar != null ? `<div class="mb"><i style="width:${Math.max(0, Math.min(100, bar))}%"></i></div>` : ''}</a>`;
+      <div class="v"><b data-count="${v}" data-ck="${ck}">0</b><small>${unit}</small></div><div class="s">${sub}</div>${bar != null ? `<div class="mb"><i style="width:${Math.max(0, Math.min(100, bar))}%"></i></div>${ring(bar)}` : ''}</a>`;
+  }
+  // 진도 도넛(월차 대비 누계 %): 시계 방향으로 돌며 채워짐 — 공통 CSS .ring
+  function ring(p) {
+    const v = Math.max(0, Math.min(100, p || 0));
+    return `<svg class="ring" viewBox="0 0 36 36" aria-hidden="true"><circle class="rt" cx="18" cy="18" r="15.5"/><circle class="arc" cx="18" cy="18" r="15.5" pathLength="100" stroke-dasharray="${v.toFixed(1)} 100"/><text x="18" y="21.5">${Math.round(v)}</text></svg>`;
   }
   function kstrip(O) {
     const L = O.lines || [], sr = O.sr || {}, pl = O.plating || {}, now = pl.now || {}, q = O.procure || {};
