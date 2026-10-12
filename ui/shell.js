@@ -140,6 +140,15 @@
 
   /* 처음 보이는 카드만 차례로 떠오르게(다시 그려도 반복하지 않음) */
   const seen = new Set();
+  /* 그래프 눈금(전 화면 공통): 1·2·5 × 10^k 간격, 4~6칸 — 625·1,875·2.6k 같은 어색한 눈금이 안 나오게 */
+  UI.scale = (max, min = 0, n = 5) => {
+    const span = Math.max(1e-9, max - min), raw = span / n, p = Math.pow(10, Math.floor(Math.log10(raw))), m = raw / p;
+    const step = (m <= 1 ? 1 : m <= 2 ? 2 : m <= 5 ? 5 : 10) * p;
+    const lo = Math.floor(min / step) * step, hi = Math.ceil(max / step) * step, ticks = [];
+    for (let v = lo; v <= hi + step / 2; v += step) ticks.push(Math.round(v / step) * step);
+    return { lo, hi, step, ticks };
+  };
+  UI.tick = (v, step) => (Math.abs(v) >= 10000 && step >= 1000 ? `${+(v / 1000).toFixed(step >= 10000 ? 0 : 1)}k` : (step < 1 ? v.toFixed(step < 0.1 ? 2 : 1) : Math.round(v).toLocaleString('ko-KR')));
   UI.reveal = (root) => {
     let i = 0;
     (root || document).querySelectorAll('.card, .tile, .kpi').forEach((el) => {

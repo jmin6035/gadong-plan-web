@@ -31,13 +31,12 @@
       el.addEventListener('mouseleave', () => { tip().style.display = 'none'; });
     });
   }
-  function niceMax(v) { const p = Math.pow(10, Math.floor(Math.log10(v || 1))); const m = v / p; return (m <= 1 ? 1 : m <= 2 ? 2 : m <= 2.5 ? 2.5 : m <= 5 ? 5 : 10) * p; }
   function stackBars(data, H = 300) {
     const W = 1200, pl0 = 56, pr = 12, pt = 14, pb = 34, n = data.length, bw = (W - pl0 - pr) / n;
-    const tot = data.map((d) => L.reduce((a, l) => a + (d[l] || 0), 0)), ym = niceMax(Math.max(...tot) * 1.05);
+    const tot = data.map((d) => L.reduce((a, l) => a + (d[l] || 0), 0)), sc = UI.scale(Math.max(...tot, 1)), ym = sc.hi;
     const y = (v) => pt + (H - pt - pb) * (1 - v / ym);
     let g = '';
-    for (let k = 0; k <= 4; k++) { const v = ym * k / 4; g += `<line class="gl" x1="${pl0}" x2="${W - pr}" y1="${y(v)}" y2="${y(v)}"/><text x="${pl0 - 8}" y="${y(v) + 4}" text-anchor="end">${n0(v)}</text>`; }
+    for (const v of sc.ticks) g += `<line class="gl" x1="${pl0}" x2="${W - pr}" y1="${y(v)}" y2="${y(v)}"/><text x="${pl0 - 8}" y="${y(v) + 4}" text-anchor="end">${UI.tick(v, sc.step)}</text>`;
     data.forEach((d, i) => {
       let acc = 0; const x = pl0 + i * bw + 3, w = Math.max(2, bw - 6);
       const we = [0, 6].includes(new Date(d.d + 'T00:00:00').getDay());
@@ -47,13 +46,14 @@
     });
     return `<svg viewBox="0 0 ${W} ${H}" class="cv" role="img" aria-label="일별 ${CFG.name} 생산">${g}</svg>`;
   }
-  function lines(xs, series, H = 300, fmt = n0) {
-    const W = 1200, pl0 = 56, pr = 110, pt = 14, pb = 34;
-    const all = series.flatMap((s) => s.v.filter((v) => v != null)), ym = niceMax(Math.max(...all) * 1.08);
+  function lines(xs, series, H = 300, fmt = n0, W = 1200) {
+    const pl0 = 56, pr = 104, pt = 14, pb = 34;
+    const all = series.flatMap((s) => s.v.filter((v) => v != null)), sc = UI.scale(Math.max(...all, 1)), ym = sc.hi;
     const x = (i) => pl0 + (W - pl0 - pr) * (xs.length > 1 ? i / (xs.length - 1) : 0.5), y = (v) => pt + (H - pt - pb) * (1 - v / ym);
     let g = '';
-    for (let k = 0; k <= 4; k++) { const v = ym * k / 4; g += `<line class="gl" x1="${pl0}" x2="${W - pr}" y1="${y(v)}" y2="${y(v)}"/><text x="${pl0 - 8}" y="${y(v) + 4}" text-anchor="end">${fmt(v)}</text>`; }
-    xs.forEach((d, i) => { if (i % 2 === 0) g += `<text x="${x(i)}" y="${H - 12}" text-anchor="middle">${md(d)}</text>`; });
+    for (const v of sc.ticks) g += `<line class="gl" x1="${pl0}" x2="${W - pr}" y1="${y(v)}" y2="${y(v)}"/><text x="${pl0 - 8}" y="${y(v) + 4}" text-anchor="end">${UI.tick(v, sc.step)}</text>`;
+    const every = Math.ceil(xs.length / (W / 110));
+    xs.forEach((d, i) => { if (i % every === 0) g += `<text x="${x(i)}" y="${H - 12}" text-anchor="middle">${md(d)}</text>`; });
     const ends = series.map((s, j) => { const k = s.v.length - 1; return { j, y: s.v[k] == null ? null : y(s.v[k]) }; }).filter((e) => e.y != null).sort((a, b) => a.y - b.y);
     for (let k = 1; k < ends.length; k++) if (ends[k].y - ends[k - 1].y < 19) ends[k].y = ends[k - 1].y + 19;
     const ly = Object.fromEntries(ends.map((e) => [e.j, e.y]));
@@ -100,8 +100,8 @@
   }
   function weekly() {
     const xs = O.weekly.map((w) => w.w);
-    return `${card('ca-wk', '주별 생산량', '13주 · 라인별', '단위: t/일', legend() + `<div class="chart">${lines(xs, L.map((l, i) => ({ n: l, c: COL[i], v: O.weekly.map((w) => w[l].tpd) })), 300)}</div>`)}
-      ${card('ca-tph', '주별 생산속도', '정지 포함', '단위: t/hr', legend() + `<div class="chart">${lines(xs, L.map((l, i) => ({ n: l, c: COL[i], v: O.weekly.map((w) => w[l].tph) })), 300, n1)}</div>`)}`;
+    return `<div class="grid2 rowc">${card('ca-wk', '주별 생산량', `${xs.length}주 · 라인별`, '단위: t/일', legend() + `<div class="chart">${lines(xs, L.map((l, i) => ({ n: l, c: COL[i], v: O.weekly.map((w) => w[l].tpd) })), 360, n0, 660)}</div>`)}
+      ${card('ca-tph', '주별 생산속도', '정지 포함', '단위: t/hr', legend() + `<div class="chart">${lines(xs, L.map((l, i) => ({ n: l, c: COL[i], v: O.weekly.map((w) => w[l].tph) })), 360, n1, 660)}</div>`)}</div>`;
   }
   function products() {
     const P = O.products[pl] || [];
@@ -113,7 +113,7 @@
     const S = O.stops, C = S.cats;
     const rows = L.map((l) => `<tr><td class="l nm">${l}</td>${C.map((c) => `<td>${n1(S.w0[l][c])} → <b>${n1(S.w1[l][c])}</b></td>`).join('')}<td>${n1(C.reduce((a, c) => a + S.w0[l][c], 0))} → <b>${n1(C.reduce((a, c) => a + S.w1[l][c], 0))}</b></td></tr>`).join('');
     return card('ca-stop', '휴지 구성', '12주 평균 → 지난주 · 하루(달력일) 평균', '단위: 시간/일', `<div class="scroll"><table class="t big"><thead><tr><th class="l">라인</th>${C.map((c) => `<th>${c}</th>`).join('')}<th>합계</th></tr></thead><tbody>${rows}</tbody></table></div>
-      <p class="small">${CFG.stopNote}</p>`) + mcCard();
+      <p class="small">${CFG.stopNote}</p>`);
   }
   function mcCard() {                                              // 도금만: 강종 전환(M/C) 실적
     if (!O.mc || !O.mc.length) return '';
@@ -128,7 +128,7 @@
       <div class="scroll"><table class="t big"><thead><tr><th class="l">월</th>${D.names.map((k) => `<th>${esc(nm(k))}</th>`).join('')}</tr></thead><tbody>${D.rows.map((m) => `<tr><td class="l">${monLabel(m.m)}</td>${D.names.map((k) => `<td>${n0(m[k])}</td>`).join('')}</tr>`).join('')}</tbody></table></div></div>`);
   }
   function render() {
-    $('ca-main').innerHTML = `<section class="card" id="ca-kpi"><h2>핵심 <small>실적 ~${md(O.asOf)} · MES 원자료 재계산</small><span class="unit">단위: 톤</span></h2>${kpis()}</section>` + lineTable() + daily() + weekly() + products() + stops() + monthly();
+    $('ca-main').innerHTML = `<section class="card" id="ca-kpi"><h2>핵심 <small>실적 ~${md(O.asOf)} · MES 원자료 재계산</small><span class="unit">단위: 톤</span></h2>${kpis()}</section>` + lineTable() + daily() + weekly() + `<div class="grid2 rowc">${products()}${stops()}</div>` + (PLANT === 'G' ? mcCard() : '') + monthly();
     $('ca-meta').innerHTML = `<span><b>실적</b>~${O.asOf}</span><span><b>지난주</b>${md(O.w1)}~</span><span><b>비교</b>${md(O.w0[0])}~${md(O.w0[1])} 주 (12주)</span><span><b>계산</b>${String(O.built).replace('T', ' ')}</span>`;
     UI.reveal($('ca-main')); UI.count($('ca-main')); bindTip($('ca-main'));
     render2();
