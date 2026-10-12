@@ -154,12 +154,27 @@
       ${(now.lockNotes || []).map((n) => `<li>재계획: ${esc(n)}</li>`).join('')}${(now.shortBy || []).length ? `<li>결품 예상: ${now.shortBy.map(esc).join(', ')}</li>` : ''}</ul>`;
   }
 
+  // 작업지시(MES) vs 계획: 도금 = 대기 코일 강종 ↔ 계획 다음 3일 강종, 컬러 = 라인별 앞으로 7일 예정 톤
+  function woCard(O) {
+    const W = O.wo; if (!W) return '';
+    const G = (W.plating || {}).lines || [], C = W.color;
+    const ymd = (s) => (s && s.length === 8 ? `${+s.slice(4, 6)}/${+s.slice(6)}` : md(s));
+    const gl = G.filter((x) => UI.inScope('G')).map((x) => `<div class="wo-l ${x.mismatch.length ? 'bad' : ''}"><b>${x.line}</b>
+      <span>대기 ${x.coils}코일 · ${x.byAlloy.map((a) => `${esc(a[0])} ${a[1]}코일(약 ${n0(a[2])}t)`).join(', ') || '없음'}</span>
+      <span class="small">계획 ${x.plan.map((p) => `${md(p[0])} ${esc(p[1] || '-')}`).join(' → ')}</span>
+      <em class="${x.mismatch.length ? 'no' : 'ok'}">${x.mismatch.length ? `불일치: ${esc(x.mismatch.join('·'))}` : '계획과 맞음'}</em></div>`).join('');
+    const cl = C && UI.inScope('C') ? `<table class="gt wo-c"><thead><tr><th class="l">컬러 예정(t)</th>${C.days.map((d, i) => `<th>${md(d)}</th>`).join('')}<th>확정</th><th>예정 끝</th></tr></thead><tbody>${C.lines.map((x) => `<tr><td class="l">${x.line}</td>${x.days.map((v) => `<td>${v ? n0(v) : '·'}</td>`).join('')}<td>${x.confRate == null ? '-' : Math.round(x.confRate * 100) + '%'}</td><td>${x.until ? md(x.until) : '-'}</td></tr>`).join('')}</tbody></table>` : '';
+    if (!gl && !cl) return '';
+    return `<h2>현장 작업지시 vs 계획 <small>MES 작업지시 ${ymd((W.plating || {}).asOf)} 기준</small></h2><div class="wo-g">${gl}</div>${cl}
+      <p class="small">도금: 미완료 지시 코일의 강종(생산번호로 판별, 톤은 최근 코일 평균으로 추정)이 계획의 다음 3일 강종 안에 있으면 '맞음'. 도금 지시는 보통 1~2일치만 나옴. 컬러 = 작업 예정일별 지시 예정 중량 — 첫날 값이 하루 능력보다 큰 것(예: 1CCL)은 밀린 지시가 그날로 잡힌 것으로 보여 확인 중.</p>`;
+  }
   function render(O) {
     lastO = O;
     $('h-meta').innerHTML = `실적 <b>~${md(O.asOf)}</b> · 계획 <b>${O.planMonth ? '기준 재수립·매일 재계획' : esc(O.rec)}</b> · 계산 ${esc(String(O.built).replace('T', ' ').slice(5, 16))}`;
     $('h-k').innerHTML = kstrip(O);
     $('h-lines').innerHTML = lines(O);
     const gh = grp(O); $('h-grp').innerHTML = gh; $('h-grp').hidden = !gh;
+    const wh = woCard(O); $('h-wo').innerHTML = wh; $('h-wo').hidden = !wh;
     $('h-ex').innerHTML = exCard(O); $('h-ex').hidden = false;
     $('h-load').innerHTML = loadCard(O); $('h-load').hidden = false;
     $('h-color').innerHTML = colorCard(O); $('h-color').hidden = false;

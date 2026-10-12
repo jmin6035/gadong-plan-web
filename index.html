@@ -53,6 +53,12 @@
 /* 2단 */
 .row2 { display: grid; grid-template-columns: minmax(0, 1fr); gap: 12px; }          /* 화면 줄 규칙: KPI 띠 · 전체 폭 · 반반 세 가지만 */
 .row3 { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; align-items: stretch; }
+.wo-g { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; margin-bottom: 10px; }
+.wo-l { display: grid; gap: 3px; border: 1px solid var(--line); border-left: 4px solid var(--good); border-radius: 0 8px 8px 0; padding: 8px 12px; font-size: 13.5px; }
+.wo-l.bad { border-left-color: var(--warn); background: var(--warn-bg); }
+.wo-l em { font-style: normal; font-weight: 800; font-size: 12.5px; } .wo-l em.ok { color: var(--good); } .wo-l em.no { color: var(--warn); }
+table.wo-c th small { display: block; font-weight: 500; }
+@media (max-width: 980px) { .wo-g { grid-template-columns: 1fr; } }
 #h-ex .exl { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 2px 18px; }
 @media (max-width: 980px) { #h-ex .exl { grid-template-columns: 1fr; } }
 /* 그룹 표 */
@@ -125,7 +131,7 @@ table.mini td.r { text-align: right; font-variant-numeric: tabular-nums; }
   <div class="dash" id="h-dash">
     <div class="kstrip" id="h-k"><div class="skel" style="grid-column:1/-1"><i style="width:30%"></i><i></i></div></div>
     <div class="lines" id="h-lines"></div>
-    <div class="row2"><section class="card" id="h-ex" hidden></section><section class="card" id="h-grp" hidden></section></div>
+    <div class="row2"><section class="card" id="h-ex" hidden></section><section class="card" id="h-grp" hidden></section><section class="card" id="h-wo" hidden></section></div>
     <div class="row3"><section class="card" id="h-load" data-pl="G" hidden></section><section class="card" id="h-color" data-pl="C" hidden></section><section class="card" id="h-stock" hidden></section><section class="card" id="h-due" hidden></section></div>
     <details class="basis" id="h-basis" hidden></details>
     <section class="card" id="h-menu"><h2>메뉴</h2><div class="menu" id="h-groups"></div></section>
