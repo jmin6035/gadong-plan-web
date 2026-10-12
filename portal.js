@@ -26,122 +26,134 @@
     ['자료', [['decisions.html', 'report', '결정 기록', '누가·무엇을·언제까지 — 결정과 할 일 추적', true], ['health.html', 'help', '자료 상태', '원천 자료별 마지막 날짜·화면별 게시 시각 — 자동 실행 점검'], ['doc.html?d=glossary', 'book', '용어·정의 · 확인 대기', '숫자 정의 사전과 아직 확인 안 된 가정 목록', true], ['doc.html?d=conditions', 'book', '계획 조건식', '컬러·도금·소재 계산식과 보완할 점'], ['doc.html?d=procure_guide', 'help', '조달 판단 사용법', '사용 순서 10단계와 계산 조건'], ['doc.html?d=requests', 'mail', '협조 요청 메일', '전산·구매·판매·생산 요청 사항']]],
   ];
 
-  $('h-groups').innerHTML = GROUPS.map(([g, L]) => `<div class="group"><h3>${g}</h3>${L.map(([u, ic, t, d, nw, only]) => `<a class="tile" href="${u}" data-rk="t-${u}"${only ? ` data-only="${only}"` : ''}><span class="ic">${IC[ic]}</span><b>${t}${nw ? '<em class="new">NEW</em>' : ''}</b><span>${d}</span>${only ? `<em class="only">${only === 'G' ? '도금' : '컬러'} 전용</em>` : ''}</a>`).join('')}</div>`).join('');
-  UI.reveal(document);
+  $('h-groups').innerHTML = GROUPS.map(([g, L]) => `<div><h3>${g}</h3>${L.map(([u, ic, t, d, nw, only]) => `<a href="${u}" title="${esc(d)}"${only ? ` data-only="${only}"` : ''}>${IC[ic]}${t}${only ? `<em>${only === 'G' ? '도금' : '컬러'}</em>` : ''}</a>`).join('')}</div>`).join('');
 
-  function kpi(tone, l, valHtml, b, href, ck) { return `<div class="kpi tone-${tone}" data-rk="k-${ck}">${href ? `<a class="go" href="${href}" aria-label="${esc(l)} 자세히"></a>` : ''}<div class="l">${l}</div><div class="v">${valHtml}</div><div class="b">${b}</div></div>`; }
-
+  const pc = (a, b) => (b > 0 ? Math.round(a / b * 100) : 0);
+  const sg = (v) => `<span class="${v < 0 ? 'neg' : 'pos'}">${v < 0 ? '−' : '+'}${n0(Math.abs(v))}</span>`;
+  const dim = (m) => new Date(+m.slice(0, 4), +m.slice(5, 7), 0).getDate();
+  const DOM = (pl) => (pl === 'G' ? 'G' : pl === 'C' ? 'C' : 'M');
   let lastO = null;
-  const scN = { all: '', G: '도금 ', C: '컬러 ' };
   const ROLES = [['all', '전체'], ['exec', '임원'], ['plan', '생산기획'], ['buy', '구매'], ['sales', '판매']];
   const RWHO = { plan: '생산기획', buy: '구매', sales: '판매' };
-  const RHINT = { all: '모든 항목', exec: '심각한 것만 · 결정 필요', plan: '가동·재계획·자료', buy: '발주 시한·기발주', sales: '재고·납기' };
   let role = 'all'; try { role = localStorage.getItem('cgl-role') || 'all'; } catch (e) { /* 무시 */ }
   function roleBar() {
     $('h-role').innerHTML = ROLES.map(([k, n]) => `<button type="button" data-r="${k}" aria-pressed="${k === role}">${n}</button>`).join('');
-    $('h-rolehint').textContent = RHINT[role];
     $('h-role').querySelectorAll('button').forEach((b) => b.addEventListener('click', () => { role = b.dataset.r; try { localStorage.setItem('cgl-role', role); } catch (e) { /* 무시 */ } roleBar(); if (lastO) render(lastO); }));
   }
   roleBar();
   const exPl = (e) => (e.area === '도금' ? 'G' : e.area === '컬러' ? 'C' : e.area === '재고' ? (/컬러/.test(e.text) ? 'C' : /도금/.test(e.text) ? 'G' : 'GC') : 'GC');
+
+  // KPI 한 칸: 이름 · 큰 숫자 · 한 줄 보조 · 막대(진도) · 상태 점
+  function K(dom, tone, l, v, unit, sub, bar, href, ck) {
+    return `<a class="k" data-dom="${dom}" href="${href || '#'}"><span class="dot ${tone}"></span><div class="l">${l}</div>
+      <div class="v"><b data-count="${v}" data-ck="${ck}">0</b><small>${unit}</small></div><div class="s">${sub}</div>${bar != null ? `<div class="mb"><i style="width:${Math.max(0, Math.min(100, bar))}%"></i></div>` : ''}</a>`;
+  }
+  function kstrip(O) {
+    const L = O.lines || [], sr = O.sr || {}, pl = O.plating || {}, now = pl.now || {}, q = O.procure || {};
+    const sum = (pl_, k) => L.filter((x) => x.pl === pl_).reduce((a, x) => a + (x[k] || 0), 0);
+    const g = { a: sum('G', 'actual'), s: sum('G', 'sched'), m: sum('G', 'month') }, c = { a: sum('C', 'actual'), s: sum('C', 'sched'), m: sum('C', 'month') };
+    const sh = (sr.ship || []).find((x) => x.name === '합계') || {};
+    const st = {}; (sr.stock || []).forEach((x) => { st[x.name] = x; });
+    const tone = (r) => (r >= 0.98 ? 'good' : r >= 0.9 ? 'warn' : 'bad');
+    const stk = (n) => { const x = st[n]; return x && x.target ? x.current / x.target : null; };
+    const cs = stk('컬러 제품'), gs = stk('도금 제품(판매재)');
+    const it = [
+      ['G', K('G', tone(g.a / g.s), '도금 생산 누계', g.a, 't', `일정 ${n0(g.s)} 대비 ${sg(g.a - g.s)} · 월차 ${n0(g.m)}`, pc(g.a, g.m), 'status.html', 'kg')],
+      ['C', K('C', tone(c.a / c.s), '컬러 생산 누계', c.a, 't', `일정 ${n0(c.s)} 대비 ${sg(c.a - c.s)} · 월차 ${n0(c.m)}`, pc(c.a, c.m), 'color_actual.html', 'kc')],
+      ['GC', K('M', tone((sh.actual || 0) / (sh.sched || 1)), '출하 누계(전체)', sh.actual || 0, 't', `일정 ${n0(sh.sched || 0)} 대비 ${sg((sh.actual || 0) - (sh.sched || 0))} · 월차 ${n0(sh.month || 0)}`, pc(sh.actual || 0, sh.month || 1), 'report.html', 'ks')],
+      ['G', K('G', now.short ? 'bad' : now.late ? 'warn' : 'good', '도금 결품 예상', now.short || 0, 't', `지연 ${n0(now.late || 0)}톤·일 · 납기 빠듯 ${pl.tightN || 0}건`, null, 'status.html', 'kx')],
+      ['GC', K('M', q.near ? 'warn' : 'good', '발주 시한 2주 안', q.near || 0, '건', q.nearTop && q.nearTop[0] ? `가장 급함 ${esc(q.nearTop[0].mat)} ${md(q.nearTop[0].deadline)}` : '-', null, 'procure.html', 'kq')],
+      ['GC', K('M', (cs || 0) > 1.3 || (gs || 0) > 1.3 ? 'bad' : 'good', '제품 재고 / 목표', Math.round(((cs || 0) + (gs || 0)) / ((cs ? 1 : 0) + (gs ? 1 : 0) || 1) * 100), '%', `컬러 ${cs ? Math.round(cs * 100) + '%' : '-'} · 도금 ${gs ? Math.round(gs * 100) + '%' : '-'}`, null, 'report.html', 'kr')],
+    ];
+    return it.filter(([p]) => UI.inScope(p)).map((x) => x[1]).join('');
+  }
+  // 라인 타일: 월차·누계·일정 대비 + 14일 추이(선이 그려지는 애니메이션) + 다음 전환
+  function spark(days) {
+    const v = days.map((d) => d[1]), mx = Math.max(...v, 1), W = 140, H = 34, n = v.length;
+    const xy = v.map((y, i) => [i * W / (n - 1), H - 3 - y / mx * (H - 6)]);
+    const li = 'M' + xy.map(([x, y]) => `${x.toFixed(1)},${y.toFixed(1)}`).join(' L');
+    return `<svg class="sp" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" aria-hidden="true"><path class="ar" d="${li} L${W},${H} L0,${H} Z"/><path class="li" d="${li}"/></svg>`;
+  }
+  function lines(O) {
+    return (O.lines || []).filter((x) => UI.inScope(x.pl)).map((x) => {
+      const r = x.sched ? x.actual / x.sched : null, cls = r == null ? '' : r >= 0.98 ? 'good' : r >= 0.9 ? 'warn' : 'bad';
+      const t = x.days.map((d) => `${md(d[0])} ${n0(d[1])}t`).join(' · ');
+      return `<div class="ln" data-dom="${x.pl}" title="최근 14일: ${t}"><div class="hd"><b>${x.line}</b>${x.fam ? `<span class="fam">${esc(x.fam)}</span>` : ''}<span class="pc ${cls}">${r == null ? '-' : Math.round(r * 100) + '%'}</span></div>
+        <div class="nums"><b>${x.actual != null ? n0(x.actual) : '-'}</b> / 월차 ${x.month != null ? n0(x.month) : '-'}t · 일정 ${x.sched != null ? n0(x.sched) : '-'}</div>
+        ${x.month ? `<div class="pb"><i style="width:${Math.min(100, x.actual / x.month * 100)}%"></i><em style="left:${Math.min(100, x.sched / x.month * 100)}%"></em></div>` : ''}
+        ${spark(x.days)}<div class="nx">${x.next ? `다음 ${md(x.next[0])} ${esc(x.next[1])}` : `어제 ${n0(x.days[x.days.length - 1][1])}t`}</div></div>`;
+    }).join('');
+  }
+  // 마케팅 그룹 표: 생산(실적/계획·남은·하루 필요·월말 예상) · 출하(실적/월차·일정 대비)
+  function grp(O) {
+    const G = (O.groups || []).filter((g) => UI.inScope(g.pl));
+    if (!G.length) return '';
+    let i = 0;
+    const row = (g) => {
+      const P = g.prod, D = dim(P.asOf.slice(0, 7)), el = +P.asOf.slice(8, 10), rem = D - el, left = Math.max(0, P.month - P.actual);
+      const proj = P.actual + (P.after || 0), r = P.month ? proj / P.month : 1, st = left <= 0 || r >= 0.98 ? '' : r >= 0.9 ? 'warn' : 'bad';
+      const w = Math.max(P.month, proj, 1) * 1.02, S = g.ship;
+      return `<tr data-dom="${g.pl}"><td class="nm"><i class="${st}"></i>${esc(g.name.replace('(컬러 소재)', ''))}</td>
+        <td class="gbar"><div class="hb" title="실적 ${n0(P.actual)} · 남은 계획대로면 ${n0(proj)} · 월 계획 ${n0(P.month)}"><i style="width:${P.actual / w * 100}%;--i:${i}"></i><u style="left:${P.actual / w * 100}%;width:${Math.max(0, proj - P.actual) / w * 100}%"></u><em style="left:${P.month / w * 100}%"></em></div></td>
+        <td><b>${n0(P.actual)}</b><span class="mu"> / ${n0(P.month)}</span></td><td class="hide-m">${n0(left)}</td><td class="hide-m">${rem ? n0(left / rem) : '-'}</td>
+        <td>${pc(proj, P.month)}%</td>
+        <td>${S ? `<b>${n0(S.actual)}</b><span class="mu"> / ${n0(S.month)}</span>` : '<span class="mu">-</span>'}</td><td class="hide-m">${S ? sg(S.actual - S.sched) : ''}</td></tr>`.replace('--i:' + i, '--i:' + (i++));
+    };
+    const sec = (pl, t) => { const L = G.filter((g) => g.pl === pl); return L.length ? `<tr class="sec" data-dom="${pl}"><td colspan="8">${t}</td></tr>` + L.map(row).join('') : ''; };
+    const g0 = G.find((g) => g.pl === 'G'), c0 = G.find((g) => g.pl === 'C'), s0 = (G.find((g) => g.ship) || {}).ship;
+    return `<h2>마케팅 그룹별 이번 달 <small>${g0 ? `도금 ~${md(g0.prod.asOf)}` : ''}${c0 ? ` · 컬러 ~${md(c0.prod.asOf)}` : ''}${s0 ? ` · 출하 ${esc(String(s0.asOf).slice(5, 10).replace('-', '/'))} 속보` : ''}</small><span class="unit">톤</span></h2>
+      <div class="scroll"><table class="gt"><thead><tr><th class="l">그룹</th><th class="l">생산 진도 <span style="font-weight:400">(줄무늬 = 남은 계획, 선 = 월 계획)</span></th><th>실적 / 계획</th><th class="hide-m">남은</th><th class="hide-m">하루 필요</th><th>월말 예상</th><th>출하 / 월차</th><th class="hide-m">일정 대비</th></tr></thead>
+      <tbody>${sec('G', '도금')}${sec('C', '컬러')}</tbody></table></div>`;
+  }
   function exCard(O) {
     let E = (O.exceptions || []).filter((e) => UI.inScope(exPl(e)));
     if (role === 'exec') E = E.filter((e) => e.lvl === 'bad').concat(E.filter((e) => e.lvl !== 'bad')).slice(0, 5);
     else if (RWHO[role]) E = E.filter((e) => String(e.who).includes(RWHO[role]) || e.area === '자료');
-    const nb = E.filter((e) => e.lvl === 'bad').length;
-    return `<h2>오늘 볼 것 <small>${E.length}건${nb ? ` · 심각 ${nb}` : ''} · ${md(O.today || O.asOf)} 아침 자동 점검</small></h2>
-      <div class="exl">${E.map((e, i) => `<a class="ex ${e.lvl}" href="${e.link}"><span class="no">${i + 1}</span><span class="ar">${esc(e.area)}</span><span>${esc(e.text)}</span><span class="who">${esc(e.who)} →</span></a>`).join('') || '<p class="lead">기준을 넘은 항목이 없습니다.</p>'}</div>
-      <p class="small" style="margin-top:10px">기준: 실적 자료 2일 이상 멈춤 · 도금 라인 이틀 연속 계획 90% 미만 · 3일 안 납기 1일 이내 생산 · 컬러 라인 지난주 −20% 이하 또는 월 진도 95% 미만 · 1순위 발주 시한 3일 안 · 재고가 목표의 70% 미만/130% 초과</p>`;
+    const nb = E.filter((e) => e.lvl === 'bad').length, N = 8;
+    return `<h2>오늘 볼 것 <small>${E.length}건${nb ? ` · 심각 ${nb}` : ''}</small></h2>
+      <div class="exl">${E.slice(0, N).map((e) => `<a class="ex ${e.lvl}" href="${e.link}" title="${esc(e.text)} — ${esc(e.who)}"><i></i><span class="ar">${esc(e.area)}</span><span class="t">${esc(e.text)}</span></a>`).join('') || '<p class="small">기준을 넘은 항목 없음</p>'}</div>
+      ${E.length > N ? `<details class="more"><summary>${E.length - N}건 더</summary><div class="exl">${E.slice(N).map((e) => `<a class="ex ${e.lvl}" href="${e.link}"><i></i><span class="ar">${esc(e.area)}</span><span class="t">${esc(e.text)}</span></a>`).join('')}</div></details>` : ''}`;
   }
-  // 마케팅 그룹별 이번 달 진도: 몇 톤 했나 · 얼마 남았나 · 하루 얼마 필요한가 · 남은 계획대로면 월말 얼마 — 문장으로
-  function grpCard(O) {
-    const G = (O.groups || []).filter((g) => UI.inScope(g.pl));
-    if (!G.length) return '';
-    const dim = (m) => new Date(+m.slice(0, 4), +m.slice(5, 7), 0).getDate();
-    const pc = (a, b) => (b > 0 ? Math.round(a / b * 100) : 0);
-    const sg = (v) => `<span class="${v < 0 ? 'neg' : 'pos'}">${v < 0 ? '−' : '+'}${n0(Math.abs(v))}t</span>`;
-    const row = (g) => {
-      const P = g.prod, m = P.asOf.slice(0, 7), D = dim(m), el = +P.asOf.slice(8, 10), rem = D - el;
-      const left = Math.max(0, P.month - P.actual), avg = el ? P.actual / el : 0, need = rem ? left / rem : 0;
-      const proj = P.actual + (P.after || 0), r = P.month > 0 ? proj / P.month : 1;   // 월말 예상 = 실적 + 남은 계획(재계획·편성) — 균등 속도 가정은 캠페인 생산과 안 맞아 쓰지 않음
-      const st = left <= 0 ? ['good', '이달 계획 달성'] : r >= 0.98 ? ['good', '계획대로면 달성'] : r >= 0.9 ? ['warn', `월말 ${pc(proj, P.month)}% 예상`] : ['bad', `월말 ${pc(proj, P.month)}% 예상`];
-      const w = Math.max(P.month, proj, 1) * 1.02;
-      const S = g.ship;
-      return `<div class="gp" data-dom="${g.pl}" data-pl="${g.pl}">
-        <div><div class="nm">${esc(g.name)}<small>${g.pl === 'G' ? '도금' : '컬러'} · 생산 ${md(P.asOf)}까지</small></div><span class="st ${st[0]}">${st[1]}</span></div>
-        <div><div class="k">생산</div>
-          <div class="big"><b>${n0(P.actual)}</b>t 했음 / ${+m.slice(5)}월 계획 ${n0(P.month)}t <span class="muted">(${pc(P.actual, P.month)}%)</span></div>
-          <div class="bar" title="실적 ${n0(P.actual)}t · 남은 계획대로면 월말 ${n0(proj)}t · 월 계획 ${n0(P.month)}t"><i style="width:${P.actual / w * 100}%"></i><u style="left:${P.actual / w * 100}%;width:${Math.max(0, proj - P.actual) / w * 100}%"></u><em style="left:${P.month / w * 100}%"></em></div>
-          <div class="ln">남은 <b>${n0(left)}t</b> → 남은 ${rem}일 동안 <b>하루 ${n0(need)}t</b> 필요 (지금까지 하루 ${n0(avg)}t)<br>${esc(P.afterSrc || '계획')}대로면 이후 ${n0(P.after || 0)}t 더 → 월말 <b>${n0(proj)}t</b> (계획의 ${pc(proj, P.month)}% ${sg(proj - P.month)})</div></div>
-        <div><div class="k">출하 <span style="font-weight:600">(판매생산속보)</span></div>${S ? `
-          <div class="big"><b>${n0(S.actual)}</b>t 출하 / 월차 ${n0(S.month)}t <span class="muted">(${pc(S.actual, S.month)}%)</span></div>
-          <div class="ln">남은 <b>${n0(Math.max(0, S.month - S.actual))}t</b> · 일정 누계 ${n0(S.sched)}t 대비 ${sg(S.actual - S.sched)}</div>` : `<div class="ln muted">${g.key === 'G자가재' ? '출하 없음 — 컬러 공장에 소재로 넘어감' : '속보에 별도 항목 없음'}</div>`}</div>
-      </div>`;
-    };
-    const P0 = G[0].prod, S0 = (G.find((g) => g.ship) || {}).ship;
-    const sec = (pl, t) => { const L = G.filter((g) => g.pl === pl); return L.length ? `<div class="gp-sec" data-dom="${pl}">${t}</div>` + L.map(row).join('') : ''; };
-    const gl = G.find((g) => g.pl === 'G'), cl = G.find((g) => g.pl === 'C');
-    return `<h2>마케팅 그룹별 이번 달 진도 <small>몇 톤 했고 · 얼마 남았고 · 하루 얼마 필요한지</small><span class="unit">단위: 톤</span></h2>
-      <div class="gp-head">${gl ? `<span>도금 생산 <b>${md(gl.prod.asOf)}</b>까지</span>` : ''}${cl ? `<span>컬러 생산 <b>${md(cl.prod.asOf)}</b>까지</span>` : ''}${S0 ? `<span>출하 <b>${esc(String(S0.asOf).slice(5, 16))}</b> 속보</span>` : ''}</div>
-      ${sec('G', '도금')}${sec('C', '컬러')}
-      <p class="gp-note">· 생산 실적 = MES 코일 무게(도금은 더미 제외), 그룹 = MES 판매그룹. 계획 = 도금 확정 ${esc(O.rec)} 일별 합, 컬러 = 통합 계획 편성(${O.colorPlanFrom ? md(O.colorPlanFrom) + '까지 실적 + 이후 편성' : ''}).
-        <br>· 하루 필요량 = 남은 양 ÷ 남은 날(달력일). 월말 예상 = 실적 + 남은 계획(도금 = 매일 재계획, 컬러 = 편성). 줄무늬 = 남은 계획분, 세로선 = 월 계획.
-        <br>· 도금은 캠페인(강종 묶음)으로 돌아 그룹마다 만드는 시기가 몰려 있음 — 하루 평균을 그대로 늘린 예측은 쓰지 않음. 재계획 정확도는 홈 '계획 정확도' 참고.
-        <br>· 날짜별 계획 누계와는 비교하지 않음 — 계획은 마감일만 지키면 부서를 어느 날 만들지가 정해지지 않아 그룹별 일자 비교는 의미가 없음.
-        <br>· 출하 = 판매생산속보 숫자 그대로(내수 송장, 수출 B/L 기준). 컬러 생산 합계는 MES 코일 합이라 속보 누계와 다를 수 있음(확인 중).</p>`;
+  function loadCard(O) {
+    const p = O.plating, mx = Math.max(...O.months.map((m, i) => p.g1[i] + p.g2[i])) * 1.04;
+    return `<h2>월별 도금 계획 <small>${O.rec}</small><span class="unit">톤</span></h2><div class="legend"><span><i style="background:var(--c1)"></i>1CGL</span><span><i style="background:var(--c2)"></i>2CGL</span></div>
+      ${O.months.map((m, i) => { const a = p.g1[i], b = p.g2[i]; return `<div class="lrow"><span>${+m.slice(5)}월</span><div class="track"><i class="seg s1" style="width:${a / mx * 100}%;--i:${i}" data-tip="${+m.slice(5)}월 1CGL ${n0(a)}t"></i><i class="seg s2" style="left:${a / mx * 100}%;width:${b / mx * 100}%;--i:${i}" data-tip="${+m.slice(5)}월 2CGL ${n0(b)}t"></i></div><span class="pct">${n0(a + b)}</span></div>`; }).join('')}`;
   }
-  function accCard(O) {
-    const A = O.acc || {}; const L = Object.keys(A);
-    if (!L.length) return '<h2>계획 정확도</h2><p class="small">이력이 아직 없습니다.</p>';
-    return `<h2>계획 정확도 <small>전날 게시 계획 vs 다음 날 실적 · 최근 ${Math.max(...L.map((l) => A[l].days))}일</small><span class="unit">단위: 톤</span></h2>
-      <div class="scroll"><table class="t acc"><thead><tr><th class="l">라인</th><th>계획</th><th>실적</th><th>편차</th><th>일평균 오차</th><th>계획 95% 미만</th></tr></thead><tbody>${L.map((l) => { const x = A[l]; return `<tr><td class="l"><b>${l}</b></td><td>${n0(x.plan)}</td><td><b>${n0(x.actual)}</b></td><td style="color:var(--${Math.abs(x.bias) < 5 ? 'good' : 'bad'});font-weight:800">${x.bias > 0 ? '+' : ''}${x.bias}%</td><td>${x.mae}%</td><td>${x.under}/${x.days}일</td></tr>
-        <tr><td></td><td colspan="5" class="l"><div class="accd">${x.last.map((r) => `<span class="${r[3] < r[2] * 0.95 ? 'lo' : ''}">${md(r[0])} ${n0(r[3])}/${n0(r[2])}</span>`).join('')}</div></td></tr>`; }).join('')}</tbody></table></div>
-      <p class="small" style="margin-top:8px">한쪽으로 계속 치우치면(편차 ±10% 이상) 재계획을 자주 하는 것보다 속도·강종 순서 같은 계획 조건을 실적으로 고쳐야 함 → <a href="analysis.html">도금 실적 분석</a>의 '반영권장'</p>`;
+  function colorCard(O) {
+    const cl = O.color.lines;
+    return `<h2>컬러 월차 편성률 <small>편성 / 월차</small></h2><div class="crow hd"><span></span>${['1CCL', '2CCL', '3CCL', '4CCL'].map((l) => `<span>${l}</span>`).join('')}</div>
+      ${O.months.map((m, i) => `<div class="crow"><span>${+m.slice(5)}월</span>${['1CCL', '2CCL', '3CCL', '4CCL'].map((l, j) => { const x = (cl[m] || {})[l] || { plan: 0, placed: 0 }; const r = x.plan ? x.placed / x.plan : 0; return `<div class="cl" title="${+m.slice(5)}월 ${l} 편성 ${n0(x.placed)} / 월차 ${n0(x.plan)}t"><i class="${r < 0.995 ? 'short' : ''}" style="width:${Math.min(100, r * 100)}%;--i:${i * 4 + j}"></i><span>${(r * 100).toFixed(r < 0.995 ? 1 : 0)}%</span></div>`; }).join('')}</div>`).join('')}`;
   }
+  function dueCard(O) {
+    const sc = UI.scope(), q = sc === 'all' ? O.procure : (O.procureBy || {})[sc] || O.procure;
+    if (!q) return '';
+    return `<h2>발주 시한 임박 <small>1순위 업체 · 2주 안</small><span class="unit">톤</span></h2>
+      <table class="mini"><tbody>${(q.nearTop || []).slice(0, 6).map((x) => `<tr><td><b>${md(x.deadline)}</b></td><td>${esc(x.mat)}</td><td class="r">${n0(x.t)}</td><td class="small">${esc(String(x.sup || '').slice(0, 10))}</td></tr>`).join('') || '<tr><td class="small">없음</td></tr>'}</tbody></table>
+      <a class="more" href="procure.html">조달 판단 →</a>`;
+  }
+  function basis(O) {
+    const now = (O.plating || {}).now || {};
+    return `<summary>숫자 기준 · 알림</summary><ul>
+      <li>생산·출하 누계, 월차, 일정 = 판매생산속보(공식). 라인 14일 추이 = MES 코일(도금 더미 제외).</li>
+      <li>그룹 실적 = MES 판매그룹. 계획 = 도금 확정 ${esc(O.rec)} 일별 합 · 컬러 편성. 월말 예상 = 실적 + 남은 계획(도금 매일 재계획).</li>
+      <li>그룹별 날짜 계획 누계는 비교하지 않음(부서 배정일은 계획 모델상 정해지지 않음). 컬러 그룹 합은 MES 코일 합이라 속보 누계와 다를 수 있음.</li>
+      ${(now.lockNotes || []).map((n) => `<li>재계획: ${esc(n)}</li>`).join('')}${(now.shortBy || []).length ? `<li>결품 예상: ${now.shortBy.map(esc).join(', ')}</li>` : ''}</ul>`;
+  }
+
   function render(O) {
     lastO = O;
-    const sc = UI.scope(), p = O.plating, r = O.roll, c = O.color, q = sc === 'all' ? O.procure : (O.procureBy || {})[sc] || O.procure;
-    const cl = c.lines, cm = O.months.map((m) => { const L = cl[m] || {}; const pl = Object.values(L).reduce((a, x) => a + x.plan, 0), pd = Object.values(L).reduce((a, x) => a + x.placed, 0); return [pl, pd]; });
-    const tot = p.g1.reduce((a, x) => a + x, 0) + p.g2.reduce((a, x) => a + x, 0);
-    const diff = r.actual - r.plan;
-    $('h-asof').textContent = `실적 기준 ${md(r.asOf)} · 계획 ${O.rec}`;
-    $('h-meta').innerHTML = `<span><b>실적</b>~${O.asOf}</span><span><b>확정 계획</b>${O.rec}</span><span><b>자료</b>MES 생산·재고, 판매계획, 소재재고</span><span><b>계산</b>${String(O.built).replace('T', ' ')}</span>`;
-    const K = [
-      ['G', kpi(p.short + p.late ? 'bad' : p.tightN ? 'warn' : 'good', '도금 납기 빠듯 (계획상 결품·지연 0)', `<b data-count="${p.tightN || 0}" data-ck="pt">0</b><small>건</small>`, `납기 2일 이내 생산 ${n0(p.tightT || 0)}t · 2CGL 하루 여유 최대 ${p.slack ? n0(p.slack['2CGL']) : '-'}분`, 'integrated.html', 'pl')],
-      ['G', kpi(diff >= 0 ? 'good' : 'warn', `도금 생산 vs 확정 ${O.rec} (~${md(r.asOf)})`, `<b data-count="${r.actual}" data-ck="ra">0</b><small>t</small><span class="pm" style="color:var(--${diff >= 0 ? 'good' : 'warn'})">${diff >= 0 ? '▲' : '▼'} ${n0(Math.abs(diff))}</span>`, `확정 계획 누계 ${n0(r.plan)}t (${(r.actual / r.plan * 100).toFixed(0)}%) · MES 생산, 더미 제외`, 'status.html', 'ra')],
-      ['C', kpi(c.unplaced[0] > 0 ? 'warn' : 'good', '컬러 미편성 (10월)', `<b data-count="${c.unplaced[0]}" data-ck="cu">0</b><small>t</small>`, `11월 ${n0(c.unplaced[1])}t · 12월 ${n0(c.unplaced[2])}t — 라인 전용 품목`, 'integrated.html', 'cu')],
-      ['C', kpi(cm[0][1] < cm[0][0] ? 'warn' : 'good', '컬러 10월 월차 편성률', `<b data-count="${(cm[0][1] / cm[0][0] * 100).toFixed(1)}" data-dec="1" data-ck="cr">0</b><small>%</small>`, `편성 ${n0(cm[0][1])} / 월차 ${n0(cm[0][0])}t · 11월 ${(cm[1][1] / cm[1][0] * 100).toFixed(1)}%`, 'integrated.html', 'cr')],
-      ['GC', kpi(q.near ? 'warn' : 'good', `${{ all: '소재', G: '도금 FH', C: '컬러 소재' }[sc]} 1순위 발주 시한 2주 안`, `<b data-count="${q.near}" data-ck="qn">0</b><small>건</small>`, q.nearTop[0] ? `가장 급함 ${esc(q.nearTop[0].mat)} · 시한 ${md(q.nearTop[0].deadline)}` : '-', 'procure.html', 'qn')],
-    ];
-    $('h-kpis').innerHTML = (sc === 'all' ? [K[0], K[1], K[2], K[4]] : K.filter(([pl]) => UI.inScope(pl))).map(([pl, h]) => h.replace('<div class="kpi ', `<div data-dom="${pl === 'GC' ? 'M' : pl}" class="kpi `)).join('');
-    // 월별 도금 계획(라인 누적)
-    const mx = Math.max(...O.months.map((m, i) => p.g1[i] + p.g2[i])) * 1.04;
-    $('h-load').innerHTML = `<h2>월별 도금 생산계획 <small>${O.rec} · 라인별</small><span class="unit">단위: 톤</span></h2>
-      <div class="legend"><span><i style="background:var(--c1)"></i>1CGL</span><span><i style="background:var(--c2)"></i>2CGL</span></div>
-      <div class="load" role="img" aria-label="월별 도금 생산계획 1CGL·2CGL">${O.months.map((m, i) => {
-        const a = p.g1[i], b = p.g2[i];
-        return `<div class="lrow"><span class="m">${+m.slice(5)}월</span><div class="track"><i class="seg s1" style="width:${a / mx * 100}%;--i:${i}" data-tip="${+m.slice(5)}월 1CGL ${n0(a)}t"></i><i class="seg s2" style="left:${a / mx * 100}%;width:${b / mx * 100}%;--i:${i}" data-tip="${+m.slice(5)}월 2CGL ${n0(b)}t"></i></div><span class="pct">${n0(a + b)}</span></div>`;
-      }).join('')}</div>
-      <details style="margin-top:12px"><summary class="small" style="cursor:pointer">표로 보기</summary><div class="scroll" style="margin-top:8px"><table class="t"><thead><tr><th class="l">월</th><th>1CGL</th><th>2CGL</th><th>합계</th></tr></thead><tbody>${O.months.map((m, i) => `<tr><td class="l">${+m.slice(5)}월</td><td>${n0(p.g1[i])}</td><td>${n0(p.g2[i])}</td><td><b>${n0(p.g1[i] + p.g2[i])}</b></td></tr>`).join('')}</tbody></table></div></details>
-`;
-    $('h-color').innerHTML = `<h2>컬러 라인 월차 편성 <small>편성 / MES 월차</small><span class="unit">단위: %</span></h2>
-      <div class="crow hd"><span></span>${['1CCL', '2CCL', '3CCL', '4CCL'].map((l) => `<span>${l}</span>`).join('')}</div>
-      ${O.months.map((m, i) => `<div class="crow"><span class="m">${+m.slice(5)}월</span>${['1CCL', '2CCL', '3CCL', '4CCL'].map((l, j) => { const x = (cl[m] || {})[l] || { plan: 0, placed: 0 }; const pc = x.plan ? x.placed / x.plan : 0; return `<div class="cl" title="${+m.slice(5)}월 ${l} 편성 ${n0(x.placed)} / 월차 ${n0(x.plan)}t"><i class="${pc < 0.995 ? 'short' : ''}" style="width:${Math.min(100, pc * 100)}%;--i:${i * 4 + j}"></i><span>${(pc * 100).toFixed(pc < 0.995 ? 1 : 0)}%</span></div>`; }).join('')}</div>`).join('')}
-      <p class="small" style="margin-top:8px">주황 = 월차를 다 못 채움(라인 전용 품목 미편성) · 10월 미편성 ${n0(c.unplaced[0])}t</p>`;
-    $('h-rec').innerHTML = `<h2>확정 계획 <small>${O.rec} · 2026-10-07</small></h2><div class="decide"><b class="tag">진행</b><br>${esc(O.recWhy)}</div>`;
-    $('h-due').innerHTML = `<h2>${scN[sc]}발주 시한 임박 <small>1순위 업체 기준 · 2주 안</small><span class="unit">단위: 톤</span></h2>
-      <div class="scroll"><table class="t"><thead><tr><th class="l">시한</th><th class="l">소재</th><th class="l">업체</th><th>첫 필요일</th><th>부족</th></tr></thead><tbody>${q.nearTop.map((x) => `<tr><td class="l"><b>${md(x.deadline)}</b></td><td class="l">${esc(x.mat)}</td><td class="l">${esc(x.sup)}</td><td>${md(x.first)}</td><td>${n0(x.t)}</td></tr>`).join('') || '<tr><td colspan="5" class="c muted">없음</td></tr>'}</tbody></table></div>
-      <div class="kpis" style="margin-top:14px;grid-template-columns:1fr 1fr">
-        ${kpi(q.alt ? 'warn' : 'good', '대체 업체 필요 (2~4주)', `<b data-count="${q.alt}" data-ck="qa">0</b><small>건</small>`, '1순위 리드타임 초과', '', 'qa')}
-        ${kpi(q.check ? 'warn' : 'good', '기발주 확인 (2~4주)', `<b data-count="${q.check}" data-ck="qc">0</b><small>건</small>`, '리드타임 안쪽 수량', '', 'qc')}</div>
-      <p class="small" style="margin-top:10px">조달 판단 화면의 기본값(여유 5일, 기발주 미입력) 기준 — 입력한 기발주·판단은 <a href="procure.html">조달 판단</a>에서 확인</p>`;
+    $('h-meta').innerHTML = `실적 <b>~${md(O.asOf)}</b> · 계획 <b>${esc(O.rec)}</b> · 계산 ${esc(String(O.built).replace('T', ' ').slice(5, 16))}`;
+    $('h-k').innerHTML = kstrip(O);
+    $('h-lines').innerHTML = lines(O);
+    const gh = grp(O); $('h-grp').innerHTML = gh; $('h-grp').hidden = !gh;
     $('h-ex').innerHTML = exCard(O); $('h-ex').hidden = false;
-    const gh = grpCard(O); $('h-grp').innerHTML = gh; $('h-grp').hidden = !gh;
-    $('h-acc').innerHTML = accCard(O);
-    $('h-detail').hidden = false;
+    $('h-load').innerHTML = loadCard(O); $('h-load').hidden = false;
+    $('h-color').innerHTML = colorCard(O); $('h-color').hidden = false;
+    const dc = dueCard(O); $('h-due').innerHTML = dc; $('h-due').hidden = !dc;
+    $('h-basis').innerHTML = basis(O); $('h-basis').hidden = false;
     UI.reveal(document); UI.count(document);
     const tip = $('h-tip');
-    document.querySelectorAll('.seg').forEach((s) => {
+    document.querySelectorAll('[data-tip]').forEach((s) => {
       s.addEventListener('mousemove', (e) => { tip.textContent = s.dataset.tip; tip.style.display = 'block'; tip.style.left = (e.clientX + 12) + 'px'; tip.style.top = (e.clientY - 34) + 'px'; });
       s.addEventListener('mouseleave', () => { tip.style.display = 'none'; });
     });
@@ -150,13 +162,13 @@
   let env = null;
   const envReady = GP.latest('portal.enc.json');
   async function unlock(pw) {
-    if (!env) env = await envReady;                              // 자료를 받기 전에 암호를 넣은 경우
+    if (!env) env = await envReady;
     try { const O = await GP.decryptJSON(env, pw); try { localStorage.setItem(PW_KEY, pw); } catch (e) { /* 무시 */ } $('h-lock').hidden = true; render(O); UI.onScope(() => render(lastO)); }
-    catch (e) { $('h-kpis').innerHTML = ''; $('h-lock').hidden = false; $('h-msg').textContent = pw ? '암호가 맞지 않습니다' : ''; }
+    catch (e) { $('h-k').innerHTML = ''; $('h-lock').hidden = false; $('h-msg').textContent = pw ? '암호가 맞지 않습니다' : ''; }
   }
-  $('h-form').addEventListener('submit', (e) => { e.preventDefault(); $('h-kpis').innerHTML = '<div class="skel" style="grid-column:1/-1"><i style="width:30%"></i><i></i></div>'; unlock($('h-pw').value); });
+  $('h-form').addEventListener('submit', (e) => { e.preventDefault(); unlock($('h-pw').value); });
   envReady.then((e) => { if (!e) throw new Error();
     env = e; let s = null; try { s = localStorage.getItem(PW_KEY); } catch (x) { /* 무시 */ }
-    if (s) unlock(s); else { $('h-kpis').innerHTML = ''; $('h-lock').hidden = false; }
-  }).catch(() => { $('h-kpis').innerHTML = ''; $('h-lock').hidden = false; $('h-msg').textContent = '요약 자료를 찾을 수 없습니다'; });
+    if (s) unlock(s); else { $('h-k').innerHTML = ''; $('h-lock').hidden = false; }
+  }).catch(() => { $('h-k').innerHTML = ''; $('h-lock').hidden = false; $('h-msg').textContent = '요약 자료를 찾을 수 없습니다'; });
 })();
