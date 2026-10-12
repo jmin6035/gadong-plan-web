@@ -1,12 +1,12 @@
 /* 공통 셸: 헤더(워드마크·메뉴·화면 모드) + 움직임 도우미(UI.reveal / UI.count / UI.toast)
-   페이지: <header id="shell" data-page="procure" data-crumb="소재" data-title="소재 조달 판단" data-sub="..."></header> */
+   페이지: <header id="shell" data-page="procure" data-crumb="소재" data-title="소재 발주 검토" data-sub="..."></header> */
 (function () {
   'use strict';
   const NAV = [
     ['home', 'index.html', '홈'], ['supply', 'supply.html', '수급 캘린더'], ['integrated', 'integrated.html', '통합 가동계획'], ['report', 'report.html', '주간 보고'],
     '|도금', ['status', 'status.html', '가동 현황'], ['rolling', 'rolling.html', '계획 계산'], ['analysis', 'analysis.html', '조건 분석'], ['platact', 'plating_actual.html', '실적'],
     '|컬러', ['colorstat', 'color_status.html', '가동 현황'], ['coloranal', 'color_analysis.html', '조건 분석'], ['coloract', 'color_actual.html', '실적'], ['planstock', 'planstock.html', '계획재'],
-    '|소재', ['procure', 'procure.html', '조달 판단'], ['material', 'material.html', '소재 발주(월)'], '|',
+    '|소재', ['procure', 'procure.html', '발주 검토'], ['material', 'material.html', '발주 계획(월)'], '|',
     ['decisions', 'decisions.html', '결정 기록'], ['health', 'health.html', '자료 상태'], ['docs', 'docs.html', '문서'],
   ];
   const TKEY = 'cgl-theme', SKEY = 'cgl-scope';
@@ -39,7 +39,7 @@
     const show = only && scope !== 'all' && scope !== only;
     if (!show) { if (el) el.remove(); return; }
     if (!el) { el = document.createElement('div'); el.id = 'ui-scope-note'; el.className = 'wrap scope-note'; h.after(el); }
-    el.innerHTML = `<div><b>이 화면은 ${SCN[only]} 자료만 있습니다.</b> 지금 '${SCN[scope]}' 보기라 내용이 없습니다 — <button type="button" data-sc="${only}">${SCN[only]} 보기로</button> 또는 <a href="index.html">홈</a>에서 ${SCN[scope]} 화면을 고르세요.</div>`;
+    el.innerHTML = `<div><b>이 화면은 ${SCN[only]} 자료만 있습니다.</b> 현재 '${SCN[scope]}' 보기라 내용이 없습니다 — <button type="button" data-sc="${only}">${SCN[only]} 보기로</button> 또는 <a href="index.html">홈</a>에서 ${SCN[scope]} 화면을 고르세요.</div>`;
     el.querySelector('button').onclick = () => setScope(only);
   }
   function build() {
@@ -98,7 +98,7 @@
   /* 화면 한 줄 도움말 */
   const HELP = {
     home: '아침에 한 번: 오늘 볼 것 → 핵심 지표 → 필요한 화면으로 이동. 보는 사람(역할)과 보기(도금/컬러)를 고르면 맞는 것만 남음',
-    integrated: '확정 계획 V1 의 4분기 일별 가동(컬러·도금)과 재고 추이. 칸을 누르면 그날 품목과 이유',
+    integrated: '확정 계획의 4분기 일별 가동(컬러·도금)과 재고 추이. 칸을 누르면 그날 품목과 이유',
     status: '도금 1·2CGL 게시 계획(매일 재계획)의 월별 간트·강종 전환·부서별 물량',
     rolling: '판매계획·자가재계획 엑셀로 도금 계획을 새로 계산하거나 실적으로 재계획하고 게시(담당자용). 정기수리를 추가하면 정지 시나리오도 볼 수 있음',
     analysis: '(계획 담당자용) MES 도금 실적으로 속도·M/C 손실·정지를 다시 계산해 계획 조건과 비교 — 반영권장 값은 계획 계산에 넣을 후보',
@@ -106,14 +106,14 @@
     coloract: '컬러 4라인 이번 달 진도, 일별·주별 생산, 속도, 품명, 휴지. 지난주가 12주 평균과 얼마나 다른지',
     colorstat: '컬러 1~4CCL 4분기 계획의 월별 간트(지난 날 = 실적), 라인 한도 대비 편성, 그룹별 물량, 못 넣은 물량. 도금 가동 현황과 같은 역할',
     coloranal: '(계획 담당자용) MES 컬러 실적으로 라인·품명 t/hr 를 다시 재서 계획 조건과 비교 — 라인 속도 차이가 ±5%를 넘으면 계획 조건 조정 검토',
-    planstock: 'TF 계획재(R15 187 사양)의 재고·생산·판매 진도와 월말 재고 예측. \'조치 필요\'부터 보고 담당자별로 확인',
+    planstock: '계획재 운영안(TF) 187개 사양의 재고·생산·판매 진도와 월말 재고 예측. \'조치 필요\'부터 보고 담당자별로 확인',
     report: '주 1회 임원 보고 양식. 인쇄/PDF 로 그대로 씀',
     procure: '필요 시점별로 제때 들어올 업체를 판단하고 구매 요청서를 만듦. 입고예정(기발주)을 먼저 넣어야 정확',
-    material: '업체 × 월 입고 필요량과 발주 마감(27년 3월까지) — 큰 그림. 주 단위 판단은 조달 판단에서',
+    material: '업체 × 월 입고 필요량과 발주 마감(27년 3월까지) — 큰 그림. 주 단위 판단은 발주 검토에서',
     decisions: '회의·보고에서 정한 것과 할 일을 남기고 기한·상태를 추적(공유 설정 후 모두가 같은 기록)',
     health: '숫자가 언제 기준인지 확인. 일일 자료가 2일 넘게 멈추면 사내 PC 자동 실행 점검',
     docs: '계획 조건식·용어 정의·사용법·요청 메일 모음',
-    conditions: '계획 계산식과 문제점', guide: '조달 판단 사용 순서', requests: '부서별 협조 요청 메일(복사해 보내기)', glossary: '숫자 정의와 아직 확인 안 된 가정',
+    conditions: '계획 계산식과 문제점', guide: '발주 검토 사용 순서', requests: '부서별 협조 요청 메일(복사해 보내기)', glossary: '숫자 정의와 아직 확인 안 된 가정',
   };
 
   /* 표가 있는 카드마다 '엑셀(CSV)' 내려받기 */

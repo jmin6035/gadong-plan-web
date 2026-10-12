@@ -3,8 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>CGL 실적 분석</title>
-<meta name="description" content="도금 1·2CGL MES 실적 분석 — 속도·M/C·손실 추이와 파라미터 후보(계획 담당자용)">
+<title>도금 조건 분석</title>
+<meta name="description" content="도금 1·2CGL 조건 분석 — 속도·M/C·손실을 실적으로 다시 재서 계획 조건과 비교">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='7' fill='%230b3a75'/><rect x='10' y='10' width='12' height='12' rx='1.5' transform='rotate(45 16 16)' fill='none' stroke='%23fff' stroke-width='2.6'/></svg>">
 <link rel="stylesheet" href="style.css">
 <link rel="stylesheet" href="dashboard.css">
@@ -12,13 +12,13 @@
 <link rel="stylesheet" href="ui/bridge.css">
 </head>
 <body class="dash">
-<header id="shell" data-page="analysis" data-crumb="실적 · 도금" data-title="도금 실적 분석" data-sub="MES 실적으로 생산속도·M/C·손실을 다시 계산해 계획 조건과 비교 (계획 담당자용)"></header>
+<header id="shell" data-page="analysis" data-crumb="도금" data-title="도금 조건 분석" data-sub="MES 실적으로 생산속도·M/C·손실을 다시 계산해 계획 조건과 비교 (계획 담당자용)"></header>
 <div class="wrap pagebar"><span class="small" id="a-meta">MES 실적으로 생산속도·M/C·손실을 다시 계산해 계획 조건과 비교합니다.</span></div>
 
 <main class="wrap">
   <section class="card empty" id="a-empty">
     <h2 id="a-empty-title">자동 분석 결과 불러오는 중…</h2>
-    <p id="a-empty-text">사내 PC 자동 실행기가 매일 올리는 분석 결과를 엽니다.</p>
+    <p id="a-empty-text">매일 자동으로 다시 계산되는 분석 결과를 엽니다.</p>
     <form id="a-unlock" class="unlock" hidden>
       <p id="a-pubinfo"></p>
       <div class="row">
@@ -43,13 +43,13 @@
     </section>
 
     <section class="card">
-      <h2>파라미터 후보 <small class="muted">— 체크한 항목을 롤링(계획) 조건에 반영</small></h2>
+      <h2>계획 조건 후보 <small class="muted">— 체크한 항목을 계획 계산 조건에 반영</small></h2>
       <div class="scroll"><table class="data" id="a-cands"></table></div>
       <div class="row">
-        <button type="button" class="primary" id="a-apply">선택 항목을 롤링 조건에 반영</button>
+        <button type="button" class="primary" id="a-apply">선택 항목을 계획 계산 조건에 반영</button>
         <span class="hint" id="a-msg"></span>
       </div>
-      <p class="hint"><b>M/C 손실과 비강종 더미는 같이 반영됩니다</b>(한쪽만 바꾸면 손실이 이중으로 잡힘). 속도(t/hr)는 제품 두께 구성에 크게 좌우됩니다(박물일수록 낮음). 기간이 짧거나 두께 구성이 치우치면 틀린 값이 나오므로 28일 이상·표본이 충분할 때만 “반영 권장”으로 표시합니다. 반영은 이 기기의 롤링 화면 조건에 저장되고, 계산을 다시 돌려야 계획에 적용됩니다.</p>
+      <p class="hint"><b>M/C 손실과 비강종 더미는 같이 반영됩니다</b>(한쪽만 바꾸면 손실이 이중으로 잡힘). 속도(t/hr)는 제품 두께 구성에 크게 좌우됩니다(박물일수록 낮음). 기간이 짧거나 두께 구성이 치우치면 틀린 값이 나오므로 28일 이상·표본이 충분할 때만 “반영 권장”으로 표시합니다. 반영은 이 기기의 계획 계산 조건에 저장되고, 계산을 다시 돌려야 계획에 적용됩니다.</p>
     </section>
 
     <section class="card">
@@ -83,13 +83,13 @@
   </div>
 
   <details class="card more" id="a-manual">
-    <summary><h2>엑셀로 직접 분석 <small class="muted">— MES 생산실적 엑셀을 올려 바로 분석(자동 실행기 없이)</small></h2></summary>
+    <summary><h2>엑셀로 직접 분석 <small class="muted">— MES 생산실적 엑셀을 올려 바로 분석(자동 갱신 없이)</small></h2></summary>
     <label class="ghost btnlike">MES 실적 엑셀 올리기(여러 개 가능)<input type="file" id="a-file" accept=".xlsx" multiple hidden></label>
     <span id="a-file-name" class="muted"></span>
-    <p class="hint">파일은 이 브라우저 안에서만 읽습니다. 비교 기준은 이 기기의 롤링 화면 조건(없으면 기본값 v30)입니다.</p>
+    <p class="hint">파일은 이 브라우저 안에서만 읽습니다. 비교 기준은 이 기기의 계획 계산 조건(없으면 기본값)입니다.</p>
   </details>
 </main>
-<footer class="wrap foot">계획 담당자용. 조회는 대시보드, 계획 계산·재계획·게시는 롤링 화면에서.</footer>
+<footer class="wrap foot">계획 담당자용 · 원자료: MES 도금 생산·휴지 실적</footer>
 
 <script src="ui/shell.js"></script>
 <script src="vendor/exceljs.min.js"></script>

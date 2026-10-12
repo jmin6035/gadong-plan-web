@@ -21,10 +21,10 @@
   };
   const GROUPS = [
     ['가동계획', [['supply.html', 'plan', '수급 캘린더', '일별 가동·자가재·구매 소재(발주·입고·재고)·제품 재고', true], ['integrated.html', 'plan', '통합 가동계획', '컬러 → 도금 4분기 일별 계획과 재고 추이'], ['report.html', 'report', '주간 보고', '도금·컬러 주간 계획 대비 실적 보고 양식']]],
-    ['도금', [['status.html', 'gantt', '가동 현황', '1·2CGL 월별 간트, 강종 전환, 부서별 물량', 0, 'G'], ['rolling.html', 'calc', '계획 계산', '도금 실적을 넣어 다시 계산(롤링)하고 게시', 0, 'G'], ['analysis.html', 'chart', '조건 분석', 'MES 실적으로 속도·M/C 손실·정지를 다시 재서 계획 조건과 비교', 0, 'G'], ['plating_actual.html', 'chart', '도금 실적', '진도·일별·주별 생산·속도·강종·휴지·강종 전환', 0, 'G']]],
-    ['컬러', [['color_status.html', 'gantt', '가동 현황', '1~4CCL 월별 간트, 라인 한도·편성, 그룹별 물량, 미편성', true, 'C'], ['color_analysis.html', 'chart', '조건 분석', 'MES 실적으로 라인·품명 t/hr 를 다시 재서 계획 조건과 비교', true, 'C'], ['color_actual.html', 'chart', '컬러 실적', '진도·일별·주별 생산·속도·품명·휴지', 0, 'C'], ['planstock.html', 'box', '계획재', 'R15 187 사양 재고·생산·판매 진도와 월말 재고 예측', true, 'C']]],
-    ['소재', [['procure.html', 'truck', '조달 판단', '필요 시점별 가능 업체 추천, 구매 요청서', true], ['material.html', 'box', '소재 발주(월)', '업체 × 월 입고 필요량과 발주 마감(~27.3)']]],
-    ['자료', [['decisions.html', 'report', '결정 기록', '누가·무엇을·언제까지 — 결정과 할 일 추적', true], ['health.html', 'help', '자료 상태', '원천 자료별 마지막 날짜·화면별 게시 시각 — 자동 실행 점검'], ['doc.html?d=glossary', 'book', '용어·정의 · 확인 대기', '숫자 정의 사전과 아직 확인 안 된 가정 목록', true], ['doc.html?d=conditions', 'book', '계획 조건식', '컬러·도금·소재 계산식과 보완할 점'], ['doc.html?d=procure_guide', 'help', '조달 판단 사용법', '사용 순서 10단계와 계산 조건'], ['doc.html?d=requests', 'mail', '협조 요청 메일', '전산·구매·판매·생산 요청 사항']]],
+    ['도금', [['status.html', 'gantt', '가동 현황', '1·2CGL 월별 간트, 강종 전환, 부서별 물량', 0, 'G'], ['rolling.html', 'calc', '계획 계산', '도금 실적을 넣어 다시 계산하고 게시', 0, 'G'], ['analysis.html', 'chart', '조건 분석', 'MES 실적으로 속도·M/C 손실·정지를 다시 재서 계획 조건과 비교', 0, 'G'], ['plating_actual.html', 'chart', '도금 실적', '진도·일별·주별 생산·속도·강종·휴지·강종 전환', 0, 'G']]],
+    ['컬러', [['color_status.html', 'gantt', '가동 현황', '1~4CCL 월별 간트, 라인 한도·편성, 그룹별 물량, 미편성', true, 'C'], ['color_analysis.html', 'chart', '조건 분석', 'MES 실적으로 라인·품명 t/hr 를 다시 재서 계획 조건과 비교', true, 'C'], ['color_actual.html', 'chart', '컬러 실적', '진도·일별·주별 생산·속도·품명·휴지', 0, 'C'], ['planstock.html', 'box', '계획재', '계획재 운영안 187개 사양 재고·생산·판매 진도와 월말 재고 예측', true, 'C']]],
+    ['소재', [['procure.html', 'truck', '발주 검토', '필요 시점별 가능 업체 추천, 구매 요청서', true], ['material.html', 'box', '발주 계획(월)', '업체 × 월 입고 필요량과 발주 마감(~27.3)']]],
+    ['자료', [['decisions.html', 'report', '결정 기록', '누가·무엇을·언제까지 — 결정과 할 일 추적', true], ['health.html', 'help', '자료 상태', '원천 자료별 마지막 날짜·화면별 게시 시각 — 자동 실행 점검'], ['doc.html?d=glossary', 'book', '용어·정의 · 확인 대기', '숫자 정의 사전과 아직 확인 안 된 가정 목록', true], ['doc.html?d=conditions', 'book', '계획 조건식', '컬러·도금·소재 계산식과 보완할 점'], ['doc.html?d=procure_guide', 'help', '발주 검토 사용법', '사용 순서 10단계와 계산 조건'], ['doc.html?d=requests', 'mail', '협조 요청 메일', '전산·구매·판매·생산 요청 사항']]],
   ];
 
   $('h-groups').innerHTML = GROUPS.map(([g, L]) => `<div><h3>${g}</h3>${L.map(([u, ic, t, d, nw, only]) => `<a href="${u}" title="${esc(d)}"${only ? ` data-only="${only}"` : ''}>${IC[ic]}${t}</a>`).join('')}</div>`).join('');
@@ -144,13 +144,13 @@
     if (!q) return '';
     return `<h2>발주 시한 임박 <small>1순위 업체 · 2주 안</small><span class="unit">톤</span></h2>
       <table class="mini"><tbody>${(q.nearTop || []).slice(0, 6).map((x) => `<tr><td><b>${md(x.deadline)}</b></td><td>${esc(x.mat)}</td><td class="r">${n0(x.t)}</td><td class="small">${esc(String(x.sup || '').slice(0, 10))}</td></tr>`).join('') || '<tr><td class="small">없음</td></tr>'}</tbody></table>
-      <a class="more" href="procure.html">조달 판단 →</a>`;
+      <a class="more" href="procure.html">발주 검토 →</a>`;
   }
   function basis(O) {
     const now = (O.plating || {}).now || {};
     return `<summary>숫자 기준 · 알림</summary><ul>
       <li>생산·출하 누계, 월차, 일정 = 판매생산속보(공식). 라인 14일 추이 = MES 코일(도금 더미 제외).</li>
-      <li>그룹 실적 = MES 판매그룹. 계획 = 도금 확정 ${esc(O.rec)} 일별 합 · 컬러 편성. 월말 예상 = 실적 + 남은 계획(도금 매일 재계획).</li>
+      <li>그룹 실적 = MES 판매그룹. 계획 = 도금 확정 계획 일별 합 · 컬러 편성. 월말 예상 = 실적 + 남은 계획(도금 매일 재계획).</li>
       <li>그룹별 날짜 계획 누계는 비교하지 않음(부서 배정일은 계획 모델상 정해지지 않음). 컬러 그룹 합은 MES 코일 합이라 속보 누계와 다를 수 있음.</li>
       ${(now.lockNotes || []).map((n) => `<li>재계획: ${esc(n)}</li>`).join('')}${(now.shortBy || []).length ? `<li>결품 예상: ${now.shortBy.map(esc).join(', ')}</li>` : ''}</ul>`;
   }

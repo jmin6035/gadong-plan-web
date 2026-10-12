@@ -444,3 +444,12 @@ html .bar-cell i { top: auto; bottom: 5px; height: 4px; transform: none; opacity
   .wrap { max-width: none; padding: 0; }
   footer.foot::after { content: "사내 한정"; }
 }
+
+/* ── 표 서식 통일: 모든 표 가운데 맞춤 · 세로 가운데 · 칸 안 줄바꿈 없음(넘치면 표 가로 스크롤).
+      예외 = 문장형 설명 칸(이유·기준 설명)만 왼쪽 맞춤·줄바꿈 */
+table th, table td { text-align: center !important; vertical-align: middle !important; white-space: nowrap !important; }
+table th br, table td br { display: none; }
+table td.why, table tr.why-row td, table td.wrap, table td.para, .tip td, .tipbox td { text-align: left !important; white-space: normal !important; }
+.scroll, .gtable-wrap { overflow-x: auto; }
+table td .why, table td:has(> .why), table td .why * { white-space: normal !important; }
+table td:has(> .why) .why { text-align: center; }

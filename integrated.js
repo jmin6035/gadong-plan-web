@@ -17,7 +17,7 @@
   const PC = ['도금국내', '도금수출', '자동차내수', '자동차수출', '자가재'];
   const FAM = { AL: '--s1', 'AL-LG': '--s1', 'AL-STS': '--s1', AZ: '--s2', MAC: '--s3' };
   const MONTHS = ['2026-10', '2026-11', '2026-12'];
-  const VN = { V1: 'V1 확정', V2: 'V2 자가재계획', V3: 'V3 계산 + M/C 2회 추가' };
+  const VN = { V1: '확정 계획', V2: '비교안(자가재계획)', V3: '비교안(M/C 2회 추가)' };
   const GN = { C건재: '컬러 건재', C수출: '컬러 수출·가전', G국내: '도금 국내', G수출: '도금 수출', G자동차: '도금 자동차' };
   let O = null, V = 'V3', mon = '2026-10', sel = null;
   const inS = (p) => !window.UI || UI.inScope(p);                 // 보기 전환(전체/도금/컬러)
@@ -128,7 +128,7 @@
       <div class="legend"><span><i class="box h-ok"></i>목표 부근</span><span><i class="box h-warn"></i>목표의 90% 미만</span><span><i class="box h-bad"></i>안전재고 미만·부족</span><span><i class="box h-over"></i>목표의 130% 초과</span></div>
       <div class="scroll"><table class="t heat"><thead>${head}</thead><tbody>${body}
       <tr class="sep"><td class="l" colspan="${W.length + 2}"><b>소재 입고 필요(그 주)</b> — 발주 = 입고 − 리드타임(FH 32일 · 컬러 45일)</td></tr>${inS('G') ? inRow(fh, 'FH 입고') : ''}${inS('C') ? inRow(cm, '컬러소재 입고') : ''}</tbody></table></div>
-      <p class="small">제품 = 9월말 재고 + 생산(컬러 실적·계획, 도금 MILP) − 판매(컬러 = 월 판매 ÷ 일수, 도금 = 판매계획 품목이 납기일에 나감). 자가재 = 9월말 + 도금 자가재 − 컬러 필요(생산일 − 5일). 소재 = 9월말 + 입고 필요 − 사용.</p>`) };
+      <p class="small">제품 = 9월말 재고 + 생산(컬러 실적·계획, 도금 계획) − 판매(컬러 = 월 판매 ÷ 일수, 도금 = 판매계획 품목이 납기일에 나감). 자가재 = 9월말 + 도금 자가재 − 컬러 필요(생산일 − 5일). 소재 = 9월말 + 입고 필요 − 사용.</p>`) };
   }
 
   // ---------- ③ 일별 가동(달력 표) ----------
@@ -200,8 +200,8 @@
   // ---------- ④ 일별 배치 기준 ----------
   function secRule() {
     const R = [
-      ['월 물량', '그룹별 월 생산', 'LP: 목표재고(생산주기/2 + 안전재고)에 맞추되 능력 안에서. 모자라면 바로 채우고, 넘치면 두 달에 나눠 줄임, 대수리 달은 앞 달에 미리'],
-      ['컬러', '① 계획재', 'EOQ 사양을 추천 반순에, 색상 > 폭 > 두께 묶음(교체시간 포함)'],
+      ['월 물량', '그룹별 월 생산', '목표재고(생산주기/2 + 안전재고)에 맞추되 능력 안에서. 모자라면 바로 채우고, 넘치면 두 달에 나눠 줄임, 대수리 달은 앞 달에 미리'],
+      ['컬러', '① 계획재', '계획재 운영안(TF) 사양·물량·순서 그대로, 날짜만 월 전체에 고르게(교체시간 포함)'],
       ['', '② 전용 라인 품명', 'STS → 3CCL, 후물·AL → 4CCL, PVS → 1CCL 먼저(범용 품명이 자리 차지 못 하게)'],
       ['', '③ 우선순위', '수출 벌크(선적 완료기한 전 10일) > 가전 내수 > 컨테이너 수출·수요개발 > 주문재'],
       ['', '④ 라인·날짜', '실적 T/hr 빠른 라인부터, 2CCL 은 마지막(가동일에 몰아서), 하루 1,440분·라인 월차 한도 안'],
@@ -212,13 +212,13 @@
     ];
     let cur = '';
     const R2 = R.filter((r) => { if (r[0]) cur = r[0]; return inS(cur === '컬러' ? 'C' : cur === '도금' ? 'G' : 'GC'); });
-    return { html: card('s-rule', '③', '일별 배치 기준', '', `<p><a href="doc.html?d=conditions"><b>전체 조건식 보기 →</b></a> (월 물량 LP · 컬러 · 자가재 · 도금 MILP · 소재 · 재계획)</p>` + `<div class="scroll"><table class="t rules"><thead><tr><th>구분</th><th>단계</th><th>기준</th></tr></thead><tbody>${R2.map((r) => `<tr><td class="l nm">${r[0]}</td><td class="l">${r[1]}</td><td class="l wrap">${r[2]}</td></tr>`).join('')}</tbody></table></div>`) };
+    return { html: card('s-rule', '③', '일별 배치 기준', '', `<p><a href="doc.html?d=conditions"><b>전체 조건식 보기 →</b></a> (월 물량 · 컬러 · 자가재 · 도금 · 소재 · 재계획)</p>` + `<div class="scroll"><table class="t rules"><thead><tr><th>구분</th><th>단계</th><th>기준</th></tr></thead><tbody>${R2.map((r) => `<tr><td class="l nm">${r[0]}</td><td class="l">${r[1]}</td><td class="l wrap">${r[2]}</td></tr>`).join('')}</tbody></table></div>`) };
   }
 
   // ---------- ⑤ 매일 감시·재계획 ----------
   function secRoll() {
     const rs = (O.rolls || []).slice().sort((a, b) => (a.asOf < b.asOf ? -1 : 1));
-    const fl = `<div class="flow">${['매일 아침 MES 실적·출하 자동 수집', '계획 대비 점검(밀린 양·강종·재고)', '기준 넘으면 → 즉시 재계획(앞 2일 고정)', '아니면 → 월요일 정기 재계획', '월초 → 월 물량(LP) 재설정'].map((x, i) => `<span>${i + 1}. ${x}</span>`).join('<i>→</i>')}</div>`;
+    const fl = `<div class="flow">${['매일 아침 MES 실적·출하 자동 수집', '계획 대비 점검(밀린 양·강종·재고)', '기준 넘으면 → 즉시 재계획(앞 2일 고정)', '아니면 → 월요일 정기 재계획', '월초 → 월 물량 다시 계산'].map((x, i) => `<span>${i + 1}. ${x}</span>`).join('<i>→</i>')}</div>`;
     // 매일 기록: 그날 계획(전날 재계획 기준) vs 실적
     let daily = '';
     if (rs.length && inS('G')) {
@@ -228,13 +228,13 @@
         return `<tr><td class="l">${md(r.asOf)}</td>${cell('1CGL')}${cell('2CGL')}<td>${n0(r.actualT)} / ${n0(r.planToDateT)}</td><td>−${r.mcRemoved.length} +${r.mcAdded.length}</td><td>${r.mcLeft ?? '-'}</td><td>${n0(r.late)}</td><td>${r.optimal === false ? '<span class="st warn">시간 제한</span>' : '<span class="st good">최적</span>'}</td></tr>`;
       };
       daily = `<h3>매일 재계획 기록 — 그날 계획(전날 재계획) vs 실적, 도금 (t)</h3><div class="scroll"><table class="t"><thead><tr><th rowspan="2">날짜</th><th colspan="3">1CGL</th><th colspan="3">2CGL</th><th rowspan="2">누계 실적 / 계획</th><th rowspan="2">M/C 변경</th><th rowspan="2">남은 M/C</th><th rowspan="2">지연(t·일)</th><th rowspan="2">풀이</th></tr><tr><th>계획</th><th>실적</th><th>차이</th><th>계획</th><th>실적</th><th>차이</th></tr></thead><tbody>${rs.map(row).join('')}</tbody></table></div>
-        ${(() => { const dif = (l) => rs.map((r) => { const x = r.vsPlan.find((z) => z[0] === r.asOf && z[1] === l); return x ? x[3] - x[2] : 0; }); const a = dif('1CGL'), b = dif('2CGL'); const same = (v) => v.every((x) => x > 0) || v.every((x) => x < 0); return same(a) || same(b) ? `<div class="issue"><b>매일 같은 방향으로 어긋남</b> — 1CGL 은 ${a.every((x) => x > 0) ? '매일 계획보다 많이' : '들쭉날쭉'}(평균 ${a.reduce((s, x) => s + x, 0) / a.length > 0 ? '+' : ''}${n0(a.reduce((s, x) => s + x, 0) / a.length)}t), 2CGL 은 ${b.every((x) => x < 0) ? '거의 매일 적게' : '들쭉날쭉'}(평균 ${n0(b.reduce((s, x) => s + x, 0) / b.length)}t). 우연한 흔들림이 아니라 계획 기준(라인 속도·강종 순서)이 현장과 다르다는 신호 → 재계획을 자주 하는 것으로는 안 고쳐지고, 속도 파라미터를 실적으로 보정해야 함(분석 화면의 '반영권장' 후보).</div>` : ''; })()}
-        <p class="small">10/1 계획은 10/1부터 새로 짠 ${esc(rs[0].variant)}. 실제 현장은 1CGL을 이미 AZ로 돌리고 있어(계획은 10/7 전환) 첫날 차이가 큼 → 매일 재계획이 실제 강종에서 다시 출발.</p>`;
+        ${(() => { const dif = (l) => rs.map((r) => { const x = r.vsPlan.find((z) => z[0] === r.asOf && z[1] === l); return x ? x[3] - x[2] : 0; }); const a = dif('1CGL'), b = dif('2CGL'); const same = (v) => v.every((x) => x > 0) || v.every((x) => x < 0); return same(a) || same(b) ? `<div class="issue"><b>매일 같은 방향으로 어긋남</b> — 1CGL 은 ${a.every((x) => x > 0) ? '매일 계획보다 많이' : '들쭉날쭉'}(평균 ${a.reduce((s, x) => s + x, 0) / a.length > 0 ? '+' : ''}${n0(a.reduce((s, x) => s + x, 0) / a.length)}t), 2CGL 은 ${b.every((x) => x < 0) ? '거의 매일 적게' : '들쭉날쭉'}(평균 ${n0(b.reduce((s, x) => s + x, 0) / b.length)}t). 우연한 흔들림이 아니라 계획 기준(라인 속도·강종 순서)이 현장과 다르다는 신호 → 재계획을 자주 하는 것으로는 안 고쳐지고, 속도 조건을 실적으로 보정해야 함(분석 화면의 '반영권장' 후보).</div>` : ''; })()}
+        <p class="small">10/1 계획은 10/1부터 새로 짠 확정 계획. 실제 현장은 1CGL을 이미 AZ로 돌리고 있어(계획은 10/7 전환) 첫날 차이가 큼 → 매일 재계획이 실제 강종에서 다시 출발.</p>`;
     }
     if (rs.length) {
       const r = rs[rs.length - 1];
       const st = Object.entries(r.stock).filter(([g]) => g !== 'C수요' && inS(plOf(g))).map(([g, v]) => `<tr><td class="l">${esc(GN[g] || (g === 'G자가재' ? '도금 자가재' : g))}</td><td>${n0(v.begin)}</td><td>+${n0(v.prod)}</td><td>−${n0(v.ship)}</td><td><b>${n0(v.now)}</b></td><td>${v.mes != null ? n0(v.mes) : (v.mesPair != null ? n0(v.mesPair) + '<span class="muted">(국내+자동차)</span>' : '-')}</td><td>${v.plan == null ? '-' : n0(v.plan)}</td><td class="${v.plan != null && Math.abs(v.now - v.plan) > 0.1 * Math.max(1, v.plan) ? 'neg' : ''}">${v.plan == null ? '-' : (v.now - v.plan > 0 ? '+' : '') + n0(v.now - v.plan)}</td></tr>`).join('');
-      daily += `<h3>지금 재고 추정 (${md(r.asOf)} 말, t)</h3><div class="scroll"><table class="t"><thead><tr><th>그룹</th><th>9월말</th><th>생산</th><th>출하</th><th>지금(추정)</th><th>MES 속보 실제</th><th>계획상</th><th>차이</th></tr></thead><tbody>${st}</tbody></table></div>`;
+      daily += `<h3>현재 재고 추정 (${md(r.asOf)} 말, t)</h3><div class="scroll"><table class="t"><thead><tr><th>그룹</th><th>9월말</th><th>생산</th><th>출하</th><th>현재(추정)</th><th>MES 속보 실제</th><th>계획상</th><th>차이</th></tr></thead><tbody>${st}</tbody></table></div>`;
     }
     // 재계획 주기 비교(시뮬레이션)
     let sim = '';
@@ -255,7 +255,7 @@
       ['설비 정지·속도 저하', '밀린 양 > 하루 생산(도금 약 800t, 컬러 라인별 1일분) 또는 정지 ½일 이상', '그날 재계획: 동결 2일 뒤 여유일에 다시 넣고, 모자라면 납기 늦은 품목부터 미룸'],
       ['현장 강종·순서 변경', '실제 강종 ≠ 계획 강종(10/1 1CGL AZ 사례)', '그날 재계획: 실제 강종에서 출발해 캠페인 다시 정함', 'G'],
       ['선적·주문 변경', '배선 일정·긴급 주문이 3일 안 납기에 걸림', '그날 재계획, 그 밖은 월요일'],
-      ['재고 이탈', '그룹 재고 < 목표 70% 또는 > 150%', '월 물량 LP 다시(그 그룹 보충·감산)'],
+      ['재고 이탈', '그룹 재고 < 목표 70% 또는 > 150%', '월 물량 다시 계산(그 그룹 보충·감산)'],
       ['소재 입고 지연', 'FH·컬러 소재 재고 < 7일분', '강종 순서 교환(입고된 소재 먼저), 구매에 입고 독촉'],
       ['컬러 월차 진도', '라인 누계 진도 ±5% 이상', '2CCL 가동일 조정·라인 간 품목 이동', 'C'],
     ];
@@ -267,15 +267,15 @@
   function secNeed() {
     const R = [
       ['bad', '일별 재고(재고현황 일자별)', '주간 재계획의 출발 재고', '월말만 있음 → 생산·출하로 추정 중. mes_download --stock-only 실행 필요(도구 준비됨)'],
-      ['bad', '소재 기발주·입고 예정', '소재 발주량 = 필요 − 기발주', '없음 → 지금은 "입고 필요량"까지만'],
+      ['bad', '소재 기발주·입고 예정', '소재 발주량 = 필요 − 기발주', '없음 → 현재는 "입고 필요량"까지만'],
       ['warn', '최신 판매계획(월 갱신본)', '월 물량·컬러 로트', 'TF 파일(9월 작성) 사용 — 새 파일 넣으면 재계산'],
       ['warn', '컬러 11·12월 월차', '컬러 라인 한도', '10월 월차를 11·12월에도 가정', 'C'],
       ['warn', '2CCL·컬러 휴지 계획', '2CCL 가동일(10월 미편성 0.9천t 해소)', '없음', 'C'],
       ['warn', '임가공 제품재고', '도금 자동차 재고', '재고현황에 없음 → 자동차 재고 낮게 잡힘', 'G'],
-      ['warn', '판매계획 vs 실적 이력(3~6개월)', '안전재고를 "예측 오차"로(지금은 출고 편차)', '없음'],
+      ['warn', '판매계획 vs 실적 이력(3~6개월)', '안전재고를 "예측 오차"로(현재는 출고 편차)', '없음'],
     ];
     const S = { bad: '꼭 필요', warn: '있으면 정확' };
-    return { html: card('s-need', '⑤', '더 필요한 데이터', '', `<table class="t sum"><thead><tr><th></th><th>데이터</th><th>쓰는 곳</th><th>지금</th></tr></thead><tbody>${R.filter((r) => inS(r[4])).map((r) => `<tr><td class="c"><span class="st ${r[0]}">${S[r[0]]}</span></td><td class="l nm">${r[1]}</td><td class="l wrap">${r[2]}</td><td class="l wrap">${r[3]}</td></tr>`).join('')}</tbody></table>`) };
+    return { html: card('s-need', '⑤', '더 필요한 데이터', '', `<table class="t sum"><thead><tr><th></th><th>데이터</th><th>쓰는 곳</th><th>현재</th></tr></thead><tbody>${R.filter((r) => inS(r[4])).map((r) => `<tr><td class="c"><span class="st ${r[0]}">${S[r[0]]}</span></td><td class="l nm">${r[1]}</td><td class="l wrap">${r[2]}</td><td class="l wrap">${r[3]}</td></tr>`).join('')}</tbody></table>`) };
   }
 
   function rerender() { const y = window.scrollY; render(); window.scrollTo(0, y); }

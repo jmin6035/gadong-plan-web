@@ -4,53 +4,82 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>컬러 가동 현황</title>
-<meta name="description" content="컬러 1~4CCL 4분기 일별 가동 계획 — 월별 간트, 라인 한도·편성, 그룹별 물량, 미편성">
+<meta name="description" content="컬러 1~4CCL 가동계획 조회 — 도금 가동 현황과 같은 양식">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='7' fill='%230b3a75'/><rect x='10' y='10' width='12' height='12' rx='1.5' transform='rotate(45 16 16)' fill='none' stroke='%23fff' stroke-width='2.6'/></svg>">
+<link rel="stylesheet" href="style.css">
+<link rel="stylesheet" href="dashboard.css">
 <link rel="stylesheet" href="ui/theme.css">
-<style>
-.chart { margin-top: 4px; }
-.cv { display: block; width: 100%; height: auto; overflow: visible; }
-.cv text { fill: var(--ink-3); font-size: 15px; }
-.cv text.we { fill: var(--bad); }
-.cv text.lab { fill: var(--ink); font-weight: 700; font-size: 15px; }
-.cv .gl { stroke: var(--grid); stroke-width: 1; }
-.cv .bar { transform-box: fill-box; transform-origin: bottom; animation: growY .7s var(--ease) both; animation-delay: calc(var(--i) * 12ms); }
-.cv .ln { animation: draw 1.4s var(--ease) backwards .1s; }
-.cv .hit { fill: transparent; cursor: pointer; } .cv .hit:hover { fill: color-mix(in srgb, var(--ink) 6%, transparent); }
-@keyframes growY { from { transform: scaleY(0); } to { transform: scaleY(1); } }
-.legend { display: flex; flex-wrap: wrap; gap: 6px 18px; color: var(--ink-2); margin: 0 0 8px; }
-.legend span { display: inline-flex; align-items: center; gap: 7px; }
-.legend i.box { width: 13px; height: 13px; border-radius: 3px; display: inline-block; }
-.dot { display: inline-block; width: 11px; height: 11px; border-radius: 50%; margin-right: 8px; vertical-align: 0; }
-.dlt { font-variant-numeric: tabular-nums; white-space: nowrap; } .dlt.up { color: var(--good); } .dlt.down { color: var(--bad); } .dlt.muted { color: var(--ink-3); }
-table.t.big td.nm { font-weight: 700; }
-td.pbar { min-width: 190px; } td.pbar div { display: inline-block; vertical-align: middle; width: 110px; height: 12px; border-radius: 6px; background: var(--grid); overflow: hidden; margin-right: 8px; }
-td.pbar i { display: block; height: 100%; border-radius: 6px; transform-origin: left; animation: grow .9s var(--ease) both .2s; } td.pbar i.ok { background: var(--good); } td.pbar i.wn { background: var(--warn); } td.pbar i.bd { background: var(--bad); }
-.hbar { height: 16px; border-radius: 4px; background: var(--grid); overflow: hidden; } .hbar i { display: block; height: 100%; border-radius: 4px; transform-origin: left; animation: grow .8s var(--ease) both; }
-.grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; } .grid2.rowc { gap: 16px; align-items: stretch; } .grid2.rowc > .card { margin: 0 0 16px; } .grid2 > * { min-width: 0; } @media (max-width: 980px) { .grid2 { grid-template-columns: 1fr; } }
-details.tv { margin-top: 12px; } details.tv summary { cursor: pointer; color: var(--brand-2); font-weight: 600; font-size: 15px; }
-.tipbox { position: fixed; pointer-events: none; background: var(--surface); color: var(--ink); border: 1px solid var(--line); border-radius: 8px; padding: 9px 12px; font-size: 14.5px; line-height: 1.55; box-shadow: var(--shadow-up); z-index: 40; display: none; }
-.tag { display: inline-block; border-radius: 999px; padding: 2px 9px; font-size: 13px; font-weight: 600; white-space: nowrap; margin: 1px 0; }
-.tag.bad { background: color-mix(in srgb, var(--bad) 16%, transparent); color: var(--bad); } .tag.warn { background: color-mix(in srgb, var(--warn) 18%, transparent); color: var(--warn); } .tag.info { background: color-mix(in srgb, var(--brand-2) 14%, transparent); color: var(--brand-2); }
-table.t td.bad { color: var(--bad); font-weight: 700; } table.t td.warn { color: var(--warn); font-weight: 700; }
-#ps-f button small { opacity: .7; margin-left: 3px; }
-</style>
+<link rel="stylesheet" href="ui/bridge.css">
+<style>.gtable td.idle { background: color-mix(in srgb, var(--sd) 55%, transparent); } .gtable td[data-d] { cursor: pointer; } .gtable tr.r-fam td { font-weight: 800; }</style>
 </head>
-<body>
-<header id="shell" data-page="colorstat" data-crumb="컬러 · 가동 현황" data-title="컬러 가동 현황" data-sub="컬러 1~4CCL 4분기 가동 계획 — 월별 간트(지난 날 = 실적), 라인 한도·편성, 그룹별 물량, 미편성"></header>
+<body class="dash">
+<header id="shell" data-page="colorstat" data-crumb="컬러" data-title="컬러 가동 현황" data-sub="컬러 1~4CCL 월별 가동계획 · 라인별 편성 · 그룹별 물량"></header>
+<div class="wrap pagebar"><b class="pt" id="d-title">CCL 가동계획</b><span class="small" id="d-meta">불러오는 중…</span></div>
+
 <main class="wrap">
-  <div class="docmeta" id="ca-meta"></div>
-  <div id="ca-main" style="margin-top:12px">
-    <section class="card lock" id="ca-lock">
-      <div id="ca-lockbox"><div class="ic" aria-hidden="true">🔒</div><h2>불러오는 중…</h2>
-        <form class="unlock" id="ca-form" hidden><input type="password" id="ca-pw" placeholder="분석 암호" autocomplete="current-password" aria-label="분석 암호"><button type="submit">열기</button></form>
-        <p class="hint" id="ca-msg"></p></div>
-      <div class="skel" id="ca-skel" hidden><i style="width:40%"></i><i></i><i style="width:80%"></i></div>
+  <section class="card empty" id="d-empty">
+    <h2 id="d-empty-title">게시된 컬러 계획</h2>
+    <p id="d-empty-text">통합 가동계획(확정 계획)의 컬러 부분입니다. 암호 해제는 이 브라우저 안에서만 합니다.</p>
+    <form id="d-unlock" class="unlock" hidden>
+      <div class="row">
+        <input type="password" id="d-pw" placeholder="분석 암호" autocomplete="current-password" aria-label="분석 암호">
+        <button type="submit" class="primary">열기</button>
+      </div>
+      <p class="hint" id="d-unlock-msg"></p>
+    </form>
+  </section>
+
+  <div id="d-body" hidden>
+    <section class="exec" id="d-exec"></section>
+    <section class="card replan" id="d-replan" hidden></section>
+    <section class="kpis big" id="d-kpis" aria-label="분기 핵심 지표"></section>
+
+    <section class="card">
+      <div class="head-row">
+        <h2>월별 가동계획</h2>
+        <div class="tabs" id="g-tabs"></div>
+      </div>
+      <div class="glegend" id="g-legend"></div>
+      <div class="gtable-wrap"><table class="gtable" id="g-table"></table></div>
+      <p class="hint">숫자 단위: 톤. 라인 행 = 그날 라인 생산 합계, 그룹 행 = 같은 날 그룹별 물량, 가동시간 = 작업 + 정지(색상교체·청소 등) 시간. 지난 날 = MES 실적. 노란색 = 휴지계획이 있는 날(S/D·청소·Test·샘플), 회색 블록 = 종일 정지(수리·계획휴지), 옅은 회색 = 가동 없음. 칸을 누르면 그날 품목.</p>
     </section>
+
+    <div class="two">
+      <section class="card">
+        <h2>라인별 편성 / MES 월차 한도</h2>
+        <table class="data evt" id="d-events"></table>
+        <p class="hint">편성 = 계획에 들어간 톤(지난 날은 실적). 한도보다 덜 채운 라인은 그 라인에서 만들 물량이 모자란 것.</p>
+      </section>
+      <section class="card">
+        <h2>월별 부하</h2>
+        <div id="d-load"></div>
+      </section>
+    </div>
+
+    <section class="card">
+      <div class="head-row">
+        <h2>기준일 라인 현황</h2>
+        <label class="inline">날짜 <input type="date" id="d-date"></label>
+      </div>
+      <div class="lines-now" id="d-now"></div>
+    </section>
+
+    <section class="card">
+      <h2>그룹별 월 생산량 <small class="muted">(t, 생산일 기준)</small></h2>
+      <div class="scroll"><table class="data" id="d-dept"></table></div>
+    </section>
+
+    <details class="card more">
+      <summary><h2>상세: 미편성 목록 · 일별 품목</h2></summary>
+      <h3>미편성 (가능 라인이 그 달 한도·시간을 다 써서 못 넣은 물량)</h3>
+      <div class="scroll"><table class="data" id="d-early"></table></div>
+      <p class="hint">일별 품목과 배치 이유는 <a href="integrated.html">통합 가동계획</a> 일별 가동 표에서 칸을 눌러 확인.</p>
+    </details>
   </div>
 </main>
-<footer class="foot"><div class="wrap"><span>원자료: 통합 가동계획(컬러 판매계획·R15 계획재·MES 월차·실적) · 계산: tools/integrated_plan.py</span><span>POSCO STEELEON 도금·컬러 가동계획</span></div></footer>
-<div class="tipbox" id="ca-tip" role="tooltip"></div>
+<div id="tip" class="tip" role="tooltip" hidden></div>
+<footer class="wrap foot">조회 전용 · 원자료: 통합 가동계획(컬러 판매계획·계획재 운영안·MES 월차·실적)</footer>
+
 <script src="ui/shell.js"></script>
 <script src="engine/crypto.js"></script>
 <script src="color_status.js"></script>

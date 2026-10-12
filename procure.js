@@ -1,4 +1,4 @@
-/* 소재 조달 판단: published/procure.enc.json (tools/procure_data.py --out)
+/* 소재 발주 검토: published/procure.enc.json (tools/procure_data.py --out)
    필요 주차 × 소재마다 → 재고·입고예정 충당 → 부족분을 '남은 일수 안에 들어오는 업체' 중 우선순위로 추천.
    업체 기준정보·입고예정·주문재 목록·판단(업체/수량/상태/메모)은 이 브라우저(localStorage)에 저장, JSON 으로 주고받기 */
 (function () {
@@ -83,7 +83,7 @@
     return period === 'all' || (period === 'w1' && w < 1) || (period === 'w4' && w >= 1 && w < 4) || (period === 'w8' && w >= 4 && w < 8) || (period === 'w9' && w >= 8);
   };
   const KIND = { ok: ['재고 충당', 'good'], normal: ['1순위 업체', 'good'], alt: ['대체 업체', 'warn'], adjust: ['조정 필요', 'bad'], check: ['기발주 확인', 'warn'], nosup: ['업체 없음', 'bad'], pos: ['포스코 지급(임가공)', 'good'] };
-  const supName = (s) => (s ? `${s.name && s.name !== s.sup ? s.name : s.sup}` : '-');
+  const supName = (s) => (s ? (s.name && s.name !== s.sup ? s.name : `업체 확인 중(발주번호 앞자리 ${s.sup})`) : '-');
 
   /* ---------- 화면 ---------- */
   const card = (id, title, sm, body) => `<section class="card" id="${id}"><h2>${esc(title)} ${sm ? `<small>${esc(sm)}</small>` : ''}</h2>${body}</section>`;
@@ -175,7 +175,7 @@
 
   function basis() {
     return card('p-basis', '계산 기준', '', `<ul class="notes">
-      <li><b>필요량</b> 컬러 구매소재 = 통합 계획(V1) 컬러 일별 ÷ 실수율 × (1 − 자가재 비중) × 품명별 소재 비중(13주 실적, 매칭률 ${Math.round(D.codeMix.matchedShare * 100)}%) · 도금 FH = 도금 일별 ÷ 실수율, AL→H · AZ·MAC→F · AL-STS→N · 27.1~3월은 TF 월 판매계획을 주별로 나눔</li>
+      <li><b>필요량</b> 컬러 구매소재 = 통합 계획 컬러 일별 ÷ 실수율 × (1 − 자가재 비중) × 품명별 소재 비중(13주 실적, 매칭률 ${Math.round(D.codeMix.matchedShare * 100)}%) · 도금 FH = 도금 일별 ÷ 실수율, AL→H · AZ·MAC→F · AL-STS→N · 27.1~3월은 TF 월 판매계획을 주별로 나눔</li>
       <li><b>계획재</b>는 우리가 정하는 양(계획 그대로), 나머지 컬러 그룹은 <b>주문재(추정)</b> — 마케팅 목록이 오면 대체</li>
       <li><b>충당</b> 재고 → 입고예정 순, 이른 필요일부터. ${esc(D.stockNote)}. 9월말 이후 FH 입고는 자료가 없어 FH 충당은 적게 잡힘 — 입고예정 탭에 기발주를 넣어야 정확</li>
       <li><b>업체 판단</b> 남은 일수 = 첫 필요일 − 여유일 − 기준일. 리드타임 ≤ 남은 일수인 업체 중 우선순위 1등을 추천. 1순위가 안 되면 '대체 업체', 아무도 안 되면 '조정 필요'</li>
@@ -183,7 +183,7 @@
       <div class="bar"><label class="small">기준일 <input type="date" id="p-today" value="${S.today}"></label><label class="small">입고 → 컬러 투입 <input type="number" id="p-safetyC" value="${S.safetyC}" min="0" max="30" style="width:56px">일</label><label class="small">입고 → 도금 투입 <input type="number" id="p-safetyG" value="${S.safetyG}" min="0" max="30" style="width:56px">일</label>
       <button type="button" class="btn" id="p-dl">설정·판단 내보내기(.json)</button><label class="btn">설정 가져오기<input type="file" accept=".json" id="p-ul" hidden></label><button type="button" class="btn" id="p-resetall">모두 초기화</button></div>
       <h3>공유(서버)</h3><div class="bar"><button type="button" class="btn primary" id="p-push" ${window.SHARE && SHARE.on() ? '' : 'disabled'}>서버에 올리기</button><button type="button" class="btn" id="p-pull" ${window.SHARE && SHARE.on() ? '' : 'disabled'}>서버에서 받기</button><span class="small">${window.SHARE && SHARE.on() ? '업체 기준정보·입고예정·주문재 목록·판단을 모두가 같은 것으로 — 올린 사람·시각이 남음' : '공유 저장소가 아직 꺼져 있음(결정 기록 화면의 공유 설정 참고) — 지금은 .json 내보내기/가져오기로 맞추기'}</span></div>
-      <p class="small">저장 위치 = 이 브라우저. 다른 사람과 맞추려면 내보낸 .json 을 보내 가져오기. 자료 계산 ${String(D.built).replace('T', ' ')} (tools/procure_data.py)</p>`);
+      <p class="small">저장 위치 = 이 브라우저. 다른 사람과 맞추려면 내보낸 파일을 보내 가져오기. 자료 계산 ${String(D.built).replace('T', ' ')}</p>`);
   }
 
   const TABS = [['board', '판단 보드'], ['arr', '입고예정'], ['ord', '주문재 목록'], ['sup', '업체 기준정보'], ['basis', '계산 기준·설정']];
@@ -192,8 +192,8 @@
     const body = { board, arr: arrivals, ord: orders, sup: suppliers, basis }[tab]();
     const fresh = lastTab !== tab; lastTab = tab;
     $('p-main').innerHTML = `<nav class="tabs big noprint">${TABS.map(([k, n]) => `<button type="button" data-tab="${k}" aria-pressed="${k === tab}">${n}</button>`).join('')}</nav><div class="${fresh ? 'fade' : ''}">${body}</div>`;
-    UI.sub(`필요 시점 → 가능한 업체 → 구매 요청 · 기준일 ${S.today} · 컬러·도금 계획(V1) 연동`);
-    $('p-meta').innerHTML = `<span><b>기준일</b>${S.today}</span><span><b>자료</b>컬러·도금 계획 V1 · 소재재고List · 재고현황</span><span><b>계산</b>${String(D.built).replace('T', ' ')}</span><span><b>단위</b>톤</span>`;
+    UI.sub(`필요 시점 → 가능한 업체 → 구매 요청 · 기준일 ${S.today} · 확정 컬러·도금 계획 연동`);
+    $('p-meta').innerHTML = `<span><b>기준일</b>${S.today}</span><span><b>자료</b>확정 컬러·도금 계획 · 소재재고List · 재고현황</span><span><b>계산</b>${String(D.built).replace('T', ' ')}</span><span><b>단위</b>톤</span>`;
     UI.reveal($('p-main')); UI.count($('p-main')); justOpened = null;
     scrollTo(0, y);
   }
@@ -296,7 +296,7 @@
   }
   $('p-form').addEventListener('submit', (e) => { e.preventDefault(); unlock($('p-pw').value); });
   envReady.then((e) => { if (!e) throw new Error();
-    env = e; $('p-lock').querySelector('h2').textContent = '소재 조달 판단 — 암호를 입력하세요';
+    env = e; $('p-lock').querySelector('h2').textContent = '소재 발주 검토 — 암호를 입력하세요';
     let s = null; try { s = localStorage.getItem(PW_KEY); } catch (x) { /* 무시 */ }
     if (s) unlock(s); else $('p-form').hidden = false;
   }).catch(() => { $('p-msg').textContent = '자료를 찾을 수 없습니다'; });

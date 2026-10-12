@@ -69,16 +69,16 @@
       const e = T.end[k], r = e / T.target;
       return `<tr><td class="l nm">${mon(m)}${k === 0 ? ' <small class="muted">(남은 분)</small>' : ''}</td><td>${n0(T.fc[i0 + k])}</td><td>${n0(T.prod[i0 + k])}</td><td><b>${n0(e)}</b></td><td class="${r > 1.5 ? 'bad' : r > 1.1 ? 'warn' : ''}">${Math.round(r * 100)}%</td></tr>`;
     }).join('');
-    return card('ps-mon', '월별 예측', 'R15 판매 예측·생산 계획 그대로 · 월말 재고는 현재 재고에서 이어 계산', '단위: 톤',
+    return card('ps-mon', '월별 예측', '계획재 운영안(TF)의 판매 예측·생산 계획 그대로 · 월말 재고는 현재 재고에서 이어 계산', '단위: 톤',
       `<div class="scroll"><table class="t big"><thead><tr><th class="l">월</th><th>판매 예측</th><th>생산 계획</th><th>월말 예상 재고</th><th>목표 대비</th></tr></thead><tbody>${rows}</tbody></table></div>
-      <p class="small">${mon(O.month)} 행: 생산 계획·판매 예측은 그 달 전체 값이고, 월말 재고는 사양별로 (계획 − 실적)·(예측 − 출하)의 남은 분만 더하고 뺀 값. 목표 = R15 사양별 목표재고(운영+안전) 합 ${n0(T.target)}t.</p>`);
+      <p class="small">${mon(O.month)} 행: 생산 계획·판매 예측은 그 달 전체 값이고, 월말 재고는 사양별로 (계획 − 실적)·(예측 − 출하)의 남은 분만 더하고 뺀 값. 목표 = 운영안 사양별 목표재고(운영+안전) 합 ${n0(T.target)}t.</p>`);
   }
 
   function byMat() {
     const rows = O.byMat.map((b) => `<tr><td class="l nm">${esc(b.mat)}</td><td>${b.n}</td><td><b>${n0(b.stock)}</b></td><td>${n0(b.target)}</td><td>${n0(b.prodM)} / ${n0(b.planM)}</td><td>${n0(b.shipM)} / ${n0(b.fcM)}</td><td><b>${n0(b.end)}</b></td></tr>`).join('');
-    return card('ps-mat', '소재 구분별', `R15 소재발주구분 · ${mon(O.month)} 진도`, '단위: 톤',
+    return card('ps-mat', '소재 구분별', `운영안 소재발주구분 · ${mon(O.month)} 진도`, '단위: 톤',
       `<div class="scroll"><table class="t big"><thead><tr><th class="l">소재</th><th>사양</th><th>현재 재고</th><th>목표</th><th>생산 / 계획</th><th>출하 / 예측</th><th>${mon(O.month)}말 예상</th></tr></thead><tbody>${rows}</tbody></table></div>
-      <p class="small">서림 GI 사양은 서림 공급이 27년부터라 지금은 다른 GI(주로 포스코 광양)로 만들고 있음 — 구분은 R15 표기 그대로.</p>`);
+      <p class="small">서림 GI 사양은 서림 공급이 27년부터라 현재는 다른 GI(주로 포스코 광양)로 만들고 있음 — 구분은 운영안 표기 그대로.</p>`);
   }
 
   function specs() {
@@ -100,17 +100,17 @@
     const m1 = O.months.indexOf(O.month);
     return card('ps-spec', '사양별 진도·예측', '위험 사양을 먼저 · 머리글 정렬: 월말 예상(안전재고 대비) / 재고 / 커버 일수', '단위: 톤',
       `<div class="seg" id="ps-f">${seg}</div><div class="seg" id="ps-s" style="margin-top:8px">${[['end', '월말 예상 낮은 순'], ['cover', '커버 일수 짧은 순'], ['stock', '재고 많은 순']].map(([k, l]) => `<button type="button" data-s="${k}" aria-pressed="${k === sortK}">${l}</button>`).join('')}</div>
-      <div class="scroll" style="margin-top:12px"><table class="t"><thead><tr><th class="l">품명</th><th class="l">사양</th><th class="l">소재</th><th class="l">담당</th><th>현재 재고</th><th>안전 / 목표</th><th>${mon(O.month)} 생산<br><small>실적 / 일정 / 월계획</small></th><th>${mon(O.month)} 출하<br><small>실적 / 예측</small></th>
-      <th>${mon(O.months[m1])}말</th><th>${mon(O.months[m1 + 1] || '')}말</th><th>${mon(O.months[m1 + 2] || '')}말</th><th>커버<br><small>일</small></th><th class="l">판정</th></tr></thead><tbody>${rows}</tbody></table></div>
-      <p class="small">커버 일수 = 현재 재고 ÷ (이번 달 판매 예측 ÷ 30). 일정 = R15 배치를 월 전체에 펼친 날짜로 오늘까지 만들었어야 할 양(통합 계획과 같은 규칙).</p>`);
+      <div class="scroll" style="margin-top:12px"><table class="t"><thead><tr><th class="l">품명</th><th class="l">사양</th><th class="l">소재</th><th class="l">담당</th><th>현재 재고</th><th>안전 / 목표</th><th>${mon(O.month)} 생산 <small>실적 / 일정 / 월계획</small></th><th>${mon(O.month)} 출하 <small>실적 / 예측</small></th>
+      <th>${mon(O.months[m1])}말</th><th>${mon(O.months[m1 + 1] || '')}말</th><th>${mon(O.months[m1 + 2] || '')}말</th><th>커버 <small>일</small></th><th class="l">판정</th></tr></thead><tbody>${rows}</tbody></table></div>
+      <p class="small">커버 일수 = 현재 재고 ÷ (이번 달 판매 예측 ÷ 30). 일정 = 운영안 생산 배치를 월 전체에 펼친 날짜로 오늘까지 만들었어야 할 양(통합 계획과 같은 규칙).</p>`);
   }
 
   function basis() {
     const T = O.tot;
     const sh = Object.entries(O.shipHist).map(([m, v]) => `${mon(m)} ${n0(v)}t`).join(' · '), pr = Object.entries(O.prodHist).map(([m, v]) => `${mon(m)} ${n0(v)}t`).join(' · ');
     return card('ps-basis', '기준과 주의', '', '', `<ul class="small" style="line-height:1.8;margin:0;padding-left:20px">
-      <li><b>대상</b> TF 계획재 운영안 R15의 187 사양(컬러건재판매그룹). 사양 = '두께 폭 상도색상' — R15 '제품재고' 시트 정의 그대로(품명 무관). 생산 실적은 실측 두께라 ±0.03mm 안에서 가장 가까운 사양으로 봄.</li>
-      <li><b>R15 시작 재고</b> R15 의 '9월말 재고' ${n0(T.stock0R15)}t 는 실제로는 <b>9/14 기준</b> 재고 목록(코일별 재고일수가 MES 8월말보다 14일 많고 9월말보다 16일 적음). MES 9월말 같은 정의 재고는 <b>${n0(T.stock0Mes)}t</b>(+${n0(T.stock0Mes - T.stock0R15)}t) — 이 화면은 MES 9월말에서 시작.</li>
+      <li><b>대상</b> 계획재 운영안(TF)의 187개 사양(컬러건재판매그룹). 사양 = '두께 폭 상도색상' — 운영안 '제품재고' 시트 정의 그대로(품명 무관). 생산 실적은 실측 두께라 ±0.03mm 안에서 가장 가까운 사양으로 봄.</li>
+      <li><b>운영안 시작 재고</b> 운영안의 '9월말 재고' ${n0(T.stock0R15)}t 는 실제로는 <b>9/14 기준</b> 재고 목록(코일별 재고일수가 MES 8월말보다 14일 많고 9월말보다 16일 적음). MES 9월말 같은 정의 재고는 <b>${n0(T.stock0Mes)}t</b>(+${n0(T.stock0Mes - T.stock0R15)}t) — 이 화면은 MES 9월말에서 시작.</li>
       <li><b>현재 재고</b> 9월말 + 그 뒤 생산 − 그 뒤 출하(출하 코일번호를 재고·생산 코일과 이어 사양 판정, 판매·이송 모두). 다음 월말 재고가 들어오면 그 값으로 다시 맞춤.</li>
       <li><b>판매 진도</b> 계획재 출하는 월말에 몰림 — 지난 3개월(${O.paceFrom.map(mon).join('·')}) 같은 사양 출하로 보면 ${md(O.asOf)}까지 보통 한 달의 <b>${Math.round(O.pace * 100)}%</b>가 나감. 직선(날짜 비례)으로 보면 늦어 보이는 것을 막음.</li>
       <li><b>최근 실적</b> 출하 ${sh} / 생산 ${pr} (같은 187 사양). MES 출하 기록이 속보보다 늦게 채워지는 날이 있어 이번 주 출하는 덜 잡혔을 수 있음.</li>
@@ -118,9 +118,9 @@
   }
 
   function render() {
-    $('ca-main').innerHTML = `<section class="card" id="ca-kpi"><h2>핵심 <small>~${md(O.asOf)} · R15 ${esc(O.src)}</small><span class="unit">단위: 톤</span></h2>${kpis()}</section>`
+    $('ca-main').innerHTML = `<section class="card" id="ca-kpi"><h2>핵심 <small>~${md(O.asOf)} · 계획재 운영안(TF)</small><span class="unit">단위: 톤</span></h2>${kpis()}</section>`
       + trend() + `<div class="grid2 rowc">${months()}${byMat()}</div>` + specs() + basis();
-    $('ca-meta').innerHTML = `<span><b>실적</b>~${O.asOf}</span><span><b>시작 재고</b>MES ${O.stockMonth.slice(0, 4)}.${O.stockMonth.slice(4)}월말</span><span><b>기준</b>R15 ${O.n} 사양</span><span><b>계산</b>${String(O.built || '').replace('T', ' ')}</span>`;
+    $('ca-meta').innerHTML = `<span><b>실적</b>~${O.asOf}</span><span><b>시작 재고</b>MES ${O.stockMonth.slice(0, 4)}.${O.stockMonth.slice(4)}월말</span><span><b>기준</b>계획재 운영안 ${O.n}개 사양</span><span><b>계산</b>${String(O.built || '').replace('T', ' ')}</span>`;
     UI.reveal($('ca-main')); UI.count($('ca-main')); bindTip($('ca-main'));
     wire();
   }
