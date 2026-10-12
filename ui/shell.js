@@ -3,14 +3,14 @@
 (function () {
   'use strict';
   const NAV = [
-    ['home', 'index.html', '홈'], ['supply', 'supply.html', '수급 캘린더'], '|',
-    ['integrated', 'integrated.html', '통합 가동계획'], ['status', 'status.html', '가동 현황'], ['rolling', 'rolling.html', '계획 계산'], ['analysis', 'analysis.html', '조건 분석'], '|',
-    ['platact', 'plating_actual.html', '도금 실적'], ['coloract', 'color_actual.html', '컬러 실적'], ['planstock', 'planstock.html', '계획재'], ['report', 'report.html', '주간 보고'], '|',
-    ['procure', 'procure.html', '조달 판단'], ['material', 'material.html', '소재 발주(월)'], '|',
+    ['home', 'index.html', '홈'], ['supply', 'supply.html', '수급 캘린더'], ['integrated', 'integrated.html', '통합 가동계획'], ['report', 'report.html', '주간 보고'],
+    '|도금', ['status', 'status.html', '가동 현황'], ['rolling', 'rolling.html', '계획 계산'], ['analysis', 'analysis.html', '조건 분석'], ['platact', 'plating_actual.html', '실적'],
+    '|컬러', ['colorstat', 'color_status.html', '가동 현황'], ['coloranal', 'color_analysis.html', '조건 분석'], ['coloract', 'color_actual.html', '실적'], ['planstock', 'planstock.html', '계획재'],
+    '|소재', ['procure', 'procure.html', '조달 판단'], ['material', 'material.html', '소재 발주(월)'], '|',
     ['decisions', 'decisions.html', '결정 기록'], ['health', 'health.html', '자료 상태'], ['docs', 'docs.html', '문서'],
   ];
   const TKEY = 'cgl-theme', SKEY = 'cgl-scope';
-  const ONLY = { status: 'G', analysis: 'G', rolling: 'G', platact: 'G', coloract: 'C', planstock: 'C' };     // 도금 자료만 있는 화면
+  const ONLY = { status: 'G', analysis: 'G', rolling: 'G', platact: 'G', coloract: 'C', planstock: 'C', colorstat: 'C', coloranal: 'C' };     // 도금 자료만 있는 화면
   const SCN = { all: '전체', G: '도금', C: '컬러' };
   const DOCS = ['conditions', 'guide', 'requests', 'glossary', 'doc'];
   const UI = window.UI = window.UI || {};
@@ -45,7 +45,7 @@
   function build() {
     const h = document.getElementById('shell'); if (!h) return;
     const d = h.dataset, esc = (s) => String(s || '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
-    const nav = NAV.map((x) => (x === '|' ? '<span class="sep" aria-hidden="true"></span>' : `<a href="${x[1]}"${x[0] === d.page || (x[0] === 'docs' && DOCS.includes(d.page)) ? ' aria-current="page"' : ''}${ONLY[x[0]] ? ` data-only="${ONLY[x[0]]}"` : ''}>${x[2]}${ONLY[x[0]] ? `<em class="only">${SCN[ONLY[x[0]]]}</em>` : ''}</a>`)).join('');
+    const nav = NAV.map((x) => (typeof x === 'string' ? `<span class="sep" aria-hidden="true"></span>${x.length > 1 ? `<span class="grp">${x.slice(1)}</span>` : ''}` : `<a href="${x[1]}"${x[0] === d.page || (x[0] === 'docs' && DOCS.includes(d.page)) ? ' aria-current="page"' : ''}${ONLY[x[0]] ? ` data-only="${ONLY[x[0]]}"` : ''}>${x[2]}</a>`)).join('');   // 같은 이름(가동 현황·조건 분석·실적)은 앞의 묶음 이름(도금·컬러)으로 구분
     h.className = 'shell-top';
     h.innerHTML = `<div class="sheen" aria-hidden="true"></div><div class="wrap">
       <div class="shell-bar"><a class="wordmark" href="index.html"><span class="mk" aria-hidden="true"><i></i></span><b>POSCO STEELEON</b><span>도금·컬러 가동계획</span></a>
@@ -54,11 +54,12 @@
         <div class="scope noprint"><span>보기</span><div class="scope-seg" role="group" aria-label="공정 보기">${Object.entries(SCN).map(([k, n]) => `<button type="button" data-sc="${k}" aria-pressed="${k === scope}">${n}</button>`).join('')}</div></div></div>
       <nav class="shell-nav" aria-label="메뉴">${nav}<span class="ink" aria-hidden="true"></span></nav></div>`;
     const ink = h.querySelector('.ink'), cur = h.querySelector('.shell-nav a[aria-current]'), navEl = h.querySelector('.shell-nav');
-    const place = (a) => { if (!a) { ink.style.width = 0; return; } ink.style.left = (a.offsetLeft + 10) + 'px'; ink.style.width = (a.offsetWidth - 20) + 'px'; };
+    const place = (a) => { if (!a) { ink.style.width = 0; return; } ink.style.left = (a.offsetLeft + 10) + 'px'; ink.style.top = (a.offsetTop + a.offsetHeight - 6) + 'px'; ink.style.width = (a.offsetWidth - 20) + 'px'; };
     requestAnimationFrame(() => { place(cur); if (cur) cur.scrollIntoView({ block: 'nearest', inline: 'center' }); });
     navEl.addEventListener('mouseover', (e) => { const a = e.target.closest('a'); if (a) place(a); });
     navEl.addEventListener('mouseleave', () => place(cur));
     addEventListener('resize', () => place(cur));
+    addEventListener('load', () => place(cur)); if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => place(cur));   // 글꼴이 늦게 오면 메뉴 폭이 바뀜
     h.querySelectorAll('.scope-seg button').forEach((b) => b.addEventListener('click', () => { if (b.dataset.sc !== scope) setScope(b.dataset.sc); }));
     h.querySelectorAll('.shell-nav a[data-only]').forEach((a) => a.classList.toggle('dim', scope !== 'all' && !a.dataset.only.includes(scope)));
     notice();
@@ -69,7 +70,7 @@
   }
 
   /* 자료 신선도: status.json(사내 PC 자동 실행기·클라우드 게시 중 최신) → 헤더 배지 + 오래되면 경고 띠 */
-  const FEED = { platact: 'MES 도금 실적', coloract: '컬러 생산 실적', planstock: '컬러 생산 실적', procure: '소재재고List(컬러)', material: '소재재고List(컬러)' };
+  const FEED = { platact: 'MES 도금 실적', coloract: '컬러 생산 실적', planstock: '컬러 생산 실적', coloranal: '컬러 생산 실적', procure: '소재재고List(컬러)', material: '소재재고List(컬러)' };
   async function fresh() {
     const h = document.getElementById('shell'); if (!h) return;
     const urls = ['https://gatcqxrzaonjsixajrwd.supabase.co/storage/v1/object/public/published/status.json?v=' + Date.now(), 'published/status.json'];
@@ -103,6 +104,8 @@
     analysis: '(계획 담당자용) MES 도금 실적으로 속도·M/C 손실·정지를 다시 계산해 계획 조건과 비교 — 반영권장 값은 계획 계산에 넣을 후보',
     platact: '도금 2라인 이번 달 진도, 일별·주별 생산, 속도, 제품·강종, 휴지, 강종 전환. 컬러 실적과 같은 양식',
     coloract: '컬러 4라인 이번 달 진도, 일별·주별 생산, 속도, 품명, 휴지. 지난주가 12주 평균과 얼마나 다른지',
+    colorstat: '컬러 1~4CCL 4분기 계획의 월별 간트(지난 날 = 실적), 라인 한도 대비 편성, 그룹별 물량, 못 넣은 물량. 도금 가동 현황과 같은 역할',
+    coloranal: '(계획 담당자용) MES 컬러 실적으로 라인·품명 t/hr 를 다시 재서 계획 조건과 비교 — 라인 속도 차이가 ±5%를 넘으면 계획 조건 조정 검토',
     planstock: 'TF 계획재(R15 187 사양)의 재고·생산·판매 진도와 월말 재고 예측. \'조치 필요\'부터 보고 담당자별로 확인',
     report: '주 1회 임원 보고 양식. 인쇄/PDF 로 그대로 씀',
     procure: '필요 시점별로 제때 들어올 업체를 판단하고 구매 요청서를 만듦. 입고예정(기발주)을 먼저 넣어야 정확',

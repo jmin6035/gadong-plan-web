@@ -1,5 +1,5 @@
 /* 4분기 통합 가동계획: published/integrated.enc.json(분석 암호, tools/integrated_web.py)
-   ① 결론(안 비교) ② 재고·소재 추이 표 ③ 일별 가동(달력 표) ④ 일별 배치 기준 ⑤ 주간 재계획 ⑥ 더 필요한 데이터
+   ① 재고·소재 추이 표 ② 일별 가동(달력 표) ③ 일별 배치 기준 ④ 주간 재계획 ⑤ 더 필요한 데이터  (안 비교 secRec 는 V1 확정 뒤 화면에서 뺌, 함수는 남김)
    V1 = 자가재 컬러 계획에서 계산, V2 = 자가재계획 유지, V3 = V1 + M/C 2회 추가 허용. 컬러 계획은 공통. */
 (function () {
   'use strict';
@@ -124,7 +124,7 @@
     }).join('');
     const fh = P.stockWeek.find((r) => r.k.startsWith('FH')), cm = P.stockWeek.find((r) => r.k.startsWith('컬러 구매'));
     const inRow = (r, nm) => `<tr><td class="l nm">${nm}</td>${r.in.map((v) => `<td>${v > 0.5 ? k1(v) : ''}</td>`).join('')}<td></td></tr>`;
-    return { html: card('s-stock', '②', '재고·소재 추이', `${VN[V]} · 단위 천t, 주말 재고`, `
+    return { html: card('s-stock', '①', '재고·소재 추이', `${VN[V]} · 단위 천t, 주말 재고`, `
       <div class="legend"><span><i class="box h-ok"></i>목표 부근</span><span><i class="box h-warn"></i>목표의 90% 미만</span><span><i class="box h-bad"></i>안전재고 미만·부족</span><span><i class="box h-over"></i>목표의 130% 초과</span></div>
       <div class="scroll"><table class="t heat"><thead>${head}</thead><tbody>${body}
       <tr class="sep"><td class="l" colspan="${W.length + 2}"><b>소재 입고 필요(그 주)</b> — 발주 = 입고 − 리드타임(FH 32일 · 컬러 45일)</td></tr>${inS('G') ? inRow(fh, 'FH 입고') : ''}${inS('C') ? inRow(cm, '컬러소재 입고') : ''}</tbody></table></div>
@@ -171,7 +171,7 @@
     const tabs = `<div class="tabs">${MONTHS.map((m) => `<button type="button" data-m="${m}" aria-pressed="${m === mon}">${+m.slice(5)}월</button>`).join('')}</div>`;
     const lg = `<div class="legend" data-pl="C"><b class="small">컬러 칸 색 = 그 날 가장 많은 그룹</b>${CG.map((k, j) => `<span><i class="box" style="background:var(${SER[j]})"></i>${k}</span>`).join('')}<span><i class="box" style="background:var(--line)"></i>흐림 = 실적</span></div>
       <div class="legend" data-pl="G"><b class="small">도금 칸 색 = 가장 많은 구분</b>${PC.map((k, j) => `<span><i class="box" style="background:var(${SER[j]})"></i>${k}</span>`).join('')}<span>강종 띠: <i class="box" style="background:var(--s1)"></i>AL <i class="box" style="background:var(--s2)"></i>AZ <i class="box" style="background:var(--s3)"></i>MAC</span></div>`;
-    return { html: card('s-daily', '③', '일별 가동', `${VN[V]} · 칸 숫자 = 그날 생산 톤, 칸을 누르면 품목·이유`, tabs + lg + h + `<div class="detail" id="d-detail"></div>`),
+    return { html: card('s-daily', '②', '일별 가동', `${VN[V]} · 칸 숫자 = 그날 생산 톤, 칸을 누르면 품목·이유`, tabs + lg + h + `<div class="detail" id="d-detail"></div>`),
       after: () => {
         document.querySelectorAll('#s-daily .tabs button').forEach((b) => b.addEventListener('click', () => { mon = b.dataset.m; rerender(); }));
         document.querySelectorAll('#s-daily td[data-k]').forEach((el) => el.addEventListener('click', () => { sel = el.dataset.k; showDetail(); }));
@@ -212,7 +212,7 @@
     ];
     let cur = '';
     const R2 = R.filter((r) => { if (r[0]) cur = r[0]; return inS(cur === '컬러' ? 'C' : cur === '도금' ? 'G' : 'GC'); });
-    return { html: card('s-rule', '④', '일별 배치 기준', '', `<p><a href="doc.html?d=conditions"><b>전체 조건식 보기 →</b></a> (월 물량 LP · 컬러 · 자가재 · 도금 MILP · 소재 · 재계획)</p>` + `<div class="scroll"><table class="t rules"><thead><tr><th>구분</th><th>단계</th><th>기준</th></tr></thead><tbody>${R2.map((r) => `<tr><td class="l nm">${r[0]}</td><td class="l">${r[1]}</td><td class="l wrap">${r[2]}</td></tr>`).join('')}</tbody></table></div>`) };
+    return { html: card('s-rule', '③', '일별 배치 기준', '', `<p><a href="doc.html?d=conditions"><b>전체 조건식 보기 →</b></a> (월 물량 LP · 컬러 · 자가재 · 도금 MILP · 소재 · 재계획)</p>` + `<div class="scroll"><table class="t rules"><thead><tr><th>구분</th><th>단계</th><th>기준</th></tr></thead><tbody>${R2.map((r) => `<tr><td class="l nm">${r[0]}</td><td class="l">${r[1]}</td><td class="l wrap">${r[2]}</td></tr>`).join('')}</tbody></table></div>`) };
   }
 
   // ---------- ⑤ 매일 감시·재계획 ----------
@@ -260,7 +260,7 @@
       ['컬러 월차 진도', '라인 누계 진도 ±5% 이상', '2CCL 가동일 조정·라인 간 품목 이동', 'C'],
     ];
     const pl = `<h3>계획대로 안 될 때 — 감지 기준과 대응</h3><div class="scroll"><table class="t rules"><thead><tr><th>상황</th><th>감지 기준(매일 자동 점검)</th><th>대응</th></tr></thead><tbody>${play.filter((r) => inS(r[3])).map((r) => `<tr><td class="l nm">${r[0]}</td><td class="l wrap">${r[1]}</td><td class="l wrap">${r[2]}</td></tr>`).join('')}</tbody></table></div>`;
-    return { html: card('s-roll', '⑤', '매일 감시 · 재계획', rs.length ? `기준일 ${rs[rs.length - 1].asOf}` : '', fl + verdict + daily + sim + pl) };
+    return { html: card('s-roll', '④', '매일 감시 · 재계획', rs.length ? `기준일 ${rs[rs.length - 1].asOf}` : '', fl + verdict + daily + sim + pl) };
   }
 
   // ---------- ⑥ 더 필요한 데이터 ----------
@@ -275,12 +275,12 @@
       ['warn', '판매계획 vs 실적 이력(3~6개월)', '안전재고를 "예측 오차"로(지금은 출고 편차)', '없음'],
     ];
     const S = { bad: '꼭 필요', warn: '있으면 정확' };
-    return { html: card('s-need', '⑥', '더 필요한 데이터', '', `<table class="t sum"><thead><tr><th></th><th>데이터</th><th>쓰는 곳</th><th>지금</th></tr></thead><tbody>${R.filter((r) => inS(r[4])).map((r) => `<tr><td class="c"><span class="st ${r[0]}">${S[r[0]]}</span></td><td class="l nm">${r[1]}</td><td class="l wrap">${r[2]}</td><td class="l wrap">${r[3]}</td></tr>`).join('')}</tbody></table>`) };
+    return { html: card('s-need', '⑤', '더 필요한 데이터', '', `<table class="t sum"><thead><tr><th></th><th>데이터</th><th>쓰는 곳</th><th>지금</th></tr></thead><tbody>${R.filter((r) => inS(r[4])).map((r) => `<tr><td class="c"><span class="st ${r[0]}">${S[r[0]]}</span></td><td class="l nm">${r[1]}</td><td class="l wrap">${r[2]}</td><td class="l wrap">${r[3]}</td></tr>`).join('')}</tbody></table>`) };
   }
 
   function rerender() { const y = window.scrollY; render(); window.scrollTo(0, y); }
   function render() {
-    const secs = [secRec(), secStock(), secDaily(), secRule(), secRoll(), secNeed()];
+    const secs = [secStock(), secDaily(), secRule(), secRoll(), secNeed()];
     $('g-main').innerHTML = secs.map((s) => s.html).join('');
     secs.forEach((s) => s.after && s.after());
     UI.sub(`${{ all: '컬러 1~4CCL · 도금 1·2CGL · 소재', G: '도금 1·2CGL 보기', C: '컬러 1~4CCL 보기' }[UI.scope()]} — 2026년 10~12월 · 계산 ${O.built.replace('T', ' ')}`);
