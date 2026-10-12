@@ -22,11 +22,7 @@
   let O = null, V = 'V3', mon = '2026-10', sel = null;
   const inS = (p) => !window.UI || UI.inScope(p);                 // 보기 전환(전체/도금/컬러)
   const plOf = (k) => (/^(C|컬러)/.test(k) ? 'C' : /^(G|FH)/.test(k) ? 'G' : 'GC');
-  function niceStep(raw) {
-    if (!(raw > 0)) return 1;
-    const p = Math.pow(10, Math.floor(Math.log10(raw))), m = raw / p;
-    return (m <= 1 ? 1 : m <= 2 ? 2 : m <= 2.5 ? 2.5 : m <= 5 ? 5 : 10) * p;
-  }
+  const niceStep = (raw) => UI.niceStep(raw);                 // 눈금 간격 = 전 화면 공통(1·2·5 × 10^k)
   function legend(items) {
     return `<div class="legend">${items.map((s) => `<span><i class="${s.box ? 'box' : ''} ${s.dash ? 'dash' : ''}" style="background:${s.color}"></i>${esc(s.name)}</span>`).join('')}</div>`;
   }

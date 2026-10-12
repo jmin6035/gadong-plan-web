@@ -710,19 +710,17 @@ html .kpi::before { background: var(--gc, var(--ps-4)); }
 html .card:has(> .xbtn) > h2 { padding-right: 92px; }
 html .card:has(> .xbtn) > h2 .unit { margin-right: 0; }
 /* 실적: 라인별 주간 추이 작은 카드 */
-.wk-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(420px, 1fr)); gap: 14px; }
 .wk-card { border: 1px solid var(--line); border-radius: 10px; padding: 14px 16px 8px; background: var(--surface); }
 .wk-card h3 { margin: 0 0 10px; font-size: 17px; display: flex; align-items: center; gap: 8px; color: var(--ink); }
 .wk-card h3 i { width: 12px; height: 12px; border-radius: 3px; } .wk-card h3 small { font-size: 13px; color: var(--ink-3); font-weight: 500; }
 .wk-ks { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 4px; }
-.wk-k { display: grid; grid-template-columns: auto 1fr; align-items: baseline; gap: 2px 8px; }
-.wk-k span { grid-column: 1 / -1; font-size: 13px; color: var(--ink-2); font-weight: 650; }
-.wk-k b { font-size: 26px; font-weight: 800; letter-spacing: -.03em; font-variant-numeric: tabular-nums; } .wk-k b small { font-size: 13px; font-weight: 500; color: var(--ink-3); margin-left: 3px; }
-.wk-k .dlt { font-size: 13.5px; } .wk-k em { grid-column: 1 / -1; font-style: normal; font-size: 12.5px; color: var(--ink-3); }
+.wk-k { display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px 8px; }                 /* 값·증감은 통째로 줄바꿈(단위만 떨어지지 않게) */
+.wk-k span { flex-basis: 100%; font-size: 13px; color: var(--ink-2); font-weight: 650; }
+.wk-k b { font-size: 26px; font-weight: 800; letter-spacing: -.03em; font-variant-numeric: tabular-nums; white-space: nowrap; } .wk-k b small { font-size: 13px; font-weight: 500; color: var(--ink-3); margin-left: 3px; }
+.wk-k .dlt { font-size: 13.5px; white-space: nowrap; } .wk-k em { flex-basis: 100%; font-style: normal; font-size: 12.5px; color: var(--ink-3); }
 .wk-ch p { margin: 8px 0 0; font-size: 12.5px; font-weight: 700; color: var(--ink-3); }
-@media (max-width: 640px) { .wk-grid { grid-template-columns: 1fr; } }
 /* 컬러 조건 분석: 계획 조건 후보 */
-.cc-lines { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 12px; margin-bottom: 18px; }
+.cc-lines { margin-bottom: 18px; }
 html .cc-line { display: block; width: 100%; text-align: left; font: inherit; color: inherit; background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 14px 16px; cursor: pointer; transition: border-color .15s, box-shadow .15s; }
 html .cc-line:hover { border-color: var(--brand-2); } html .cc-line.on { border-color: var(--brand-2); box-shadow: 0 0 0 3px color-mix(in srgb, var(--brand-2) 20%, transparent); }
 .cc-h { display: flex; justify-content: space-between; align-items: center; } .cc-h b { font-size: 18px; }
@@ -748,7 +746,6 @@ html .cc-line:hover { border-color: var(--brand-2); } html .cc-line.on { border-
 .cp-more summary { cursor: pointer; padding: 10px 0; font-size: 13.5px; color: var(--ink-2); font-weight: 600; }
 @media (max-width: 900px) { .cp-head { display: none; } .cp-row { grid-template-columns: 1fr 1fr; } .cp-bar { grid-column: 1 / -1; } }
 /* 주간 보고 요약 타일 · 결정 카드 */
-.sum-tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 14px; }
 .sum-tile { border: 1px solid var(--line); border-top: 4px solid var(--steel-2); border-radius: 12px; padding: 14px 16px; background: var(--surface); display: flex; flex-direction: column; gap: 4px; }
 .sum-tile.st-good { border-top-color: var(--good); } .sum-tile.st-warn { border-top-color: var(--warn); } .sum-tile.st-bad { border-top-color: var(--bad); }
 .sum-h { display: flex; justify-content: space-between; align-items: center; gap: 8px; } .sum-h b { font-size: 17px; }
@@ -763,8 +760,26 @@ html .cc-line:hover { border-color: var(--brand-2); } html .cc-line.on { border-
 .sum-a { margin-top: auto; padding-top: 10px; border-top: 1px dashed var(--line); font-size: 14px; line-height: 1.5; color: var(--ink); }
 .sum-a span { display: inline-block; font-size: 12px; font-weight: 800; color: var(--brand-2); background: color-mix(in srgb, var(--brand-2) 12%, transparent); border-radius: 4px; padding: 0 6px; margin-right: 6px; }
 .decide2 { margin-top: 18px; } .decide2 h3 { margin: 0 0 10px; font-size: 17px; } .decide2 h3 small { color: var(--ink-3); font-weight: 600; font-size: 13px; }
-.dc-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 12px; }
 .dc { display: flex; gap: 12px; border: 1px solid var(--line); border-left: 4px solid var(--warn); border-radius: 0 10px 10px 0; padding: 12px 14px; background: var(--surface); }
 .dc > i { flex: none; width: 26px; height: 26px; border-radius: 50%; background: var(--warn); color: #fff; font-style: normal; font-weight: 800; display: grid; place-items: center; font-size: 14px; }
 .dc b { display: block; font-size: 15.5px; line-height: 1.45; } .dc p { margin: 4px 0 0; font-size: 13.5px; color: var(--ink-2); line-height: 1.55; }
 @media print { .sum-tiles { grid-template-columns: repeat(4, 1fr); gap: 6px; } .sum-tile { padding: 8px; } .sum-v { font-size: 26px; } .dc-grid { grid-template-columns: repeat(3, 1fr); } }
+
+/* ================= 화면 칸 규칙(전 화면 공통, 2026-10-12) =================
+   ① KPI 띠 .kpis        최소 200px · 간격 12
+   ② 작은 타일          최소 240px · 간격 12  (라인 타일·요약 타일·단계 카드 등)
+   ③ 넓은 카드          최소 320px · 간격 18  (판단 카드·문서 목록)
+   ④ 반반 .g2           2칸 · 간격 18 · 1000px 이하 한 줄   (예전 이름 .grid2 .two .row3 .det .chartrow .wk-grid 도 같은 규칙)
+   카드 사이 간격은 가로·세로 모두 18(카드 아래 여백과 같음). 칸 안의 카드는 자기 여백을 없애고, 칸 묶음이 아래 여백 18을 가짐 */
+:root { --gap: 18px; --gap-s: 12px; }
+.kpis { grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: var(--gap-s); }
+.kstrip, .lines { gap: var(--gap-s); }                               /* 홈 KPI 띠·라인 띠(6칸 고정) */
+.cc-lines, .ln-grid, .sum-tiles, .cc-steps, .up { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: var(--gap-s); }
+.dc-grid, .dl { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: var(--gap); }
+.g2, .grid2, .two, .row3, .det, .chartrow, .wk-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--gap); align-items: stretch; margin-bottom: var(--gap); }
+.row2 { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--gap); margin-bottom: var(--gap); }
+:is(.g2, .grid2, .two, .row2, .row3, .det, .chartrow, .wk-grid) > * { min-width: 0; }
+:is(.g2, .grid2, .two, .row2, .row3, .det, .chartrow, .wk-grid) > .card { margin: 0; }
+.card :is(.g2, .grid2, .two, .wk-grid) { margin-bottom: 0; }    /* 카드 안의 반반(표 두 개·라인 미니 그래프)은 카드 여백만 */
+@media (max-width: 1000px) { .g2, .grid2, .two, .row3, .det, .chartrow, .wk-grid { grid-template-columns: 1fr; } }
+@media print { .g2, .grid2, .two, .row3, .det, .chartrow, .wk-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }

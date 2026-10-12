@@ -48,16 +48,14 @@ table.sc td.tot, table.sc th.tot { font-weight: 800; background: var(--surface-2
 .lg { display: flex; flex-wrap: wrap; gap: 6px 14px; font-size: 12px; color: var(--ink-2); margin: 8px 2px 0; }
 .lg i { display: inline-block; width: 12px; height: 10px; border-radius: 2px; margin-right: 5px; vertical-align: -1px; }
 /* 상세 */
-.det { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; } @media (max-width: 1000px) { .det { grid-template-columns: 1fr; } } .det .card table { width: 100%; }
-.det .card { margin: 0; padding: 14px 16px; }
+.det .card table { width: 100%; }
+.det .card { padding: 14px 16px; }
 .det h3 { margin: 0 0 8px; font-size: 15px; }
 table.dt { width: 100%; border-collapse: collapse; font-size: 13px; font-variant-numeric: tabular-nums; }
 table.dt th { white-space: nowrap; font-size: 11.5px; color: var(--ink-3); text-align: left; padding: 3px 4px; border-bottom: 1px solid var(--line); font-weight: 700; }
 table.dt td { padding: 4px; border-bottom: 1px solid var(--grid); vertical-align: top; }
 table.dt td.r, table.dt th.r { text-align: right; }
 .why { font-size: 12px; color: var(--ink-3); line-height: 1.5; margin-top: 6px; }
-.chartrow { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-.chartrow .card { margin: 0; }
 svg.tr { width: 100%; height: 190px; display: block; }
 svg.tr text { font-size: 13px; fill: var(--ink-3); }
 table.sc td.est { font-style: italic; opacity: .75; }
@@ -71,7 +69,6 @@ table.dt.mt td.st { font-weight: 700; } table.dt.mt td.st.ok { color: var(--good
 .fto { font-size: 12px; color: #0a7d71; font-weight: 700; margin-top: 2px; }
 .fin { display: flex; flex-direction: column; gap: 2px; margin: 0 0 6px; font-size: 12.5px; color: #5b4bb7; font-weight: 700; }
 .fl-r { cursor: pointer; } .fin .fl-r:hover, tr.fl-r:hover td { text-decoration: underline; }
-@media (max-width: 900px) { .chartrow { grid-template-columns: 1fr; } }
 .band { display: flex; align-items: center; gap: 12px; margin: 26px 0 10px; font-size: 15px; color: var(--ink-2); }
 .band b { font-size: 20px; color: #fff; padding: 4px 14px; border-radius: 8px; letter-spacing: .02em; }
 .band-g b { background: var(--brand-2); } .band-m b { background: #b25e00; }
@@ -115,7 +112,7 @@ table.sc td.nd { color: var(--ink-3); }
     </section>
     <div class="det" id="s-det2"></div>
     <section class="card" id="s-mat"></section>
-    <div class="chartrow" style="margin-top:12px"><section class="card" id="s-ch1"></section><section class="card" id="s-ch2"></section></div>
+    <div class="chartrow"><section class="card" id="s-ch1"></section><section class="card" id="s-ch2"></section></div>
     <details class="basis" style="margin-top:10px;font-size:12.5px;color:var(--ink-3)"><summary style="cursor:pointer;font-weight:700;color:var(--ink-2)">산출 기준</summary>
       <ul style="line-height:1.7">
         <li>가동·자가재·구매 소재·제품 재고 = 확정 통합 계획 기준. 매일 재계획 연동은 추후 반영.</li>

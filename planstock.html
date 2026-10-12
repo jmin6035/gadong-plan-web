@@ -27,7 +27,7 @@ table.t.big td.nm { font-weight: 700; }
 td.pbar { min-width: 190px; } td.pbar div { display: inline-block; vertical-align: middle; width: 110px; height: 12px; border-radius: 6px; background: var(--grid); overflow: hidden; margin-right: 8px; }
 td.pbar i { display: block; height: 100%; border-radius: 6px; transform-origin: left; animation: grow .9s var(--ease) both .2s; } td.pbar i.ok { background: var(--good); } td.pbar i.wn { background: var(--warn); } td.pbar i.bd { background: var(--bad); }
 .hbar { height: 16px; border-radius: 4px; background: var(--grid); overflow: hidden; } .hbar i { display: block; height: 100%; border-radius: 4px; transform-origin: left; animation: grow .8s var(--ease) both; }
-.grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; } .grid2.rowc { gap: 16px; align-items: stretch; grid-template-columns: repeat(auto-fit, minmax(min(100%, 550px), 1fr)); } .grid2.rowc > .card { margin: 0 0 16px; } .grid2 > * { min-width: 0; } @media (max-width: 980px) { .grid2 { grid-template-columns: 1fr; } }
+/* 반반 칸(.grid2)은 ui/theme.css 공통 규칙 */
 details.tv { margin-top: 12px; } details.tv summary { cursor: pointer; color: var(--brand-2); font-weight: 600; font-size: 15px; }
 .tipbox { position: fixed; pointer-events: none; background: var(--surface); color: var(--ink); border: 1px solid var(--line); border-radius: 8px; padding: 9px 12px; font-size: 14.5px; line-height: 1.55; box-shadow: var(--shadow-up); z-index: 40; display: none; }
 .tag { display: inline-block; border-radius: 999px; padding: 2px 9px; font-size: 13px; font-weight: 600; white-space: nowrap; margin: 1px 0; }

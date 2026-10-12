@@ -51,8 +51,7 @@
 .ln svg.sp path.li { fill: none; stroke: var(--gc); stroke-width: 2; stroke-linejoin: round; animation: draw 1.2s var(--ease) backwards .3s; }
 .ln .nx { font-size: 12.5px; color: var(--ink-3); margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 /* 2단 */
-.row2 { display: grid; grid-template-columns: minmax(0, 1fr); gap: 12px; }          /* 화면 줄 규칙: KPI 띠 · 전체 폭 · 반반 세 가지만 */
-.row3 { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; align-items: stretch; }
+/* 줄 규칙(.row2 전체 폭 · .row3 반반)은 ui/theme.css 공통 규칙 */
 .wo-g { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; margin-bottom: 10px; }
 .wo-l { display: grid; gap: 3px; border: 1px solid var(--line); border-left: 4px solid var(--good); border-radius: 0 8px 8px 0; padding: 8px 12px; font-size: 13px; }
 .wo-l.bad { border-left-color: var(--warn); background: var(--warn-bg); }
@@ -115,7 +114,7 @@ table.mini td.r { text-align: right; font-variant-numeric: tabular-nums; }
 .tipbox { position: fixed; pointer-events: none; background: var(--surface); color: var(--ink); border: 1px solid var(--line); border-radius: 6px; padding: 6px 9px; font-size: 12.5px; box-shadow: var(--shadow-up); z-index: 40; display: none; white-space: nowrap; }
 #h-lock .unlock { margin-top: 6px; }
 @media (max-width: 1280px) { .kstrip, .lines { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
-@media (max-width: 980px) { .row2, .row3 { grid-template-columns: 1fr; } .menu { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 980px) { .menu { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 @media (max-width: 640px) { .kstrip, .lines { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; } .k .v { font-size: 22px; } table.gt .hide-m { display: none; } table.gt td.gbar { min-width: 80px; } }
 #h-week .calc { min-height: 96px; cursor: default; } #h-week .calc:hover { transform: none; box-shadow: none; border-color: var(--line); } #h-week .calc.today:hover { border-color: var(--brand-2); }
 </style>

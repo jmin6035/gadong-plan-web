@@ -122,15 +122,14 @@
       ${rp.byDept ? `<div class="scroll"><table class="data vs"><tr><th>부서</th><th>계획</th><th>실적</th><th>차이</th><th>달성</th></tr>${rp.byDept.filter((r) => r[1] || r[2]).map(([c, p, a]) => `<tr><td>${c}</td><td class="n">${GP.fmt(p)}</td><td class="n">${GP.fmt(a)}</td><td class="n ${a < p - 1 ? 'neg' : ''}">${a >= p ? '+' : ''}${GP.fmt(a - p)}</td><td class="n">${pct(a, p)}</td></tr>`).join('')}</table></div>` : ''}`;
   }
   // ---------------- 일별 차트 (라인별 작은 배수, 같은 y축) ----------------
-  function niceMax(v) { const p = 10 ** Math.floor(Math.log10(v)); return Math.ceil(v / p / (v / p > 5 ? 2 : 1)) * p * (v / p > 5 ? 2 : 1); }
   function renderDaily() {
     const P = R.P, H = A.H, days = H.days, n = days.length;
     const box = $('d-daily'); const avail = Math.max(box.clientWidth || 700, 300);
     const ml = 44, mr = 8, mt = 16, mb = 22, h = 150;
     const band = Math.max(8, (avail - ml - mr) / n), W = ml + mr + band * n, bw = Math.min(24, band - 2);
-    const ymax = niceMax(Math.max(...Object.values(A.prodLD), 1));
+    const sc = UI.scale(Math.max(...Object.values(A.prodLD), 1), 0, 2), ymax = sc.hi;   // 눈금 = 전 화면 공통(1·2·5 간격)
     const y = (v) => mt + h - (v / ymax) * h;
-    const ticks = [0, ymax / 2, ymax];
+    const ticks = sc.ticks;
     box.innerHTML = P.lines.map((l) => {
       let s = `<svg class="daily" width="${W}" height="${mt + h + mb}" role="img" aria-label="${l} 일별 계획 생산량">`;
       if (R.replan) {

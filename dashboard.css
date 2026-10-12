@@ -34,9 +34,6 @@ svg text { fill: var(--muted); font: 11px "Malgun Gothic", "Apple SD Gothic Neo"
 svg .grid { stroke: var(--grid); stroke-width: 1; }
 svg .bar:hover, svg .bar.on { opacity: .8; }
 svg .hit { fill: transparent; cursor: pointer; }
-.two { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
-.two .card { margin: 0; }
-@media (max-width: 820px) { .two { grid-template-columns: 1fr; } }
 .load-row { display: grid; grid-template-columns: 48px 1fr 56px; align-items: center; gap: 8px; margin: 6px 0; font-size: 13px; }
 .load-track { height: 14px; background: var(--soft); border-radius: 0 4px 4px 0; position: relative; }
 .load-fill { height: 100%; background: var(--bar-neutral); border-radius: 0 4px 4px 0; }
@@ -138,7 +135,6 @@ table.gtable { table-layout: fixed; min-width: 1320px; }
 table.vs td small { color: var(--muted); font-weight: normal; }
 .neg { color: var(--down); font-weight: bold; }
 @media (max-width: 560px) { h2 small { display: block; margin-top: 2px; } table.mes-t td, table.mes-t th { padding: 5px 4px; font-size: 13px; } table.mes-t td.l { white-space: normal; min-width: 0; } table.mes-t .pill { font-size: 11px; padding: 0 5px; } }
-.two > * { min-width: 0; }
 .pos { color: var(--fam-AL); font-weight: bold; }
 .report h3 { font-size: 15px; margin: 14px 0 4px; }
 .report p, .report li { line-height: 1.6; margin: 3px 0; }

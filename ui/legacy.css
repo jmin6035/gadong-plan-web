@@ -5,9 +5,7 @@
 .delta.up { color: var(--up); }
 .delta.down { color: var(--down); }
 .delta.flat { color: var(--ink-3); }
-.grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
 .grid2 > * { min-width: 0; }
-@media (max-width: 860px) { .grid2 { grid-template-columns: 1fr; } }
 .sw { display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin-right: 6px; vertical-align: -1px; }
 .chart { position: relative; }
 .chart svg { display: block; width: 100%; height: auto; overflow: visible; }

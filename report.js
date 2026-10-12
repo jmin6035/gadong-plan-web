@@ -25,11 +25,7 @@
   const chip = (s) => (s && ST[s] ? `<span class="st ${s}">${ST[s]}</span>` : '');
 
   // ---------- 그래프(인라인 SVG) ----------
-  function niceStep(raw) {
-    if (!(raw > 0)) return 1;
-    const p = Math.pow(10, Math.floor(Math.log10(raw))), m = raw / p;
-    return (m <= 1 ? 1 : m <= 2 ? 2 : m <= 2.5 ? 2.5 : m <= 5 ? 5 : 10) * p;
-  }
+  const niceStep = (raw) => UI.niceStep(raw);                 // 눈금 간격 = 전 화면 공통(1·2·5 × 10^k)
   function legend(series) {
     return `<div class="legend">${series.map((s, k) => `<span><i class="${s.box ? 'box' : ''} ${s.dash ? 'dash' : ''}" style="background:${s.color || `var(${SER[k]})`}"></i>${esc(s.name)}</span>`).join('')}</div>`;
   }
@@ -207,7 +203,7 @@
     b += '</div>';
     let d = '<div class="scroll"><table class="t"><thead><tr><th>라인</th><th>12주 평균 t/일</th><th>보고 주 t/일</th><th>증감</th><th>속도 t/hr</th><th>평균 두께 mm</th><th>휴지 h/일</th></tr></thead><tbody>' +
       pl.rows.map((r, k) => `<tr><td class="l"><span class="sw" style="background:var(${SER[k]})"></span>${r.line}</td><td>${n0(r.w0.tpd)}</td><td><b>${n0(r.w1.tpd)}</b></td><td>${delta(r.dTpd)}</td><td>${n1(r.w0.tph)} → ${n1(r.w1.tph)}</td><td>${n3(r.w0.thick)} → ${n3(r.w1.thick)}</td><td>${n1(r.w0.stopH)} → ${n1(r.w1.stopH)}</td></tr>`).join('') + '</tbody></table></div>';
-    d += '<div class="grid2" style="margin-top:12px">' + box('c-pl-trend', '주별 생산량', 't/일') + '<div>';
+    d += '<div class="grid2">' + box('c-pl-trend', '주별 생산량', 't/일') + '<div>';
     if (pa) d += '<p class="ttl">강종 전환(M/C) 일정</p><div class="scroll"><table class="t"><thead><tr><th>일자</th><th>라인</th><th>전환</th></tr></thead><tbody>' +
       pa.upcomingMC.map((m) => `<tr><td class="l">${md(m.day)}</td><td class="l">${m.line}</td><td class="l">${esc(m.from)} → ${esc(m.to)}</td></tr>`).join('') + '</tbody></table></div>' +
       `<p class="hint">재계획: 지연 ${n0(pa.late)}t · 결품 ${pa.short.length ? pa.short.length + '건' : '0'} · 잔여 강종 전환 ${pa.remainMC}회</p>`;
@@ -229,7 +225,7 @@
       b += box('c-co-week', '주별 생산량 (라인 누적)', 't/일') + '</div>';
       d = '<div class="scroll"><table class="t"><thead><tr><th>라인</th><th>12주 평균 t/일</th><th>보고 주 t/일</th><th>증감</th><th>가동일</th><th>속도 t/hr <span class="muted">휴지 포함</span></th><th>가동일당 휴지 h</th><th>주요 품목 (t)</th></tr></thead><tbody>' +
         co.rows.map((r, k) => `<tr><td class="l"><span class="sw" style="background:var(${SER[k]})"></span>${r.line}</td><td>${n0(r.w0.tpd)}</td><td><b>${n0(r.w1.tpd)}</b></td><td>${delta(r.dTpd)}</td><td>${r.w1.days}/7</td><td>${n1(r.w0.tph)} → ${n1(r.w1.tph)}</td><td>${n1(r.w0.stopH)} → ${n1(r.w1.stopH)}</td><td class="l">${r.top.map((x) => `${esc(x[0])} ${n0(x[1])}`).join(' · ')}</td></tr>`).join('') + '</tbody></table></div>';
-      d += '<div class="grid2" style="margin-top:12px">' + box('c-co-stop', '주별 휴지 구성 (4라인 합)', '시간/일') + '<div><p class="ttl">휴지 구성 (4라인 합, 시간/일)</p><div class="scroll"><table class="t"><thead><tr><th>구분</th><th>12주 평균</th><th>보고 주</th><th>증감</th></tr></thead><tbody>' +
+      d += '<div class="grid2">' + box('c-co-stop', '주별 휴지 구성 (4라인 합)', '시간/일') + '<div><p class="ttl">휴지 구성 (4라인 합, 시간/일)</p><div class="scroll"><table class="t"><thead><tr><th>구분</th><th>12주 평균</th><th>보고 주</th><th>증감</th></tr></thead><tbody>' +
         co.stops.map((s, k) => `<tr><td class="l"><span class="sw" style="background:var(${SER[k]})"></span>${esc(s.cat)}</td><td>${n1(s.w0)}</td><td><b>${n1(s.w1)}</b></td><td>${delta(pct(s.w1, s.w0), false)}</td></tr>`).join('') + '</tbody></table></div></div></div>';
       b += notes(N.color) + more('상세 — 라인별 실적·휴지 구성', d);
       h += section('2', '컬러 생산 (1~4CCL)', sm.color || { status: K.color.st }, b, 'C');
@@ -245,7 +241,7 @@
       d = '';
       if (sh && sh.monthly && sh.monthly.length) d += '<p class="ttl">월별 판매 출하와 월말 출하 집중</p><div class="scroll"><table class="t"><thead><tr><th>월</th><th>판매 출하 t</th><th>1~5일</th><th>말일 출하</th><th>말일 비중</th></tr></thead><tbody>' +
         sh.monthly.map((m) => `<tr><td class="l">${+m.month.slice(5)}월</td><td>${n0(m.total)}</td><td>${n0(m.first5)}</td><td><b>${n0(m.lastDay)}</b></td><td><b>${rate(m.lastDay, m.total)}%</b></td></tr>`).join('') + '</tbody></table></div>';
-      if (sh) d += '<div class="grid2" style="margin-top:12px">' + box('c-ship', '주별 출하', 't/일') + '<div><div class="scroll"><table class="t"><thead><tr><th>구분</th><th>12주 평균 t/일</th><th>보고 주 t/일</th><th>증감</th></tr></thead><tbody>' +
+      if (sh) d += '<div class="grid2">' + box('c-ship', '주별 출하', 't/일') + '<div><div class="scroll"><table class="t"><thead><tr><th>구분</th><th>12주 평균 t/일</th><th>보고 주 t/일</th><th>증감</th></tr></thead><tbody>' +
         sh.rows.map((r, k) => `<tr><td class="l"><span class="sw" style="background:var(${SER[k]})"></span>${esc(r.kind)}</td><td>${n0(r.w0)}</td><td><b>${n0(r.w1)}</b></td><td>${delta(r.d)}</td></tr>`).join('') + '</tbody></table></div></div></div>';
       b += notes(N.ship) + (d ? more('상세 — 월말 출하 집중·주별 추이', d) : '');
       h += section('3', '출하', sm.ship || { status: K.ship.st }, b);
