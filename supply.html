@@ -72,6 +72,16 @@ table.dt.mt td.st { font-weight: 700; } table.dt.mt td.st.ok { color: var(--good
 .fin { display: flex; flex-direction: column; gap: 2px; margin: 0 0 6px; font-size: 12.5px; color: #5b4bb7; font-weight: 700; }
 .fl-r { cursor: pointer; } .fin .fl-r:hover, tr.fl-r:hover td { text-decoration: underline; }
 @media (max-width: 900px) { .chartrow { grid-template-columns: 1fr; } }
+.band { display: flex; align-items: center; gap: 12px; margin: 26px 0 10px; font-size: 15px; color: var(--ink-2); }
+.band b { font-size: 20px; color: #fff; padding: 4px 14px; border-radius: 8px; letter-spacing: .02em; }
+.band-g b { background: var(--brand-2); } .band-m b { background: #b25e00; }
+.matcal table.sc thead th, .matcal table.sc thead .lb { background: color-mix(in srgb, #b25e00 14%, var(--surface)); }
+.matcal table.sc tr.sec td, .matcal table.sc tr.sec td.lb { color: #8a4a00; }
+table.sc td.inb2 { font-weight: 800; color: var(--good); } table.sc td.inb2::before { content: '▲'; font-size: 10px; margin-right: 2px; }
+table.sc td.dl { outline: 2px solid var(--bad); outline-offset: -2px; }
+table.sc td.nd { color: var(--ink-3); }
+#s-mat td.bad { color: var(--bad); font-weight: 800; } #s-mat td.warn { color: var(--warn); font-weight: 800; }
+.det > .card { overflow-x: auto; }
 </style>
 </head>
 <body>
@@ -85,10 +95,13 @@ table.dt.mt td.st { font-weight: 700; } table.dt.mt td.st.ok { color: var(--good
   <div id="main" hidden>
     <div class="sbar"><span id="s-meta"></span><div class="tabs" id="s-mon" role="group" aria-label="월"></div></div>
     <section class="card" id="s-top"></section>
+    <div class="band band-g"><b>가동</b> 도금·컬러 생산과 제품 재고</div>
     <section class="card"><h2>가동 캘린더 <small>도금·컬러 생산 · 제품 재고 — 날짜(열)를 누르면 아래에 그날 품목별 납기·소재 발주·입고</small><span class="unit">톤</span></h2>
       <div class="calw" id="s-calw"><table class="sc" id="s-cal"></table></div>
     </section>
-    <section class="card"><h2>자가재 캘린더 <small>도금이 만든 컬러 소재(AZ·MAC·AL) — 그날 끝 재고, 부족하면 노란·빨간 칸</small><span class="unit">톤</span></h2>
+    <div class="band band-m"><b>소재</b> 자가재(도금 → 컬러)와 구매 소재 — 재고가 언제 바닥나고 언제까지 발주해야 하나</div>
+    <section class="card" id="s-mat"></section>
+    <section class="card matcal"><h2>소재 캘린더 <small>그날 끝 재고 — 자가재는 계획대로, 구매 소재는 새 발주가 없다고 볼 때. ▲ = 입고(기발주), 붉은 테 = 발주 마감</small><span class="unit">톤</span></h2>
       <div class="calw" id="s-calw2"><table class="sc" id="s-cal2"></table></div>
       <div class="lg"><span><i style="background:color-mix(in srgb,#1660c9 25%,#fff)"></i>AL</span><span><i style="background:color-mix(in srgb,#e8590c 25%,#fff)"></i>AZ</span><span><i style="background:color-mix(in srgb,#0a9e8f 25%,#fff)"></i>MAC</span><span><i style="background:#fff;box-shadow:inset 0 -3px 0 #c98b00"></i>M/C</span><span><i style="background:var(--warn-bg)"></i>재고 부족 주의(3일분 미만)</span><span><i style="background:var(--bad-bg)"></i>바닥·목표 130% 초과</span></div>
     </section>

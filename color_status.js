@@ -12,6 +12,7 @@
   const wd = (d) => WD[new Date(d + 'T00:00:00').getDay()];
   const LINES = ['1CCL', '2CCL', '3CCL', '4CCL'];
   const CG = ['계획재', '주문재', '건재수출', '가전수출', '가전내수', '수요개발'];
+  const GL = (g) => (g === '주문재' ? '건재 주문재' : g);          // 판매계획 '③ 주문재' = 컬러건재(국내) 고객 주문 생산분(계획재 아님)
   const GVAR = Object.fromEntries(CG.map((g, i) => [g, `var(--s${i + 1})`]));
   const MONTHS = ['2026-10', '2026-11', '2026-12'];
   const sum = (a, f = (x) => x) => a.reduce((s, x) => s + (f(x) || 0), 0);
@@ -46,7 +47,7 @@
       [`${fmt(pl)}t`, '계획재', `4분기 생산의 ${fmt(pl / q * 100)}%`],
       [`${fmt(mx * 100, 1)}%`, '최대 월 부하', `${mxK} (편성 ÷ MES 월차)`, mx > 0.995],
     ].map(([v, l, sub, bad]) => `<div class="kpi ${bad ? 'bad' : ''}"><span class="kl">${l}</span><b>${v}</b><span class="ks">${sub}</span></div>`).join('');
-    const leg = CG.map((g) => `<span><i class="sw" style="background:${GVAR[g]}"></i>${g}</span>`).join('') + '<span><i class="sw" style="background:var(--mc)"></i>휴지계획(S/D·청소·Test·샘플, 마우스를 올리면 시간)</span><span><i class="sw" style="background:var(--sd)"></i>종일 정지(수리·계획휴지) · 가동 없음</span>';
+    const leg = CG.map((g) => `<span><i class="sw" style="background:${GVAR[g]}"></i>${GL(g)}</span>`).join('') + '<span><i class="sw" style="background:var(--mc)"></i>휴지계획(S/D·청소·Test·샘플, 마우스를 올리면 시간)</span><span><i class="sw" style="background:var(--sd)"></i>종일 정지(수리·계획휴지) · 가동 없음</span>';
     $('g-legend').innerHTML = leg;
     $('g-tabs').innerHTML = MONTHS.map((m, i) => `<button type="button" data-g="${i}">${+m.slice(5)}월</button>`).join('');
     const t0 = localToday(), ti = MONTHS.indexOf(t0.slice(0, 7)), la = MONTHS.indexOf(lastAct.slice(0, 7));
@@ -81,7 +82,7 @@
       rows.forEach((r, ri) => {
         h += `<tr class="r-${r.k}${ri === 0 ? ' first' : ''}">`;
         if (ri === 0) h += `<th class="c0 line" rowspan="${rows.length}">${l}</th>`;
-        h += `<th class="c1">${r.k === 'fam' ? '<b>합계</b>' : r.k === 'dep' ? `<i class="sw" style="background:${GVAR[r.g]}"></i>${r.g}` : '가동시간(h)'}</th>`;
+        h += `<th class="c1">${r.k === 'fam' ? '<b>합계</b>' : r.k === 'dep' ? `<i class="sw" style="background:${GVAR[r.g]}"></i>${GL(r.g)}` : '가동시간(h)'}</th>`;
         let t = 0;
         const fdIdx = ds.map((d, i) => (fullDay(l, d) ? i : -1)).filter((i) => i >= 0);
         const runs = []; fdIdx.forEach((i) => { const r0 = runs[runs.length - 1]; if (r0 && r0[1] === i - 1) r0[1] = i; else runs.push([i, i]); });
@@ -128,7 +129,7 @@
     const m = d.slice(0, 7);
     $('d-now').innerHTML = LINES.map((l) => {
       const c = by[`${l}|${d}`], T = c ? tot(c) : 0;
-      const gs = c ? Object.entries(c.g).filter(([, v]) => v > 0.5).sort((a, b) => b[1] - a[1]).map(([k, v]) => `${k} ${fmt(v)}t`).join(', ') : '';
+      const gs = c ? Object.entries(c.g).filter(([, v]) => v > 0.5).sort((a, b) => b[1] - a[1]).map(([k, v]) => `${GL(k)} ${fmt(v)}t`).join(', ') : '';
       const items = c ? c.rows.slice(0, 4).map((r) => `${esc(r[1])}${r[2] ? ' ' + esc(r[2]) : ''} ${fmt(r[5])}t`).join(', ') : '';
       const toDate = sum(O.color.filter((x) => x.l === l && x.d.startsWith(m) && x.d <= d), tot);
       const next = O.color.filter((x) => x.l === l && x.d > d && tot(x) < 0.5).map((x) => x.d)[0];
@@ -152,13 +153,13 @@
     const mx = Math.max(...Object.values(t), 1);
     const cell = (v) => `<td class="n bar-cell"><i style="width:${(v / mx) * 100}%"></i><span>${fmt(v)}</span></td>`;
     $('d-dept').innerHTML = `<tr><th>그룹</th>${MONTHS.map((m) => `<th>${+m.slice(5)}월</th>`).join('')}<th>분기 생산</th><th>미편성</th><th>계획 물량(생산 + 미편성)</th></tr>`
-      + CG.map((g) => { const v = MONTHS.map((m) => t[`${g}|${m}`] || 0); return `<tr><td><i class="sw" style="background:${GVAR[g]}"></i> ${g}</td>${v.map(cell).join('')}<td class="n"><b>${fmt(sum(v))}</b></td><td class="n">${fmt(un[g] || 0)}</td><td class="n">${fmt(sum(v) + (un[g] || 0))}</td></tr>`; }).join('')
+      + CG.map((g) => { const v = MONTHS.map((m) => t[`${g}|${m}`] || 0); return `<tr><td><i class="sw" style="background:${GVAR[g]}"></i> ${GL(g)}</td>${v.map(cell).join('')}<td class="n"><b>${fmt(sum(v))}</b></td><td class="n">${fmt(un[g] || 0)}</td><td class="n">${fmt(sum(v) + (un[g] || 0))}</td></tr>`; }).join('')
       + `<tr><td><b>합계</b></td>${MONTHS.map((m) => `<td class="n"><b>${fmt(monT(m))}</b></td>`).join('')}<td class="n"><b>${fmt(sum(MONTHS, (m) => monT(m)))}</b></td><td class="n">${fmt(unT())}</td><td class="n">${fmt(sum(MONTHS, (m) => monT(m)) + unT())}</td></tr>`;
   }
   function renderEarly() {
     const U = O.colorUnplaced.slice().sort((a, b) => (a.ym < b.ym ? -1 : a.ym > b.ym ? 1 : b.t - a.t));
     $('d-early').innerHTML = '<tr><th>월</th><th>그룹</th><th>품명</th><th>고객·목적지</th><th>가능 라인</th><th>톤</th></tr>'
-      + (U.map((u) => `<tr><td>${+u.ym.slice(5)}월</td><td>${esc(u.g)}</td><td>${esc(u.p)}</td><td>${esc(u.c || '')}${u.dest ? ' · ' + esc(u.dest) : ''}</td><td>${esc(u.lines || '')}</td><td class="n">${fmt(u.t)}</td></tr>`).join('') || '<tr><td colspan="6">없음</td></tr>');
+      + (U.map((u) => `<tr><td>${+u.ym.slice(5)}월</td><td>${esc(GL(u.g))}</td><td>${esc(u.p)}</td><td>${esc(u.c || '')}${u.dest ? ' · ' + esc(u.dest) : ''}</td><td>${esc(u.lines || '')}</td><td class="n">${fmt(u.t)}</td></tr>`).join('') || '<tr><td colspan="6">없음</td></tr>');
   }
 
   // ---------------- 자료 열기(분석 암호) ----------------
