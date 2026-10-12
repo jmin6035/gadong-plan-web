@@ -22,7 +22,7 @@
 .al i { width: 8px; height: 8px; border-radius: 50%; background: var(--warn); } .al.bad i { background: var(--bad); }
 .al b { font-size: 12px; color: var(--ink-2); }
 /* 캘린더 */
-.calw { overflow-x: auto; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); }
+.calw { overflow: auto; max-height: calc(100vh - 110px); border: 1px solid var(--line); border-radius: 8px; background: var(--surface); }   /* 표 안 세로 스크롤 → 날짜 머리줄 고정 */
 table.sc { border-collapse: separate; border-spacing: 0; font-size: 12.5px; font-variant-numeric: tabular-nums; min-width: 1500px; width: 100%; }
 table.sc th, table.sc td { border-right: 1px solid var(--grid); border-bottom: 1px solid var(--grid); padding: 5px 3px; text-align: center; white-space: nowrap; min-width: 40px; }
 table.sc thead th { position: sticky; top: 0; z-index: 3; background: var(--tint-2); font-weight: 700; cursor: pointer; }

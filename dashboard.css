@@ -82,10 +82,11 @@ body.dash .top h1 { font-size: 24px; font-weight: 800; }
 .kpis.big .kpi.bad b { color: var(--err); }
 .glegend { display: flex; gap: 14px; flex-wrap: wrap; font-size: 13px; color: var(--muted); margin: 0 0 8px; }
 .glegend span { display: inline-flex; align-items: center; gap: 5px; }
-.gtable-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; border: 1px solid var(--line); border-radius: 6px; }
+.gtable-wrap { overflow: auto; max-height: calc(100vh - 110px); -webkit-overflow-scrolling: touch; border: 1px solid var(--line); border-radius: 6px; }   /* 표 안에서 세로로도 스크롤 → 날짜 머리줄이 위에 고정 */
 table.gtable { border-collapse: separate; border-spacing: 0; font-size: 12px; font-variant-numeric: tabular-nums; width: 100%; }
 .gtable th, .gtable td { border: 0; border-right: 1px solid var(--line); border-bottom: 1px solid var(--line); padding: 4px 3px; text-align: center; white-space: nowrap; min-width: 40px; }
 .gtable thead th { background: var(--soft); font-weight: 700; position: sticky; top: 0; z-index: 2; }
+.gtable thead tr:nth-child(2) th { top: var(--h1, 39px); }                         /* 둘째 머리줄(요일)은 첫 줄 높이만큼 아래에 고정 */
 .gtable thead th.sat { background: #f7d9a8; color: #1c1c1c; }
 .gtable thead th.sun { background: #f5c2c2; color: #1c1c1c; }
 .gtable .c0 { position: sticky; left: 0; z-index: 3; background: var(--card); min-width: 52px; }
