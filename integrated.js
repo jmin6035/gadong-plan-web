@@ -101,8 +101,8 @@
     const x = O.variants[vs[0]].self.AZ.map((r) => '2026-' + r[0]);
     const col = { V1: 'var(--s1)', V2: 'var(--s2)', V3: 'var(--s3)' };
     return { html: card('s-rec', '①', O.confirmed ? `확정 계획 ${O.confirmed}` : '결론', O.confirmed ? '2026-10-07 확정 · V2·V3 비교안은 정리함' : '', `<p class="lead">★ ${esc(O.recWhy)}</p>${tb}${vs.length > 1 ? '<p class="small">초록 = 그 지표에서 가장 좋은 안. 컬러 계획·판매·월 물량 기준은 세 안 공통이고, 다른 것은 자가재 납기(V2 월말 / V1·V3 10일 단위)와 M/C 허용 횟수뿐.</p>' : ''}
-      <h3>AZ 자가재 재고 — 0 밑 = 컬러가 소재를 못 받는 날</h3><div class="chart" id="c-az"></div>`),
-      after: () => lineChart($('c-az'), { x, W: 1000, H: 240, series: vs.map((v) => ({ name: v, color: col[v], v: O.variants[v].self.AZ.map((r) => r[3]), markMin: v === 'V2' })) }) };
+      ${vs.length > 1 ? '<h3>AZ 자가재 재고 — 0 밑 = 컬러가 소재를 못 받는 날</h3><div class="chart" id="c-az"></div>' : '<p class="small">자가재·구매 소재의 일별 흐름(생산·사용·발주·입고·재고)은 <a href="supply.html">수급 캘린더</a>에서 봅니다.</p>'}`),
+      after: () => { if (vs.length > 1) lineChart($('c-az'), { x, W: 1000, H: 240, series: vs.map((v) => ({ name: v, color: col[v], v: O.variants[v].self.AZ.map((r) => r[3]), markMin: v === 'V2' })) }); } };   // 비교안이 하나뿐이면 버전 비교 그래프는 숨김
   }
 
   // ---------- ② 재고·소재 추이 표 ----------

@@ -3,7 +3,7 @@
 (function () {
   'use strict';
   const NAV = [
-    ['home', 'index.html', '홈'], '|',
+    ['home', 'index.html', '홈'], ['supply', 'supply.html', '수급 캘린더'], '|',
     ['integrated', 'integrated.html', '통합 가동계획'], ['status', 'status.html', '가동 현황'], ['rolling', 'rolling.html', '계획 계산'], '|',
     ['analysis', 'analysis.html', '도금 실적'], ['coloract', 'color_actual.html', '컬러 실적'], ['report', 'report.html', '주간 보고'], '|',
     ['procure', 'procure.html', '조달 판단'], ['material', 'material.html', '소재 발주(월)'], '|',
@@ -119,7 +119,7 @@
   }
   function addExport(root) {
     (root || document).querySelectorAll('.card').forEach((c) => {
-      if (c.querySelector(':scope > .xbtn') || !c.querySelector('table') || c.classList.contains('lock')) return;
+      if (c.querySelector(':scope > .xbtn') || !c.querySelector('table') || c.classList.contains('lock') || c.hasAttribute('data-noexport')) return;
       const b = document.createElement('button'); b.type = 'button'; b.className = 'xbtn noprint'; b.title = '이 카드의 표를 엑셀(CSV)로 받기'; b.textContent = '⤓ 엑셀';
       b.onclick = () => {
         const h = c.querySelector('h2'); const name = `${(document.querySelector('.shell-head h1') || {}).textContent || document.title}_${h ? h.childNodes[0].textContent.trim() : '표'}_${new Date().toISOString().slice(0, 10)}.csv`.replace(/[\\/:*?"<>|]/g, '');

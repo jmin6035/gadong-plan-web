@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>수급 캘린더</title>
+<meta name="description" content="일별 가동 · 자가재 · 구매 소재(발주·입고·재고) · 제품 재고를 한 달력에서">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='7' fill='%230b3a75'/><rect x='10' y='10' width='12' height='12' rx='1.5' transform='rotate(45 16 16)' fill='none' stroke='%23fff' stroke-width='2.6'/></svg>">
+<link rel="stylesheet" href="ui/theme.css">
+<style>
+.sbar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px; margin: 12px 0 10px; font-size: 13px; color: var(--ink-2); }
+.sbar b { color: var(--ink); }
+.order { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 10px; }
+.ob { border: 1px solid var(--line); border-left: 5px solid var(--gc-m); border-radius: 0 8px 8px 0; background: var(--gt-m); padding: 10px 12px; }
+.ob .t { font-size: 12.5px; font-weight: 800; color: var(--gc-m); }
+.ob .v { font-size: 24px; font-weight: 800; letter-spacing: -.6px; font-variant-numeric: tabular-nums; }
+.ob .v small { font-size: 13px; font-weight: 600; color: var(--ink-2); }
+.ob .s { font-size: 12.5px; color: var(--ink-2); }
+.alerts { display: grid; gap: 4px; margin-top: 10px; }
+.al { display: grid; grid-template-columns: 10px 64px 1fr; gap: 8px; align-items: center; font-size: 13.5px; padding: 6px 8px; border-radius: 6px; cursor: pointer; }
+.al:hover { background: var(--hover); }
+.al i { width: 8px; height: 8px; border-radius: 50%; background: var(--warn); } .al.bad i { background: var(--bad); }
+.al b { font-size: 12px; color: var(--ink-2); }
+/* 캘린더 */
+.calw { overflow-x: auto; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); }
+table.sc { border-collapse: separate; border-spacing: 0; font-size: 12.5px; font-variant-numeric: tabular-nums; min-width: 1500px; width: 100%; }
+table.sc th, table.sc td { border-right: 1px solid var(--grid); border-bottom: 1px solid var(--grid); padding: 5px 3px; text-align: center; white-space: nowrap; min-width: 40px; }
+table.sc thead th { position: sticky; top: 0; z-index: 3; background: var(--tint-2); font-weight: 700; cursor: pointer; }
+table.sc thead th.we { color: var(--down); }
+table.sc thead th.today { background: var(--brand-2); color: #fff; }
+table.sc .lb { position: sticky; left: 0; z-index: 2; background: var(--surface); text-align: left; padding-left: 8px; font-weight: 700; min-width: 132px; border-right: 2px solid var(--line); }
+table.sc thead .lb { z-index: 4; background: var(--tint-2); }
+table.sc tr.sec td { background: var(--surface-2); font-size: 12px; font-weight: 800; letter-spacing: .04em; text-align: left; padding: 6px 8px; color: var(--gc); border-top: 2px solid var(--line); }
+table.sc tr.sec td.lb { color: var(--gc); background: var(--surface-2); }
+table.sc tr.sub .lb { font-weight: 500; color: var(--ink-2); padding-left: 18px; }
+table.sc td { cursor: pointer; animation: cellin .5s var(--ease) both; animation-delay: calc(var(--ci, 0) * 15ms); }
+table.sc td.z { color: var(--ink-3); }
+table.sc td.fAL { background: color-mix(in srgb, #1660c9 13%, var(--surface)); } table.sc td.fAZ { background: color-mix(in srgb, #e8590c 14%, var(--surface)); } table.sc td.fMAC { background: color-mix(in srgb, #0a9e8f 15%, var(--surface)); }
+table.sc td.mc { box-shadow: inset 0 -3px 0 #c98b00; font-weight: 800; }
+table.sc td.act { color: var(--ink-2); font-style: italic; }
+table.sc td.lo { background: var(--warn-bg); color: var(--warn); font-weight: 800; }
+table.sc td.neg { background: var(--bad-bg); color: var(--bad); font-weight: 800; }
+table.sc td.hi { background: var(--bad-bg); color: var(--bad); font-weight: 700; }
+table.sc td.ord { color: var(--gc-m); font-weight: 800; }
+table.sc td.inb { color: var(--good); font-weight: 700; }
+table.sc .sel { outline: 2px solid var(--ink); outline-offset: -2px; }
+table.sc td.tot, table.sc th.tot { font-weight: 800; background: var(--surface-2); min-width: 60px; }
+.lg { display: flex; flex-wrap: wrap; gap: 6px 14px; font-size: 12px; color: var(--ink-2); margin: 8px 2px 0; }
+.lg i { display: inline-block; width: 12px; height: 10px; border-radius: 2px; margin-right: 5px; vertical-align: -1px; }
+/* 상세 */
+.det { display: grid; grid-template-columns: repeat(auto-fit, minmax(330px, 1fr)); gap: 12px; }
+.det .card { margin: 0; padding: 14px 16px; }
+.det h3 { margin: 0 0 8px; font-size: 15px; }
+table.dt { width: 100%; border-collapse: collapse; font-size: 13px; font-variant-numeric: tabular-nums; }
+table.dt th { white-space: nowrap; font-size: 11.5px; color: var(--ink-3); text-align: left; padding: 3px 4px; border-bottom: 1px solid var(--line); font-weight: 700; }
+table.dt td { padding: 4px; border-bottom: 1px solid var(--grid); vertical-align: top; }
+table.dt td.r, table.dt th.r { text-align: right; }
+.why { font-size: 12px; color: var(--ink-3); line-height: 1.5; margin-top: 6px; }
+.chartrow { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.chartrow .card { margin: 0; }
+svg.tr { width: 100%; height: 190px; display: block; }
+svg.tr text { font-size: 11px; fill: var(--ink-3); }
+@media (max-width: 900px) { .chartrow { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+<header id="shell" data-page="supply" data-crumb="가동계획" data-title="수급 캘린더" data-sub="일별 가동 · 자가재 · 구매 소재(발주·입고·재고) · 제품 재고"></header>
+<main class="wrap">
+  <section class="card lock" id="lock" style="margin-top:16px" hidden>
+    <h2>분석 암호를 입력하세요</h2>
+    <form class="unlock" id="f"><input type="password" id="pw" placeholder="분석 암호" aria-label="분석 암호"> <button>열기</button></form>
+    <p class="hint" id="msg"></p>
+  </section>
+  <div id="main" hidden>
+    <div class="sbar"><span id="s-meta"></span><div class="tabs" id="s-mon" role="group" aria-label="월"></div></div>
+    <section class="card" id="s-top"></section>
+    <section class="card"><h2>일별 수급 <small>날짜(열)를 누르면 아래에 그날 상세</small><span class="unit">톤</span></h2>
+      <div class="calw" id="s-calw"><table class="sc" id="s-cal"></table></div>
+      <div class="lg"><span><i style="background:color-mix(in srgb,#1660c9 25%,#fff)"></i>AL</span><span><i style="background:color-mix(in srgb,#e8590c 25%,#fff)"></i>AZ</span><span><i style="background:color-mix(in srgb,#0a9e8f 25%,#fff)"></i>MAC</span><span><i style="background:#fff;box-shadow:inset 0 -3px 0 #c98b00"></i>M/C</span><span><i style="background:var(--warn-bg)"></i>재고 부족 주의(3일분 미만)</span><span><i style="background:var(--bad-bg)"></i>바닥·목표 130% 초과</span><span style="color:var(--gc-m);font-weight:800">발주 = 그날 내야 할 양</span><span style="color:var(--good);font-weight:700">입고 = 그날 들어와야 할 양</span></div>
+    </section>
+    <div class="det" id="s-det"></div>
+    <div class="chartrow" style="margin-top:12px"><section class="card" id="s-ch1"></section><section class="card" id="s-ch2"></section></div>
+    <details class="basis" style="margin-top:10px;font-size:12.5px;color:var(--ink-3)"><summary style="cursor:pointer;font-weight:700;color:var(--ink-2)">숫자 기준</summary>
+      <ul style="line-height:1.7">
+        <li>가동·자가재·구매 소재·제품 재고 = 확정 통합 계획 V1(10/7 계산, 실적 ~10/6) 기준. 매일 재계획과의 연결은 다음 단계.</li>
+        <li>자가재 = 도금이 만든 컬러 소재(AZ·MAC·AL). 재고 = 전날 재고 + 도금 생산 − 컬러 사용(컬러 생산일 − 5일에 필요한 것으로 계산).</li>
+        <li>구매 소재(F/H = 도금 소재, 컬러 소재 = 컬러가 직접 사는 소재): 재고를 목표(F/H 16,000t·컬러 15,500t) 이상으로 지키도록 '필요 입고'를 계산하고, 리드타임(F/H 32일·컬러 45일)만큼 앞당긴 날을 '발주'로 표시. 실제 발주·입고(MES)는 연결 예정.</li>
+        <li>제품 재고 = 그룹별 주 단위(그 주 첫날 기준) 추정, 목표 = 통합 속보 기준.</li>
+      </ul></details>
+  </div>
+</main>
+<footer class="foot"><div class="wrap"><span>자료는 암호화되어 게시되며 이 브라우저 안에서만 풉니다</span><span>POSCO STEELEON 도금·컬러 가동계획</span></div></footer>
+<div class="tipbox" id="s-tip" role="tooltip"></div>
+<script src="ui/shell.js"></script>
+<script src="engine/crypto.js"></script>
+<script src="supply.js"></script>
+</body>
+</html>
