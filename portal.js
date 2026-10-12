@@ -65,7 +65,8 @@
       ['GC', K('M', q.near ? 'warn' : 'good', '발주 시한 2주 안', q.near || 0, '건', q.nearTop && q.nearTop[0] ? `가장 급함 ${esc(q.nearTop[0].mat)} ${md(q.nearTop[0].deadline)}` : '-', null, 'procure.html', 'kq')],
       ['GC', K('M', (cs || 0) > 1.3 || (gs || 0) > 1.3 ? 'bad' : 'good', '제품 재고 / 목표', Math.round(((cs || 0) + (gs || 0)) / ((cs ? 1 : 0) + (gs ? 1 : 0) || 1) * 100), '%', `컬러 ${cs ? Math.round(cs * 100) + '%' : '-'} · 도금 ${gs ? Math.round(gs * 100) + '%' : '-'}`, null, 'report.html', 'kr')],
     ];
-    return it.filter(([p]) => UI.inScope(p)).map((x) => x[1]).join('');
+    const has = [L.some((x) => x.pl === 'G'), L.some((x) => x.pl === 'C'), !!sh.month, !!pl.now, true, !!(sr.stock || []).length];   // 예전 형식 자료(라인·속보 요약 없음)면 그 칸은 숨김
+    return it.filter(([p], j) => has[j] && UI.inScope(p)).map((x) => x[1]).join('');
   }
   // 라인 타일: 월차·누계·일정 대비 + 14일 추이(선이 그려지는 애니메이션) + 다음 전환
   function spark(days) {
