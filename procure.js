@@ -19,9 +19,9 @@
 
   /* ---------- 저장 상태 ---------- */
   function defaults() {
-    return { today: D.today, safety: 5, dueLead: 7, sup: D.suppliers.map((s) => ({ ...s, on: true, memo: '' })), arr: [], orders: [], dec: {} };
+    return { today: D.today, safetyC: 7, safetyG: 5, dueLead: 7, sup: D.suppliers.map((s) => ({ ...s, on: true, memo: '' })), arr: [], orders: [], dec: {} };
   }
-  function load() { try { const x = JSON.parse(localStorage.getItem(ST_KEY) || 'null'); if (x && x.sup) return { ...defaults(), ...x, today: D.today }; } catch (e) { /* 무시 */ } return defaults(); }
+  function load() { try { const x = JSON.parse(localStorage.getItem(ST_KEY) || 'null'); if (x && x.sup) { const o = { ...defaults(), ...x, today: D.today }; if (o.safetyC == null) { o.safetyC = 7; o.safetyG = 5; } return o; } } catch (e) { /* 무시 */ } return defaults(); }
   function save() { try { localStorage.setItem(ST_KEY, JSON.stringify(S)); } catch (e) { /* 무시 */ } }
 
   /* ---------- 계산 ---------- */
@@ -55,7 +55,8 @@
     S.arr.forEach((a) => { const k = `${plantOf(a.code)}:${a.code}`; (lots[k] = lots[k] || []).push({ date: a.date, t: +a.t || 0, src: a.sup || '입고예정' }); });
     Object.values(lots).forEach((L) => L.sort((a, b) => (a.date < b.date ? -1 : 1)));
     return U.map((u) => {
-      const needBy = addD(u.first, -S.safety), left = diff(needBy, S.today);
+      const POS = u.plant === 'G' && u.code === 'N';                // 임가공(AL-STS F/H) = 포스코 지급 — 우리 발주 아님
+      const needBy = addD(u.first, -(u.plant === 'C' ? S.safetyC : S.safetyG)), left = diff(needBy, S.today);
       let rem = u.t; const L = lots[`${u.plant}:${u.code}`] || [];
       const cutoff = needBy > S.today ? needBy : S.today;          // 이미 늦은 주는 지금 있는 재고·도착분으로 충당
       for (const l of L) { if (rem <= 0) break; if (l.date > cutoff || l.t <= 0) continue; const q = Math.min(l.t, rem); l.t -= q; rem -= q; }
@@ -67,20 +68,21 @@
       const dec = S.dec[u.key] || {};
       const rec = feas[0] || null;
       let kind;
-      if (short < 1) kind = 'ok';
+      if (POS) kind = 'pos';
+      else if (short < 1) kind = 'ok';
       else if (!cand.length) kind = 'nosup';
       else if (!rec) kind = S.arr.some((a) => a.code === u.code && plantOf(a.code) === u.plant) ? 'adjust' : 'check';   // 그 소재 기발주를 넣었으면 '조정', 아니면 '기발주 확인'
       else if (first && rec !== first) kind = 'alt';
       else kind = 'normal';
       const deadline = first ? addD(needBy, -first.lt) : null;
-      return { ...u, needBy, left, short, cover, cand, feas, rec, kind, deadline, dec, specOk };
+      return { ...u, needBy, left, short: POS ? 0 : short, cover, cand, feas, rec, kind, deadline, dec, specOk };
     });
   }
   const inPeriod = (j) => {
     const w = diff(j.wk, monday(S.today)) / 7;
     return period === 'all' || (period === 'w1' && w < 1) || (period === 'w4' && w >= 1 && w < 4) || (period === 'w8' && w >= 4 && w < 8) || (period === 'w9' && w >= 8);
   };
-  const KIND = { ok: ['재고 충당', 'good'], normal: ['1순위 업체', 'good'], alt: ['대체 업체', 'warn'], adjust: ['조정 필요', 'bad'], check: ['기발주 확인', 'warn'], nosup: ['업체 없음', 'bad'] };
+  const KIND = { ok: ['재고 충당', 'good'], normal: ['1순위 업체', 'good'], alt: ['대체 업체', 'warn'], adjust: ['조정 필요', 'bad'], check: ['기발주 확인', 'warn'], nosup: ['업체 없음', 'bad'], pos: ['포스코 지급(임가공)', 'good'] };
   const supName = (s) => (s ? `${s.name && s.name !== s.sup ? s.name : s.sup}` : '-');
 
   /* ---------- 화면 ---------- */
@@ -114,7 +116,7 @@
       const sel = d.sup || (j.rec && j.rec.sup) || '';
       const qty = d.qty != null && d.qty !== '' ? d.qty : Math.ceil(j.short);
       const opts = ['<option value="">-</option>'].concat(j.cand.map((s) => `<option value="${esc(s.sup)}" ${s.sup === sel ? 'selected' : ''}>${esc(supName(s))} · LT ${s.lt}일${+s.lt > j.left ? ' (늦음)' : ''}${j.specOk(s) ? '' : ' (사양 밖)'}</option>`)).join('');
-      const why = j.kind === 'ok' ? '재고·입고예정으로 충당'
+      const why = j.kind === 'pos' ? 'AL-STS 임가공 소재 — 포스코가 지급(팀 확인 10/12), 발주 대상 아님' : j.kind === 'ok' ? '재고·입고예정으로 충당'
         : j.kind === 'nosup' ? '등록된 업체 없음 → 업체 기준정보에 추가'
           : j.kind === 'check' ? `${minLT == null ? '두께 범위에 맞는 등록 업체 없음' : `남은 ${j.left}일 < 리드타임(최단 ${minLT}일)`} → 이미 발주돼 있어야 할 양(입고예정에 기발주 입력)${specNote}`
           : j.kind === 'adjust' ? `${minLT == null ? '두께 범위에 맞는 등록 업체 없음' : `남은 ${j.left}일 < 최단 LT ${minLT}일`} → 재고 전환·투입 순서 변경·자가재 대체 검토${specNote}`
@@ -131,10 +133,10 @@
         ${isOpen ? `<tr class="ux"><td colspan="7"><div class="${j.key === justOpened ? 'drop' : ''}"><div class="use"><b>무엇을 만들려고</b> ${j.use.slice().sort((a, b) => b[3] - a[3]).slice(0, 12).map((r) => `<span><i>${esc(r[0])}</i> ${esc(r[1])} ${esc(r[2])} <b>${n0(r[3])}t</b></span>`).join('')}</div>
           <div class="use"><b>업체별</b> ${j.cand.map((s) => `<span class="${+s.lt <= j.left && j.specOk(s) ? '' : 'no'}">${s.prio}순위 ${esc(supName(s))} LT ${s.lt}일 → 발주 시한 ${md(addD(j.needBy, -s.lt))}${j.specOk(s) ? '' : ' · 두께 범위 밖'}</span>`).join('') || '-'}</div></div></td></tr>` : ''}`;
     }).join('');
-    return card('p-board', '판단 보드', `기준일 ${S.today} · 필요일 = 투입 ${S.safety}일 전 입고`, kp + ctl + `
+    return card('p-board', '판단 보드', `기준일 ${S.today} · 필요일 = 컬러 투입 ${S.safetyC}일 · 도금 투입 ${S.safetyG}일 전 입고`, kp + ctl + `
       <div class="scroll"><table class="t bd"><thead><tr><th class="l">첫 필요일</th><th class="l">소재</th><th>필요(t)</th><th>충당</th><th>발주 필요</th><th class="l">판단 · 이유</th><th class="l">결정 (업체 · 수량 · 상태 · 메모)</th></tr></thead>
       <tbody>${rows || '<tr><td colspan="7" class="c muted">이 기간에 해당 없음</td></tr>'}</tbody></table></div>
-      <p class="small">판단 단위 = 필요 주차 × 소재. 충당 = 오늘 재고 + 필요일까지 들어오는 입고예정(이른 주부터). 남은 일수 = 첫 필요일 − ${S.safety}일 − 기준일. 업체는 리드타임 ≤ 남은 일수 · 두께 범위 안에서 우선순위가 가장 높은 곳을 추천 — 선택을 바꾸면 이 브라우저에 저장.</p>`);
+      <p class="small">판단 단위 = 필요 주차 × 소재. 충당 = 오늘 재고 + 필요일까지 들어오는 입고예정(이른 주부터). 남은 일수 = 첫 필요일 − 여유일(컬러 ${S.safetyC}일·도금 ${S.safetyG}일, 팀 소재 리드타임 표) − 기준일. 업체는 리드타임 ≤ 남은 일수 · 두께 범위 안에서 우선순위가 가장 높은 곳을 추천 — 선택을 바꾸면 이 브라우저에 저장.</p>`);
   }
 
   function arrivals() {
@@ -178,7 +180,7 @@
       <li><b>충당</b> 재고 → 입고예정 순, 이른 필요일부터. ${esc(D.stockNote)}. 9월말 이후 FH 입고는 자료가 없어 FH 충당은 적게 잡힘 — 입고예정 탭에 기발주를 넣어야 정확</li>
       <li><b>업체 판단</b> 남은 일수 = 첫 필요일 − 여유일 − 기준일. 리드타임 ≤ 남은 일수인 업체 중 우선순위 1등을 추천. 1순위가 안 되면 '대체 업체', 아무도 안 되면 '조정 필요'</li>
       <li><b>확인할 점</b> 리드타임 기준(주문일시), 업체별 정기 마감·최소량, AL-STS 소재(도금용 SUS 재고가 월 사용량에 비해 매우 적음 — 코드 확인 필요), 업체명이 없는 코드(V3·YB·YF)</li></ul>
-      <div class="bar"><label class="small">기준일 <input type="date" id="p-today" value="${S.today}"></label><label class="small">입고 → 투입 여유 <input type="number" id="p-safety" value="${S.safety}" min="0" max="30" style="width:56px">일</label>
+      <div class="bar"><label class="small">기준일 <input type="date" id="p-today" value="${S.today}"></label><label class="small">입고 → 컬러 투입 <input type="number" id="p-safetyC" value="${S.safetyC}" min="0" max="30" style="width:56px">일</label><label class="small">입고 → 도금 투입 <input type="number" id="p-safetyG" value="${S.safetyG}" min="0" max="30" style="width:56px">일</label>
       <button type="button" class="btn" id="p-dl">설정·판단 내보내기(.json)</button><label class="btn">설정 가져오기<input type="file" accept=".json" id="p-ul" hidden></label><button type="button" class="btn" id="p-resetall">모두 초기화</button></div>
       <h3>공유(서버)</h3><div class="bar"><button type="button" class="btn primary" id="p-push" ${window.SHARE && SHARE.on() ? '' : 'disabled'}>서버에 올리기</button><button type="button" class="btn" id="p-pull" ${window.SHARE && SHARE.on() ? '' : 'disabled'}>서버에서 받기</button><span class="small">${window.SHARE && SHARE.on() ? '업체 기준정보·입고예정·주문재 목록·판단을 모두가 같은 것으로 — 올린 사람·시각이 남음' : '공유 저장소가 아직 꺼져 있음(결정 기록 화면의 공유 설정 참고) — 지금은 .json 내보내기/가져오기로 맞추기'}</span></div>
       <p class="small">저장 위치 = 이 브라우저. 다른 사람과 맞추려면 내보낸 .json 을 보내 가져오기. 자료 계산 ${String(D.built).replace('T', ' ')} (tools/procure_data.py)</p>`);
@@ -278,7 +280,8 @@
     if (t.dataset.up) { if (t.files[0]) upload(t.dataset.up, t.files[0]); return; }
     if (t.id === 'p-only') { onlyShort = t.checked; render(); return; }
     if (t.id === 'p-today' && t.value) { S.today = t.value; save(); return; }
-    if (t.id === 'p-safety') { S.safety = +t.value || 0; save(); return; }
+    if (t.id === 'p-safetyC') { S.safetyC = +t.value || 0; save(); return; }
+    if (t.id === 'p-safetyG') { S.safetyG = +t.value || 0; save(); return; }
     if (t.id === 'p-duelead') { S.dueLead = +t.value || 0; S.orders = S.orders.map((o) => ({ ...o, need: addD(o.due, -S.dueLead) })); save(); render(); return; }
     if (t.id === 'p-ul' && t.files[0]) { t.files[0].text().then((x) => { const o = JSON.parse(x); if (!o.sup) throw new Error('형식'); S = { ...defaults(), ...o }; save(); render(); }).catch(() => alert('설정 파일이 아닙니다')); }
   });

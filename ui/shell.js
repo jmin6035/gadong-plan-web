@@ -14,7 +14,6 @@
   const SCN = { all: '전체', G: '도금', C: '컬러' };
   const DOCS = ['conditions', 'guide', 'requests', 'glossary', 'doc'];
   const UI = window.UI = window.UI || {};
-  const reduce = () => window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
 
   function applyTheme(t) { if (t === 'light' || t === 'dark') document.documentElement.setAttribute('data-theme', t); else document.documentElement.removeAttribute('data-theme'); }
   let theme = 'auto'; try { theme = localStorage.getItem(TKEY) || 'auto'; } catch (e) { /* 무시 */ }
@@ -165,7 +164,7 @@
       const to = +el.dataset.count, key = el.dataset.ck || '', dec = +(el.dataset.dec || 0);
       const from = key in last ? last[key] : 0; last[key] = to;
       const fmt = (v) => v.toLocaleString('ko-KR', { minimumFractionDigits: dec, maximumFractionDigits: dec });
-      if (reduce() || from === to) { el.textContent = fmt(to); return; }
+      if (from === to) { el.textContent = fmt(to); return; }
       const t0 = performance.now(), dur = 650;
       const step = (t) => { const p = Math.min(1, (t - t0) / dur), e = 1 - Math.pow(1 - p, 3); el.textContent = fmt(from + (to - from) * e); if (p < 1) requestAnimationFrame(step); };
       requestAnimationFrame(step);

@@ -226,7 +226,7 @@ table.t input[type=number] { width: 88px; text-align: right; }
 @keyframes sheen { to { transform: translateX(100%); } }
 @keyframes shimmer { from { background-position: 100% 0; } to { background-position: 0 0; } }
 @keyframes pulse { 0% { box-shadow: 0 0 0 0 currentColor; } 100% { box-shadow: 0 0 0 6px transparent; } }
-@media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition: none !important; } }
+/* '애니메이션 효과 끄기'(동작 줄이기) PC 에서도 효과가 보이도록 전체 끄기 규칙은 두지 않음(사용자 요청 2026-10-12). 대신 모든 효과의 처음 상태는 keyframes 안에만 둬서, 효과가 안 돌아도 최종 모양은 항상 보임 */
 
 
 /* ---------- 가독성(40·50대 기준): 넓은 화면 · 큰 글씨 · 큰 칸 ---------- */

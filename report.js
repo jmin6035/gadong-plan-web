@@ -46,7 +46,11 @@
   }
   // 선 그래프: refs = 기준선(목표 등), 마지막 점 라벨
   function lineChart(el, { x, series, unit = '', fmt = n0, yMin, H = 230, refs = [], legendOn = true }) {
-    const W = 520, L = 48, R = 70, T = 12, B = 26;
+    // 끝 라벨 길이만큼 오른쪽 여백을 잡아 옆 칸을 침범하거나 잘리지 않게(한글 ≈ 11, 숫자·기호 ≈ 6.6 단위)
+    const tw = (t) => [...String(t)].reduce((a, c) => a + (/[가-힣]/.test(c) ? 11 : 6.6), 0);
+    const lastV = (s_) => { for (let j = s_.v.length - 1; j >= 0; j--) if (s_.v[j] != null) return s_.v[j]; return null; };
+    const W = 520, L = 48, T = 12, B = 26;
+    const R = Math.max(56, 16 + Math.max(0, ...series.map((s_) => tw(`${legendOn ? '' : s_.name + ' '}${fmt(lastV(s_))}`))));
     const vals = series.flatMap((s) => s.v.filter((v) => v != null)).concat(refs.map((r) => r.v));
     let lo = yMin != null ? yMin : Math.min(...vals), hi = Math.max(...vals);
     if (yMin == null) { const pad = (hi - lo) * 0.15 || hi * 0.1 || 1; lo = Math.max(0, lo - pad); hi += pad; } else hi *= 1.1;
@@ -59,7 +63,13 @@
     x.forEach((d, i) => { if (i % every === 0 || i === x.length - 1) g += `<text x="${X(i)}" y="${H - 6}" text-anchor="middle" font-size="11" fill="var(--ink-3)">${esc(d)}</text>`; });
     refs.forEach((r) => {
       g += `<line x1="${L}" x2="${W - R}" y1="${Y(r.v)}" y2="${Y(r.v)}" stroke="${r.color || 'var(--down)'}" stroke-width="1.5" stroke-dasharray="6 4"/>`;
-      g += `<text x="${L + 4}" y="${Y(r.v) - 5}" font-size="11" fill="${r.color || 'var(--down)'}">${esc(r.name)} ${fmt(r.v)}</text>`;
+      // 목표 글자는 선이 지나가지 않는 자리(오른쪽 위 → 오른쪽 아래 → 왼쪽 위 → 왼쪽 아래)에
+      const lab = `${r.name} ${fmt(r.v)}`, w_ = tw(lab), y0 = Y(r.v);
+      const yAt = (s_, xx) => { const n = s_.v.length; if (n < 2) return null; const t = (xx - L) / ((W - L - R) / (n - 1)); const i = Math.max(0, Math.min(n - 2, Math.floor(t))); const a = s_.v[i], b2 = s_.v[i + 1]; if (a == null || b2 == null) return null; return Y(a + (b2 - a) * Math.min(1, Math.max(0, t - i))); };
+      const hit = (x0, x1, yt, yb) => series.some((s_) => { for (let xx = x0; xx <= x1; xx += 4) { const yy = yAt(s_, xx); if (yy != null && yy >= yt - 2 && yy <= yb + 2) return true; } return false; });
+      const cands = [[W - R - 4 - w_, y0 - 5], [W - R - 4 - w_, y0 + 14], [L + 4, y0 - 5], [L + 4, y0 + 14]];
+      const pos = cands.find(([x0, yb]) => !hit(x0, x0 + w_, yb - 11, yb)) || cands[0];
+      g += `<text x="${pos[0]}" y="${pos[1]}" font-size="11" font-weight="600" fill="${r.color || 'var(--down)'}" paint-order="stroke" stroke="var(--surface)" stroke-width="4" stroke-linejoin="round">${esc(lab)}</text>`;
     });
     const ends = series.map((s, k) => { let j = s.v.length - 1; while (j >= 0 && s.v[j] == null) j--; return { k, j, y: j >= 0 ? Y(s.v[j]) : null }; }).filter((e) => e.y != null).sort((a, b) => a.y - b.y);
     for (let i = 1; i < ends.length; i++) if (ends[i].y - ends[i - 1].y < 13) ends[i].y = ends[i - 1].y + 13;
@@ -72,7 +82,7 @@
       const e = ends.find((z) => z.k === k);
       if (e) {
         g += `<circle cx="${X(e.j)}" cy="${Y(s.v[e.j])}" r="4.2" fill="${col}" stroke="var(--surface)" stroke-width="2"/>`;
-        g += `<text x="${X(e.j) + 8}" y="${e.y + 4}" font-size="11" font-weight="600" fill="var(--ink)">${legendOn ? '' : esc(s.name) + ' '}${fmt(s.v[e.j])}</text>`;
+        g += `<text x="${X(e.j) + 8}" y="${e.y + 4}" font-size="11" font-weight="600" fill="var(--ink)" paint-order="stroke" stroke="var(--surface)" stroke-width="4" stroke-linejoin="round">${legendOn ? '' : esc(s.name) + ' '}${fmt(s.v[e.j])}</text>`;
       }
     });
     x.forEach((_, i) => { const w = (W - L - R) / Math.max(1, x.length - 1); g += `<rect class="hb" data-i="${i}" x="${X(i) - w / 2}" y="${T}" width="${w}" height="${H - T - B}" fill="transparent"/>`; });
