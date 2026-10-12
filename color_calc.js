@@ -42,6 +42,14 @@
     $('c-src').innerHTML = S.map(([t, a, b, st]) => `<div class="cc-src"><b>${t}</b><small>${a}</small><small>${b}</small><span class="st ${st}">${st === 'good' ? '사용' : '확인'}</span></div>`).join('');
   }
 
+  document.querySelectorAll('.up .dl-tpl').forEach((btn) => btn.addEventListener('click', (e) => {   // 지금 쓰는 기준 파일 받기(양식 겸 예시)
+    e.preventDefault(); e.stopPropagation();
+    const path = D && D.files && (D.files.upload || {})[btn.dataset.dl], b = path && D.files.files[path];
+    if (!b) { alert('기준 자료가 아직 열리지 않았습니다.'); return; }
+    const bin = atob(b), u = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) u[i] = bin.charCodeAt(i);
+    const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([u], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' })); a.download = path.split('/').pop();
+    document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 2000);
+  }));
   document.querySelectorAll('.up input').forEach((inp) => inp.addEventListener('change', async () => {
     const f = inp.files[0], lb = inp.closest('label');
     if (!f) { delete uploads[inp.dataset.k]; lb.classList.remove('on'); lb.querySelector('em').textContent = ''; return; }

@@ -793,3 +793,15 @@ details.more > summary h2 { display: inline; font-size: 16px; color: var(--brand
 details.more > summary::before { content: '▸ '; color: var(--brand); }
 details.more[open] > summary::before { content: '▾ '; }
 details.more[open] > summary { margin-bottom: 12px; }
+
+/* 계획 계산 화면 공통(도금·컬러): 기준 자료 타일 · 바꿀 자료 올리기 타일 */
+.cc-src { border: 1px solid var(--line); border-radius: 12px; padding: 14px 16px; background: var(--surface); }
+.cc-src b { display: block; font-size: 15px; } .cc-src small { display: block; color: var(--ink-3); font-size: 13px; margin-top: 4px; line-height: 1.5; }
+.cc-src .st { margin-top: 8px; }
+div.up label { display: flex; flex-direction: column; gap: 6px; border: 1px dashed var(--line); border-radius: 12px; padding: 14px 16px; cursor: pointer; background: var(--surface); transition: border-color .15s; }
+div.up label:hover { border-color: var(--brand-2); } div.up label.on { border-style: solid; border-color: var(--good); background: color-mix(in srgb, var(--good) 6%, var(--surface)); }
+div.up label b { font-size: 15px; } div.up label span { font-size: 13px; color: var(--ink-3); } div.up label em { font-style: normal; font-size: 13.5px; font-weight: 700; color: var(--good); }
+div.up input { display: none; }
+div.up label .dl-tpl { align-self: flex-start; margin-top: 4px; font-size: 12.5px; font-weight: 700; color: var(--brand-2); background: none; border: 1px solid var(--line); border-radius: 7px; padding: 3px 9px; cursor: pointer; }
+div.up label .dl-tpl:hover { border-color: var(--brand-2); }
+.cc-src .tpl { margin-top: 8px; font-size: 12.5px; }

@@ -66,18 +66,45 @@
   };
 
   // ---------------- 파일 → 해석 ----------------
-  const drop = $('drop');
-  ['dragover', 'dragenter'].forEach((t) => drop.addEventListener(t, (e) => { e.preventDefault(); drop.classList.add('over'); }));
-  ['dragleave', 'drop'].forEach((t) => drop.addEventListener(t, () => drop.classList.remove('over')));
-  drop.addEventListener('drop', (e) => { e.preventDefault(); setFiles(e.dataTransfer.files); });
-  $('files').onchange = (e) => setFiles(e.target.files);
-  async function setFiles(list) {
-    files = [];
-    for (const f of list) if (/\.xlsx$/i.test(f.name)) files.push({ name: f.name, buf: await f.arrayBuffer() });
-    $('file-list').innerHTML = files.map((f) => `<li>${esc(f.name)} <span class="muted">(${GP.fmt(f.buf.byteLength / 1024)} KB) 읽는 중…</span></li>`).join('');
-    if (files.length) parse();
+  // 기준 자료(확정 계획 입력 = 컬러 계산 기준 자료 묶음 안의 엑셀) + 바꿀 자료(올린 파일이 우선)
+  const BASE = { sales: 'data/ctx_가동_판매자가재.xlsx', sail: 'data/ctx_배선일정분석.xlsx' };
+  const SRC = { sales: ['판매계획 · 자가재계획', '판매계획 · 자가재생산계획 시트'], sail: ['배선일정', '정리_배선일정 시트 — 없으면 내장 배선일정'] };
+  const base = {}, upl = {};
+  let baseInfo = null;
+  const b64buf = (b) => { const s_ = atob(b), u = new Uint8Array(s_.length); for (let i = 0; i < s_.length; i++) u[i] = s_.charCodeAt(i); return u.buffer; };
+  function srcTiles() {
+    const t = (k) => { const u = upl[k], b = base[k]; return `<div class="cc-src"><b>${SRC[k][0]}</b><small>${u ? `올린 파일: ${esc(u.name)}` : b ? `기준: ${esc(BASE[k].split('/').pop())} (확정 계획 v30 입력)` : '기준 자료 없음 — 파일을 올려 주세요'} · ${SRC[k][1]}</small><span class="st ${u || b ? 'ok' : 'warn'}">${u ? '올린 파일 사용' : b ? '사용' : '없음'}</span></div>`; };
+    $('g-src').innerHTML = t('sales') + t('sail') + `<div class="cc-src"><b>계획 조건</b><small>속도·시간손실·첫날 강종·정기수리 — ③에서 확인·변경${baseInfo ? '' : ''}</small><span class="st ok">${JSON.stringify(P) === JSON.stringify(GP.DEFAULT_PARAMS) ? '기본값(v30)' : '바꾼 값'}</span></div>`;
+    ['sales', 'sail'].forEach((k) => { const L = $('u-' + k); if (L) { L.classList.toggle('on', !!upl[k]); L.querySelector('em').textContent = upl[k] ? `✓ ${upl[k].name}` : ''; } });
   }
+  function useFiles() { files = ['sales', 'sail'].map((k) => upl[k] || base[k]).filter(Boolean); srcTiles(); if (files.length) parse(); }
+  document.querySelectorAll('#sec-up input[type=file][data-k]').forEach((inp) => inp.onchange = async () => {
+    const f = inp.files[0]; if (!f) return; upl[inp.dataset.k] = { name: f.name, buf: await f.arrayBuffer() }; useFiles();
+  });
+  document.querySelectorAll('#sec-up .dl-tpl').forEach((b) => b.onclick = (e) => {
+    e.preventDefault(); e.stopPropagation();
+    const k = b.dataset.dl, x = base[k];
+    if (!x) { alert('기준 자료가 아직 열리지 않았습니다(①의 분석 암호 입력).'); return; }
+    download(new Blob([x.buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }), x.name);
+  });
+  async function openBase(pw) {
+    try {
+      const env = await GP.latest('color_calc_files.enc.json');
+      if (!env) throw new Error('기준 자료 파일 없음');
+      const d = await GP.decryptJSON(env, pw);
+      for (const [k, path] of Object.entries(BASE)) if (d.files[path]) base[k] = { name: path.split('/').pop(), buf: b64buf(d.files[path]) };
+      baseInfo = { created: env.created };
+      try { localStorage.setItem('cgl-analysis-pw', pw); } catch (e) { /* 무시 */ }
+      $('g-unlock').hidden = true; useFiles();
+    } catch (e) {
+      $('g-unlock').hidden = false; srcTiles();
+      if (pw) $('g-msg').textContent = /암호/.test(String(e.message)) ? '⚠ 암호가 맞지 않습니다' : '⚠ 기준 자료를 읽지 못했습니다: ' + e.message;
+    }
+  }
+  $('g-unlock').addEventListener('submit', (e) => { e.preventDefault(); openBase($('g-pw').value); });
+  { let pw0 = null; try { pw0 = localStorage.getItem('cgl-analysis-pw'); } catch (e) { /* 무시 */ } if (pw0) openBase(pw0); else { $('g-unlock').hidden = false; srcTiles(); } }
   function parse() {
+    srcTiles();
     show('sec-error', false); $('run').disabled = true;
     $('check-summary').innerHTML = '<p class="muted">파일 읽는 중…</p>';
     worker.postMessage({ type: 'parse', files, params: P });

@@ -16,12 +16,18 @@
 
 <main class="wrap">
   <section class="card" id="sec-files">
-    <h2><span class="num">1</span>입력 파일</h2>
-    <label class="drop" id="drop">
-      <input type="file" id="files" accept=".xlsx" multiple>
-      <strong>판매계획 엑셀 선택</strong>
-      <span><b>가동_판매자가재</b> 파일 하나면 됩니다(판매계획·자가재생산계획 시트). 선적 일정이 바뀐 달만 <b>배선일정분석</b> 파일도 같이 선택하세요.</span>
-    </label>
+    <h2><span class="num">1</span>기준 자료 <small>입력 파일을 올리지 않으면 아래 기준으로 계산</small></h2>
+    <div class="cc-steps" id="g-src"><p class="muted">기준 자료 불러오는 중…</p></div>
+    <form class="unlock" id="g-unlock" hidden><input type="password" id="g-pw" placeholder="분석 암호" autocomplete="current-password" aria-label="분석 암호"><button type="submit">기준 자료 열기</button> <span class="hint" id="g-msg">기준 자료(확정 계획 입력 파일)는 분석 암호로 잠겨 있습니다. 직접 파일을 올리면 암호 없이도 계산됩니다.</span></form>
+  </section>
+
+  <section class="card" id="sec-up">
+    <h2><span class="num">2</span>바꿀 자료 올리기 <small>필요한 것만 · 파일은 서버로 전송되지 않음</small></h2>
+    <div class="up">
+      <label id="u-sales"><b>판매계획 · 자가재계획 엑셀</b><span>필요한 시트 2개: <b>판매계획</b>(부서·권역·용도·고객군별 월 톤) · <b>자가재생산계획</b>(섹션별 월 톤). 시트 이름이 같으면 다른 시트는 있어도 됩니다.</span><em></em><input type="file" accept=".xlsx" data-k="sales"><button type="button" class="dl-tpl" data-dl="sales">지금 쓰는 파일 받기 (양식 겸 예시)</button></label>
+      <label id="u-sail"><b>배선일정 엑셀</b><span>필요한 시트: <b>정리_배선일정</b>(목적지 · 선적 시작일 · 완료일). 선적 일정이 바뀐 달만 올리면 됩니다.</span><em></em><input type="file" accept=".xlsx" data-k="sail"><button type="button" class="dl-tpl" data-dl="sail">지금 쓰는 파일 받기 (양식 겸 예시)</button></label>
+    </div>
+    <p class="hint">양식: '지금 쓰는 파일 받기'로 받은 엑셀의 숫자만 바꿔 올리면 됩니다(시트 이름·제목 줄은 그대로). 올린 파일은 이 브라우저 안에서만 읽습니다.</p>
     <ul id="file-list" class="files"></ul>
     <details class="load-result">
       <summary>저장해 둔 계산 결과 열기(.json) — 파일 없이 결과만 다시 보기</summary>
@@ -30,7 +36,7 @@
   </section>
 
   <section class="card" id="sec-params">
-    <h2><span class="num">2</span>계획 조건</h2>
+    <details class="more" id="p-more"><summary><h2 style="display:inline"><span class="num">3</span>계획 조건 <small>기본값(v30) — 속도·첫날 강종·정기수리를 바꿀 때만 펼치기</small></h2></summary>
     <div class="grid">
       <label>연도 <input type="number" id="p-year" min="2024" max="2035"></label>
       <label>분기
@@ -61,11 +67,12 @@
       <button type="button" class="ghost" id="p-export">조건 저장(.json)</button>
       <label class="ghost btnlike">조건 불러오기<input type="file" id="p-import" accept=".json" hidden></label>
     </div>
+    </details>
   </section>
 
   <section class="card" id="sec-check">
-    <h2><span class="num">3</span>입력 확인</h2>
-    <div id="check-summary"><p class="muted">① 에서 가동_판매자가재 엑셀을 올리면 여기에 수요 요약이 나오고 <b>계산 시작</b> 버튼이 켜집니다. 계획 조건(②)은 기본값(v30) 그대로 두면 됩니다.</p></div>
+    <h2><span class="num">4</span>입력 확인 · 계산</h2>
+    <div id="check-summary"><p class="muted">기준 자료(①)를 읽으면 여기에 수요 요약이 나오고 <b>계산 시작</b> 버튼이 켜집니다. 바꿀 자료(②)·계획 조건(③)은 필요할 때만.</p></div>
     <div class="scroll"><table class="data" id="demand-table"></table></div>
     <ul id="checks" class="checks"></ul>
     <button type="button" class="primary" id="run" disabled>계산 시작</button>
@@ -126,7 +133,7 @@
   </section>
 
   <section class="card" id="sec-replan" hidden>
-    <h2><span class="num">4</span>실적 반영 재계획</h2>
+    <h2><span class="num">5</span>실적 반영 재계획</h2>
     <p class="hint">위 결과를 기준 계획으로 두고, 기준일까지의 실적(설비고장·불량 반영)으로 남은 기간을 다시 계산합니다. 지연·결품을 먼저 막고, 그다음 M/C 최소, 같은 조건이면 기존 계획과 가까운 일정을 고릅니다.</p>
     <div class="grid">
       <label>실적 기준일(이날까지 실적) <input type="date" id="rp-t0"></label>
