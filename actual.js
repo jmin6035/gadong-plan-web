@@ -1,6 +1,6 @@
 /* 실적 화면(도금·컬러 공용, 같은 양식): <body data-plant="G|C">
    자료: published/plating_actual.enc.json · color_actual.enc.json (cglplan/pages.py plating_actual·color_actual)
-   ① 핵심 지표 ② 라인별 진도·주간 비교 ③ 일별 생산(최근 35일) ④ 주별 추이 ⑤ 품명(최근 4주) ⑥ 휴지 구성(+도금: 강종 전환 실적) ⑦ 월별 부서 */
+   ① 핵심 지표 ② 라인별 진도·주간 비교 ③ 일별 생산(이번 달 1일부터) ④ 주별 추이 ⑤ 품명(최근 4주) ⑥ 휴지 구성(+도금: 강종 전환 실적) ⑦ 월별 부서 */
 (function () {
   'use strict';
   const $ = (id) => document.getElementById(id);
@@ -39,10 +39,10 @@
     const stop1 = O.lines.reduce((a, x) => a + x.w1.stopH, 0) / L.length, stop0 = O.lines.reduce((a, x) => a + x.w0.stopH, 0) / L.length;
     const k = (tone, l, v, unit, b, ck, dec = 0) => `<div class="kpi tone-${tone}" data-rk="k-${ck}"><div class="l">${l}</div><div class="v"><b data-count="${v}" data-dec="${dec}" data-ck="${ck}">0</b><small>${unit}</small></div><div class="b">${b}</div></div>`;
     const rate = tot ? tot.actual / tot.sched * 100 : null;
-    return `<div class="kpis">${tot ? k(rate >= 98 ? 'good' : rate >= 90 ? 'warn' : 'bad', `10월 누계 실적 (MES ${md(O.month.asOf)})`, Math.round(tot.actual), 't', `일정 ${n0(tot.sched)}t 대비 <b>${rate.toFixed(1)}%</b> · 월차 ${n0(tot.month)}t`, 'mt') : ''}
-      ${k(pct(tpd1, tpd0) >= -3 ? 'good' : 'warn', `지난주 생산 (${md(O.w1)}~)`, Math.round(tpd1), 't/일', `12주 평균 ${n0(tpd0)}t/일 대비 ${dl(pct(tpd1, tpd0))}`, 'wt')}
-      ${k('brand', `${L.length}라인 생산속도 (정지 포함)`, Math.round(O.lines.reduce((a, x) => a + (x.w1.tph || 0), 0) * 10) / 10, 't/hr 합', `12주 ${n1(O.lines.reduce((a, x) => a + (x.w0.tph || 0), 0))} t/hr`, 'tp', 1)}
-      ${k(stop1 > stop0 * 1.1 ? 'warn' : 'good', '라인당 휴지', Math.round(stop1 * 10) / 10, 'h/가동일', `12주 평균 ${n1(stop0)}h 대비 ${dl(pct(stop1, stop0), false)}`, 'st', 1)}</div>`;
+    return `<div class="kpis">${tot ? k(rate >= 98 ? 'good' : rate >= 90 ? 'warn' : 'bad', (() => { const a = String(O.month.asOf || O.asOf).slice(0, 10), e = new Date(Date.parse(a) - 864e5).toISOString().slice(0, 10); return `${+e.slice(5, 7)}월 누계 실적 (1~${+e.slice(8)}일)`; })(), Math.round(tot.actual), 't', `판매생산속보 · 일정 ${n0(tot.sched)}t 대비 <b>${rate.toFixed(1)}%</b> · 월차 ${n0(tot.month)}t`, 'mt') : ''}
+      ${k(pct(tpd1, tpd0) >= -3 ? 'good' : 'warn', `지난주 생산 (${md(O.w1)}~)`, Math.round(tpd1), 't/일', `${BW()} 평균 ${n0(tpd0)}t/일 대비 ${dl(pct(tpd1, tpd0))}`, 'wt')}
+      ${k('brand', `${L.length}라인 생산속도 (정지 포함)`, Math.round(O.lines.reduce((a, x) => a + (x.w1.tph || 0), 0) * 10) / 10, 't/hr 합', `${BW()} ${n1(O.lines.reduce((a, x) => a + (x.w0.tph || 0), 0))} t/hr`, 'tp', 1)}
+      ${k(stop1 > stop0 * 1.1 ? 'warn' : 'good', '라인당 휴지', Math.round(stop1 * 10) / 10, 'h/가동일', `${BW()} 평균 ${n1(stop0)}h 대비 ${dl(pct(stop1, stop0), false)}`, 'st', 1)}</div>`;
   }
   function lineTable() {
     const M = Object.fromEntries(O.month.rows.map((x) => [x.line, x]));
@@ -53,8 +53,8 @@
         <td>${n0(x.w0.tpd)}</td><td><b>${n0(x.w1.tpd)}</b></td><td>${dl(pct(x.w1.tpd, x.w0.tpd))}</td><td>${n1(x.w0.tph)} → <b>${n1(x.w1.tph)}</b></td><td>${x.w0.thick ? x.w0.thick.toFixed(2) : '-'} → ${x.w1.thick ? x.w1.thick.toFixed(2) : '-'}</td><td>${n1(x.w0.stopH)} → <b>${n1(x.w1.stopH)}</b></td><td>${n1(x.w1.days)}</td></tr>`;
     }).join('');
     const t = O.month.rows.find((x) => /계$/.test(x.line));
-    return card('ca-line', '라인별 진도 · 주간 비교', `이번 달 = MES 판매생산속보 ${O.month.asOf || ''} · 주간 = 지난주 vs 앞 12주`, '단위: 톤', `<div class="scroll"><table class="t big"><thead><tr><th class="l" rowspan="2">라인</th><th colspan="4">10월 진도 (MES 월차계획)</th><th colspan="3">생산 t/일</th><th rowspan="2">속도 t/hr <small>정지 포함</small></th><th rowspan="2">평균 두께 mm</th><th rowspan="2">휴지 h/가동일</th><th rowspan="2">가동일 <small>지난주</small></th></tr>
-      <tr><th>월차</th><th>일정 누계</th><th>실적 누계</th><th>달성률</th><th>12주 평균</th><th>지난주</th><th>증감</th></tr></thead><tbody>${rows}
+    return card('ca-line', '라인별 진도 · 주간 비교', `이번 달 = MES 판매생산속보 ${O.month.asOf || ''} · 주간 = 지난주 vs ${BW()} 평균`, '단위: 톤', `<div class="scroll"><table class="t big"><thead><tr><th class="l" rowspan="2">라인</th><th colspan="4">10월 진도 (MES 월차계획)</th><th colspan="3">생산 t/일</th><th rowspan="2">속도 t/hr <small>정지 포함</small></th><th rowspan="2">평균 두께 mm</th><th rowspan="2">휴지 h/가동일</th><th rowspan="2">가동일 <small>지난주</small></th></tr>
+      <tr><th>월차</th><th>일정 누계</th><th>실적 누계</th><th>달성률</th><th>${BW()} 평균</th><th>지난주</th><th>증감</th></tr></thead><tbody>${rows}
       ${t ? `<tr class="total"><td class="l">${CFG.name} 계</td><td>${n0(t.month)}</td><td>${n0(t.sched)}</td><td>${n0(t.actual)}</td><td class="pbar"><div><i class="ok" style="width:${Math.min(100, t.actual / t.sched * 100)}%"></i></div><b>${(t.actual / t.sched * 100).toFixed(1)}%</b></td><td>${n0(O.lines.reduce((a, x) => a + x.w0.tpd, 0))}</td><td>${n0(O.lines.reduce((a, x) => a + x.w1.tpd, 0))}</td><td></td><td></td><td></td><td></td><td></td></tr>` : ''}</tbody></table></div>
       <p class="small">속도 = 생산 t ÷ (작업 + 정지 시간) — 주간 보고와 같은 정의. MES 속보의 t/hr(정지 제외)와는 다름.</p>`);
   }
@@ -72,9 +72,11 @@
       g += `<rect class="hit" x="${pl0 + i * bw}" y="${pt}" width="${bw}" height="${H - pt - pb}" data-tip="${tipf ? tipf(d) : `<b>${xl(d)}</b> ${fmt(v)}`}"/>`;
       if ((n - 1 - i) % every === 0) g += `<text x="${x + w / 2}" y="${H - 12}" text-anchor="middle" class="${d.we ? 'we' : ''}">${xl(d)}</text>`;
     });
-    refs.forEach((r) => { if (r.v == null) return; g += `<line x1="${pl0}" x2="${W - pr}" y1="${y(r.v)}" y2="${y(r.v)}" stroke="${r.c}" stroke-width="2" stroke-dasharray="${r.dash || '6 5'}"/><text x="${W - pr + 8}" y="${y(r.v) + 4}" class="lab" fill="${r.c}">${r.n} ${fmt(r.v)}</text>`; });
+    const ly = [];                                                     // 기준선 이름이 겹치지 않게(가까우면 아래로 16px씩)
+    refs.filter((r) => r && r.v != null).sort((a, b) => b.v - a.v).forEach((r) => { let t = y(r.v) + 4; while (ly.some((q) => Math.abs(q - t) < 16)) t += 16; ly.push(t); g += `<line x1="${pl0}" x2="${W - pr}" y1="${y(r.v)}" y2="${y(r.v)}" stroke="${r.c}" stroke-width="2" stroke-dasharray="${r.dash || '6 5'}"/><text x="${W - pr + 8}" y="${t}" class="lab" fill="${r.c}">${r.n} ${fmt(r.v)}</text>`; });
     return `<svg viewBox="0 0 ${W} ${H}" class="cv" role="img">${g}</svg>`;
   }
+  const NW = () => (O && O.nW0) || 12, BW = () => `앞 ${NW()}주`;     // 비교 기준 = 지난주 앞의 실제 자료 주 수(최대 12주)
   let dsel = 'all';
   function dailyChart() {
     const tot = (d) => (dsel === 'all' ? L.reduce((a, l) => a + (d[l] || 0), 0) : d[dsel] || 0);
@@ -84,15 +86,15 @@
     const [yy, mm] = String(O.asOf).split('-').map(Number), nd = new Date(yy, mm, 0).getDate();
     const mon = dsel === 'all' ? L.reduce((a, l) => a + ((M[l] || {}).month || 0), 0) : (M[dsel] || {}).month;
     const color = dsel === 'all' ? 'var(--brand-2)' : COL[L.indexOf(dsel)];
-    const refs = [{ n: '35일 평균', v: avg, c: 'var(--ink-3)', dash: '3 4' }, mon ? { n: `${mm}월 월차 일평균`, v: mon / nd, c: 'var(--warn)' } : null].filter(Boolean);
+    const refs = [{ n: `${O.daily.length}일 평균`, v: avg, c: 'var(--ink-3)', dash: '3 4' }, mon ? { n: `${mm}월 월차 일평균`, v: mon / nd, c: 'var(--warn)' } : null].filter(Boolean);
     return bars(data, color, refs, 300, 1200, n0, (d) => md(d.d), (d) => `<b>${md(d.d)}</b> ${dsel === 'all' ? '합계' : dsel} ${n0(d.v)}t${dsel === 'all' ? '<br>' + L.map((l) => `${l} ${n0(d.raw[l])}t`).join('<br>') : ''}`);
   }
   function daily() {
     const seg = `<div class="seg" id="ca-dsel" role="group" aria-label="라인">${['all', ...L].map((k) => `<button type="button" data-k="${k}" aria-pressed="${k === dsel}">${k === 'all' ? `${CFG.name} 전체` : k}</button>`).join('')}</div>`;
-    return card('ca-daily', '일별 생산', `최근 35일 · 점선 = 35일 평균, 주황 = 이번 달 월차 일평균 · 막대에 마우스를 올리면 상세`, '단위: 톤', seg + `<div class="chart" id="ca-dchart" style="margin-top:12px">${dailyChart()}</div>
+    return card('ca-daily', '일별 생산', `${md(O.daily[0].d)}~${md(O.daily[O.daily.length - 1].d)} (${O.daily.length}일, 이번 달부터) · 점선 = 기간 일평균, 주황 = 이번 달 월차 일평균 · 막대에 마우스를 올리면 상세`, '단위: 톤', seg + `<div class="chart" id="ca-dchart" style="margin-top:12px">${dailyChart()}</div>
       <details class="tv"><summary>표로 보기</summary><div class="scroll"><table class="t"><thead><tr><th class="l">날짜</th>${L.map((l) => `<th>${l}</th>`).join('')}<th>합계</th></tr></thead><tbody>${O.daily.slice().reverse().map((d) => `<tr><td class="l">${md(d.d)}</td>${L.map((l) => `<td>${n0(d[l])}</td>`).join('')}<td><b>${n0(L.reduce((a, l) => a + d[l], 0))}</b></td></tr>`).join('')}</tbody></table></div></details>`);
   }
-  /* 주별 추이: 라인마다 작은 카드 하나(지난주 값 · 12주 평균 대비 + 14주 막대) — 선 4개가 엉키지 않게 */
+  /* 주별 추이: 라인마다 작은 카드 하나(지난주 값 · 앞 N주 평균 대비 + 주별 막대) — 선 4개가 엉키지 않게 */
   function weekly() {
     const xs = O.weekly.map((w) => w.w), last = O.weekly.length - 1;
     const mini = (l, i) => {
@@ -101,13 +103,13 @@
       const at = avg(t), ah = avg(h);
       const td = O.weekly.map((w, k) => ({ d: w.w, v: t[k], dim: k !== last }));
       const hd = O.weekly.map((w, k) => ({ d: w.w, v: h[k], dim: k !== last }));
-      const sw = (lbl, val, base, fmt, unit, good = true) => `<div class="wk-k"><span>${lbl}</span><b>${fmt(val)}<small>${unit}</small></b>${dl(pct(val, base), good)}<em>12주 평균 ${fmt(base)}</em></div>`;
+      const sw = (lbl, val, base, fmt, unit, good = true) => `<div class="wk-k"><span>${lbl}</span><b>${fmt(val)}<small>${unit}</small></b>${dl(pct(val, base), good)}<em>${BW()} 평균 ${fmt(base)}</em></div>`;
       return `<div class="wk-card"><h3><i style="background:${COL[i]}"></i>${l} <small>지난주 ${md(xs[last])}~</small></h3>
         <div class="wk-ks">${sw('생산량', t[last], at, n0, 't/일')}${sw('생산속도', h[last], ah, n1, 't/hr')}</div>
         <div class="wk-ch"><p>생산량 t/일</p>${bars(td, COL[i], [{ n: '평균', v: at, c: 'var(--ink-3)', dash: '3 4' }], 150, 560, n0, (d) => md(d.d), (d) => `<b>${md(d.d)} 주</b> ${n0(d.v)} t/일`)}</div>
         <div class="wk-ch"><p>생산속도 t/hr (정지 포함)</p>${bars(hd, COL[i], [{ n: '평균', v: ah, c: 'var(--ink-3)', dash: '3 4' }], 150, 560, n1, (d) => md(d.d), (d) => `<b>${md(d.d)} 주</b> ${n1(d.v)} t/hr`)}</div></div>`;
     };
-    return card('ca-wk', '라인별 주간 추이', `최근 ${xs.length}주 · 진한 막대 = 지난주, 점선 = 앞 12주 평균`, '', `<div class="wk-grid">${L.map(mini).join('')}</div>`);
+    return card('ca-wk', '라인별 주간 추이', `최근 ${xs.length}주 · 진한 막대 = 지난주, 점선 = ${BW()} 평균`, '', `<div class="wk-grid">${L.map(mini).join('')}</div>`);
   }
   function products() {
     const P = O.products[pl] || [];
@@ -118,7 +120,7 @@
   function stops() {
     const S = O.stops, C = S.cats;
     const rows = L.map((l) => `<tr><td class="l nm">${l}</td>${C.map((c) => `<td>${n1(S.w0[l][c])} → <b>${n1(S.w1[l][c])}</b></td>`).join('')}<td>${n1(C.reduce((a, c) => a + S.w0[l][c], 0))} → <b>${n1(C.reduce((a, c) => a + S.w1[l][c], 0))}</b></td></tr>`).join('');
-    return card('ca-stop', '휴지 구성', '12주 평균 → 지난주 · 하루(달력일) 평균', '단위: 시간/일', `<div class="scroll"><table class="t big"><thead><tr><th class="l">라인</th>${C.map((c) => `<th>${c}</th>`).join('')}<th>합계</th></tr></thead><tbody>${rows}</tbody></table></div>
+    return card('ca-stop', '휴지 구성', `라인별 하루 평균 정지 시간 — ${BW()} 평균 → 지난주(굵게)`, '단위: 시간/일', `<div class="scroll"><table class="t big"><thead><tr><th class="l">라인</th>${C.map((c) => `<th>${c}</th>`).join('')}<th>합계</th></tr></thead><tbody>${rows}</tbody></table></div>
       <p class="small">${CFG.stopNote}</p>`);
   }
   function mcCard() {                                              // 도금만: 강종 전환(M/C) 실적
@@ -130,12 +132,12 @@
   const monLabel = (m) => `${+m.slice(5)}월${O.from && O.from.slice(0, 7) === m && +O.from.slice(8) > 1 ? `<small class="muted">(${+O.from.slice(8)}일~)</small>` : ''}`;
   function monthly() {
     const D = O.dept, nm = (k) => (/^\d+$/.test(k) ? `기타(${k})` : k);
-    return card('ca-mon', '월별 생산', '라인별 · 부서별 (10월은 누계)', '단위: 톤', `<div class="grid2"><div class="scroll"><table class="t big"><thead><tr><th class="l">월</th>${L.map((l) => `<th>${l}</th>`).join('')}<th>합계</th></tr></thead><tbody>${O.monthly.map((m) => `<tr><td class="l">${monLabel(m.m)}</td>${L.map((l) => `<td>${n0(m[l])}</td>`).join('')}<td><b>${n0(L.reduce((a, l) => a + m[l], 0))}</b></td></tr>`).join('')}</tbody></table></div>
+    return card('ca-mon', '월별 생산', `라인별 · 부서별 · 월 단위 (${+O.asOf.slice(5, 7)}월은 ${md(O.asOf)}까지 누계)`, '단위: 톤', `<div class="grid2"><div class="scroll"><table class="t big"><thead><tr><th class="l">월</th>${L.map((l) => `<th>${l}</th>`).join('')}<th>합계</th></tr></thead><tbody>${O.monthly.map((m) => `<tr><td class="l">${monLabel(m.m)}</td>${L.map((l) => `<td>${n0(m[l])}</td>`).join('')}<td><b>${n0(L.reduce((a, l) => a + m[l], 0))}</b></td></tr>`).join('')}</tbody></table></div>
       <div class="scroll"><table class="t big"><thead><tr><th class="l">월</th>${D.names.map((k) => `<th>${esc(nm(k))}</th>`).join('')}</tr></thead><tbody>${D.rows.map((m) => `<tr><td class="l">${monLabel(m.m)}</td>${D.names.map((k) => `<td>${n0(m[k])}</td>`).join('')}</tr>`).join('')}</tbody></table></div></div>`);
   }
   function render() {
     $('ca-main').innerHTML = `<section class="card" id="ca-kpi"><h2>주요 지표 <small>실적 ~${md(O.asOf)} · MES 원자료 재계산</small><span class="unit">단위: 톤</span></h2>${kpis()}</section>` + lineTable() + daily() + weekly() + `<div class="grid2 rowc">${products()}${stops()}</div>` + (PLANT === 'G' ? mcCard() : '') + monthly();
-    $('ca-meta').innerHTML = `<span><b>실적</b>~${O.asOf}</span><span><b>지난주</b>${md(O.w1)}~</span><span><b>비교</b>${md(O.w0[0])}~${md(O.w0[1])} 주 (12주)</span><span><b>계산</b>${String(O.built).replace('T', ' ')}</span>`;
+    $('ca-meta').innerHTML = `<span><b>실적</b>~${O.asOf}</span><span><b>지난주</b>${md(O.w1)}~</span><span><b>비교</b>${md(O.w0[0])}~${md(O.w0[1])} 주 (${NW()}주)</span><span><b>계산</b>${String(O.built).replace('T', ' ')}</span>`;
     UI.reveal($('ca-main')); UI.count($('ca-main')); bindTip($('ca-main'));
     render2();
   }
