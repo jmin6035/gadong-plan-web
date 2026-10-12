@@ -49,8 +49,8 @@
   GP.PUBLISH_REPO = { owner: 'jmin6035', repo: 'gadong-plan-web', branch: 'main' };
 
   /* GitHub에 바로 게시(관리자용). token: 이 저장소 Contents 쓰기 권한만 준 fine-grained 토큰. 브라우저 → GitHub API 직접 호출 */
-  GP.publishToGitHub = async function (env, token) {
-    const { owner, repo, branch } = GP.PUBLISH_REPO, path = GP.PUBLISH_PATH;
+  GP.publishToGitHub = async function (env, token, path = GP.PUBLISH_PATH) {
+    const { owner, repo, branch } = GP.PUBLISH_REPO;
     const api = `https://api.github.com/repos/${owner}/${repo}/contents/${path}`;
     const h = { Authorization: `Bearer ${token}`, Accept: 'application/vnd.github+json' };
     let sha;
