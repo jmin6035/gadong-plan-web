@@ -180,9 +180,26 @@
   // ---------------- 자료 열기(분석 암호) ----------------
   let env = null;
   const envReady = GP.latest('integrated.enc.json');
+  /* 지난 날짜 = MES 실적(사내 PC 가 매일 계획 그룹으로 분류해 게시: color_actual.enc.json 의 byGroup). 통합 계획 파일은 계산할 때만 바뀌므로 실적은 여기서 덮어씀 */
+  async function overlayActual(pw) {
+    try {
+      const e = await GP.latest('color_actual.enc.json'); if (!e) return;
+      const A = (await GP.decryptJSON(e, pw)).byGroup; if (!A || !A.days) return;
+      const idx = {}; O.color.forEach((c, i) => { idx[`${c.l}|${c.d}`] = i; });
+      for (const [d, L] of Object.entries(A.days)) {
+        if (d < '2026-10-01' || d > '2026-12-31') continue;
+        for (const [l, [g, mn, prods]] of Object.entries(L)) {
+          const c = { d, l, g, act: true, min: mn, rows: (prods || []).map(([p, t]) => ['실적', p, '', '', '', t]) };
+          if (idx[`${l}|${d}`] != null) O.color[idx[`${l}|${d}`]] = Object.assign({}, O.color[idx[`${l}|${d}`]], c); else O.color.push(c);
+        }
+        for (const l of LINES) if (!L[l] && idx[`${l}|${d}`] != null && d <= A.asOf) O.color[idx[`${l}|${d}`]] = Object.assign({}, O.color[idx[`${l}|${d}`]], { g: {}, act: true, min: 0, rows: [] });   // 실적 날인데 생산 없음 = 비가동
+      }
+      O.actualTo = A.asOf;
+    } catch (err) { /* 실적 덮어쓰기 실패해도 계획 표는 그대로 */ }
+  }
   async function unlock(pw) {
     if (!env) env = await envReady;
-    try { O = await GP.decryptJSON(env, pw); try { localStorage.setItem(PW_KEY, pw); } catch (e) { /* 무시 */ } render(); }
+    try { O = await GP.decryptJSON(env, pw); try { localStorage.setItem(PW_KEY, pw); } catch (e) { /* 무시 */ } await overlayActual(pw); render(); }
     catch (e) { $('d-unlock').hidden = false; $('d-unlock-msg').textContent = pw ? '⚠ 암호가 맞지 않습니다' : ''; }
   }
   $('d-unlock').addEventListener('submit', (e) => { e.preventDefault(); unlock($('d-pw').value); });
