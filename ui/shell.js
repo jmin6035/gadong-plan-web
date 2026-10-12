@@ -5,12 +5,12 @@
   const NAV = [
     ['home', 'index.html', '홈'], ['supply', 'supply.html', '수급 캘린더'], '|',
     ['integrated', 'integrated.html', '통합 가동계획'], ['status', 'status.html', '가동 현황'], ['rolling', 'rolling.html', '계획 계산'], ['analysis', 'analysis.html', '조건 분석'], '|',
-    ['platact', 'plating_actual.html', '도금 실적'], ['coloract', 'color_actual.html', '컬러 실적'], ['report', 'report.html', '주간 보고'], '|',
+    ['platact', 'plating_actual.html', '도금 실적'], ['coloract', 'color_actual.html', '컬러 실적'], ['planstock', 'planstock.html', '계획재'], ['report', 'report.html', '주간 보고'], '|',
     ['procure', 'procure.html', '조달 판단'], ['material', 'material.html', '소재 발주(월)'], '|',
     ['decisions', 'decisions.html', '결정 기록'], ['health', 'health.html', '자료 상태'], ['docs', 'docs.html', '문서'],
   ];
   const TKEY = 'cgl-theme', SKEY = 'cgl-scope';
-  const ONLY = { status: 'G', analysis: 'G', rolling: 'G', platact: 'G', coloract: 'C' };     // 도금 자료만 있는 화면
+  const ONLY = { status: 'G', analysis: 'G', rolling: 'G', platact: 'G', coloract: 'C', planstock: 'C' };     // 도금 자료만 있는 화면
   const SCN = { all: '전체', G: '도금', C: '컬러' };
   const DOCS = ['conditions', 'guide', 'requests', 'glossary', 'doc'];
   const UI = window.UI = window.UI || {};
@@ -69,7 +69,7 @@
   }
 
   /* 자료 신선도: status.json(사내 PC 자동 실행기·클라우드 게시 중 최신) → 헤더 배지 + 오래되면 경고 띠 */
-  const FEED = { platact: 'MES 도금 실적', coloract: '컬러 생산 실적', procure: '소재재고List(컬러)', material: '소재재고List(컬러)' };
+  const FEED = { platact: 'MES 도금 실적', coloract: '컬러 생산 실적', planstock: '컬러 생산 실적', procure: '소재재고List(컬러)', material: '소재재고List(컬러)' };
   async function fresh() {
     const h = document.getElementById('shell'); if (!h) return;
     const urls = ['https://gatcqxrzaonjsixajrwd.supabase.co/storage/v1/object/public/published/status.json?v=' + Date.now(), 'published/status.json'];
@@ -103,6 +103,7 @@
     analysis: '(계획 담당자용) MES 도금 실적으로 속도·M/C 손실·정지를 다시 계산해 계획 조건과 비교 — 반영권장 값은 계획 계산에 넣을 후보',
     platact: '도금 2라인 이번 달 진도, 일별·주별 생산, 속도, 제품·강종, 휴지, 강종 전환. 컬러 실적과 같은 양식',
     coloract: '컬러 4라인 이번 달 진도, 일별·주별 생산, 속도, 품명, 휴지. 지난주가 12주 평균과 얼마나 다른지',
+    planstock: 'TF 계획재(R15 187 사양)의 재고·생산·판매 진도와 월말 재고 예측. \'조치 필요\'부터 보고 담당자별로 확인',
     report: '주 1회 임원 보고 양식. 인쇄/PDF 로 그대로 씀',
     procure: '필요 시점별로 제때 들어올 업체를 판단하고 구매 요청서를 만듦. 입고예정(기발주)을 먼저 넣어야 정확',
     material: '업체 × 월 입고 필요량과 발주 마감(27년 3월까지) — 큰 그림. 주 단위 판단은 조달 판단에서',
