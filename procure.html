@@ -14,7 +14,7 @@ table.bd th { padding: 11px 9px; }
 table.bd td:nth-child(2) { white-space: normal; min-width: 130px; }
 table.bd td.jd { min-width: 230px; max-width: 300px; white-space: normal; }
 table.bd td.jd .why { font-size: 13.5px; color: var(--ink-2); line-height: 1.5; margin-top: 6px; }
-table.bd td.dec { min-width: 320px; white-space: normal; }
+table.bd td.dec { min-width: 220px; white-space: normal; }
 .onlyshort { display: inline-flex; align-items: center; gap: 6px; font-size: 14px; font-weight: 600; color: var(--ink-2); cursor: pointer; }
 .onlyshort input { width: 16px; height: 16px; accent-color: var(--brand-2); }
 .dg { display: grid; grid-template-columns: minmax(130px, 1fr) 78px 92px; gap: 6px 8px; }
@@ -40,6 +40,18 @@ table.ed input[size] { width: 48px; }
 .x { border: 0; background: none; color: var(--ink-3); cursor: pointer; border-radius: 5px; width: 24px; height: 24px; }
 .x:hover { background: var(--bad-bg); color: var(--bad); }
 .bar input[type=date], .bar input[type=number] { font: inherit; font-size: 14px; padding: 6px 8px; border: 1px solid var(--line); border-radius: 6px; background: var(--surface); color: var(--ink); }
+/* 판단 보드: 조치 묶음 머리줄 · 결정 요약 버튼 · 펼친 입력칸 */
+table.bd tr.grp-h td { background: var(--surface-2); font-weight: 800; font-size: 14px; color: var(--ink); padding: 9px 12px; border-top: 2px solid var(--line); text-align: left; }
+table.bd tr.grp-h.g0 td { border-left: 4px solid var(--bad); } table.bd tr.grp-h.g1 td { border-left: 4px solid var(--warn); } table.bd tr.grp-h.g2 td { border-left: 4px solid var(--brand-2); } table.bd tr.grp-h.g3 td, table.bd tr.grp-h.g4 td { border-left: 4px solid var(--good); }
+table.bd tr.grp-h .muted { font-weight: 600; margin-left: 8px; }
+button.dsum { all: unset; cursor: pointer; display: inline-flex; flex-wrap: wrap; gap: 4px 6px; align-items: center; font-size: 13.5px; }
+button.dsum .ds { font-weight: 800; padding: 2px 8px; border-radius: 999px; background: var(--surface-2); color: var(--ink-2); } button.dsum .ds.set { background: var(--good-bg); color: var(--good); }
+button.dsum .go { color: var(--brand-2); font-size: 12.5px; } button.dsum:hover .go { text-decoration: underline; }
+.dg.dg-open { grid-template-columns: minmax(200px, 1.4fr) 110px 130px minmax(220px, 2fr); margin-bottom: 10px; } .dg.dg-open label { display: flex; flex-direction: column; gap: 4px; font-size: 12.5px; color: var(--ink-3); font-weight: 700; }
+@media (max-width: 900px) { .dg.dg-open { grid-template-columns: 1fr 1fr; } }
+table.arrsum th.late, table.arrsum td.late, .arrg .late, table td.late { color: var(--bad); font-weight: 800; }
+table.arrsum tr.sum td { border-top: 2px solid var(--line); font-weight: 800; background: var(--surface-2); }
+details.arrg { border: 1px solid var(--line); border-radius: 8px; padding: 8px 12px; margin: 6px 0; } details.arrg > summary { cursor: pointer; font-size: 14px; } details.arrg[open] > summary { margin-bottom: 8px; }
 </style>
 </head>
 <body>

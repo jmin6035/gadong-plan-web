@@ -111,7 +111,10 @@
       <label class="onlyshort"><input type="checkbox" id="p-only" ${onlyShort ? 'checked' : ''}> 발주 필요만 보기 <span class="muted">(${V.filter((j) => j.short >= 1).length}/${V.length})</span></label>
       <span class="sp"></span>
       <button type="button" class="btn primary" id="p-export">구매 요청서 내보내기(.xlsx)</button></div>`;
-    const VR = onlyShort ? V.filter((j) => j.short >= 1) : V;
+    const GRP = { adjust: 0, nosup: 0, alt: 0, check: 1, ok: 3, pos: 4 }, gi = (j) => (GRP[j.kind] != null ? GRP[j.kind] : 2);   // 조치 묶음: 0 지금 조치 · 1 기발주 확인 · 2 정상 발주 · 3 충당 · 4 발주 대상 아님
+    const GH = ['지금 조치 — 새 발주로는 못 맞춤(재고 전환·투입 순서·대체 업체·업체 등록)', '기발주 확인 — 이미 발주돼 있어야 할 양(입고예정에 있는지 확인)', '발주 예정 — 마감 전에 1순위 업체로 발주', '충당됨 — 재고·입고예정으로 충분', '발주 대상 아님'];
+    const VR = (onlyShort ? V.filter((j) => j.short >= 1) : V).slice().sort((a, b) => gi(a) - gi(b) || (a.first < b.first ? -1 : a.first > b.first ? 1 : 0));
+    let lastG = -1;
     const rows = VR.map((j) => {
       const [kn, kc] = KIND[j.kind], d = j.dec;
       const okL = j.cand.filter((x) => j.specOk(x)).map((x) => +x.lt), minLT = okL.length ? Math.min(...okL) : null;
@@ -125,19 +128,20 @@
           : j.kind === 'adjust' ? `${minLT == null ? '두께 범위에 맞는 등록 업체 없음' : `남은 ${j.left}일 < 최단 LT ${minLT}일`} → 재고 전환·투입 순서 변경·자가재 대체 검토${specNote}`
             : j.kind === 'alt' ? `1순위 ${esc(supName(j.cand[0]))} LT ${j.cand[0].lt}일 > 남은 ${j.left}일 → ${esc(supName(j.rec))}(LT ${j.rec.lt}일)`
               : `남은 ${j.left}일 ≥ LT ${j.rec.lt}일 · 시한 ${md(j.deadline)}`;
-      const isOpen = open[j.key];
-      return `<tr class="u ${isOpen ? 'on' : ''}" data-k="${esc(j.key)}">
+      const isOpen = open[j.key], g = gi(j), gh = g !== lastG ? `<tr class="grp-h g${g}"><td colspan="7">${GH[g]} <span class="muted">${VR.filter((x) => gi(x) === g).length}건 · ${n0(VR.filter((x) => gi(x) === g).reduce((a, x) => a + x.short, 0))}t</span></td></tr>` : ''; lastG = g;
+      const decSum = j.short >= 1 ? `<button type="button" class="tg dsum" aria-expanded="${!!isOpen}"><span class="ds ${d.status && d.status !== '판단대기' ? 'set' : ''}">${esc(d.status || '판단대기')}</span>${sel ? ` <span class="muted">${esc(supName(j.cand.find((x) => x.sup === sel) || { sup: sel }))} · ${n0(qty)}t</span>` : ''}${d.memo ? ' <span class="muted">· 메모</span>' : ''} <b class="go">${isOpen ? '닫기 ▴' : '결정 입력 ▾'}</b></button>` : '<span class="muted">발주 불필요</span>';
+      return gh + `<tr class="u ${isOpen ? 'on' : ''}" data-k="${esc(j.key)}">
         <td class="l"><button type="button" class="tg" aria-expanded="${!!isOpen}" aria-label="용도 보기">${isOpen ? '▾' : '▸'}</button> ${md(j.first)} <span class="muted">(${j.left >= 0 ? 'D-' + j.left : -j.left + '일 지남'})</span></td>
         <td class="l">${PL[j.plant]} <b>${esc(codeNm(j.code))}</b>${j.thk ? ` <span class="muted">${j.thk[0]}~${j.thk[1]}mm</span>` : ''}</td>
         <td>${n0(j.t)}${j.est >= 1 ? ` <span class="muted">· 추정 ${n0(j.est)}</span>` : ''}</td><td>${n0(j.cover)}</td><td><b>${j.short >= 1 ? n0(j.short) : '·'}</b></td>
         <td class="l jd"><span class="st ${kc}">${kn}</span><div class="why">${why}</div></td>
-        <td class="l dec">${j.short >= 1 ? `<div class="dg"><label>업체<select data-f="sup" aria-label="업체">${opts}</select></label><label>수량<input data-f="qty" type="number" min="0" step="10" value="${esc(qty)}" aria-label="수량"></label><label>상태<select data-f="status" aria-label="상태">${STATUS.map((x) => `<option ${x === (d.status || '판단대기') ? 'selected' : ''}>${x}</option>`).join('')}</select></label></div>` : '<span class="muted">발주 불필요</span>'}
-          <input class="memo" data-f="memo" type="text" value="${esc(d.memo || '')}" placeholder="메모" aria-label="메모"></td></tr>
-        ${isOpen ? `<tr class="ux"><td colspan="7"><div class="${j.key === justOpened ? 'drop' : ''}"><div class="use"><b>무엇을 만들려고</b> ${j.use.slice().sort((a, b) => b[3] - a[3]).slice(0, 12).map((r) => `<span><i>${esc(r[0])}</i> ${esc(r[1])} ${esc(r[2])} <b>${n0(r[3])}t</b></span>`).join('')}</div>
+        <td class="l dec">${decSum}</td></tr>
+        ${isOpen ? `<tr class="ux" data-k="${esc(j.key)}"><td colspan="7"><div class="${j.key === justOpened ? 'drop' : ''}">
+          ${j.short >= 1 ? `<div class="dg dg-open"><label>업체<select data-f="sup" aria-label="업체">${opts}</select></label><label>수량(t)<input data-f="qty" type="number" min="0" step="10" value="${esc(qty)}" aria-label="수량"></label><label>상태<select data-f="status" aria-label="상태">${STATUS.map((x) => `<option ${x === (d.status || '판단대기') ? 'selected' : ''}>${x}</option>`).join('')}</select></label><label class="wide">메모<input class="memo" data-f="memo" type="text" value="${esc(d.memo || '')}" placeholder="예: 10/14 구매팀 발주 완료" aria-label="메모"></label></div>` : ''}<div class="use"><b>무엇을 만들려고</b> ${j.use.slice().sort((a, b) => b[3] - a[3]).slice(0, 12).map((r) => `<span><i>${esc(r[0])}</i> ${esc(r[1])} ${esc(r[2])} <b>${n0(r[3])}t</b></span>`).join('')}</div>
           <div class="use"><b>업체별</b> ${j.cand.map((s) => `<span class="${+s.lt <= j.left && j.specOk(s) ? '' : 'no'}">${s.prio}순위 ${esc(supName(s))} LT ${s.lt}일 → 발주 마감 ${md(addD(j.needBy, -s.lt))}${j.specOk(s) ? '' : ' · 두께 범위 밖'}</span>`).join('') || '-'}</div></div></td></tr>` : ''}`;
     }).join('');
     return card('p-board', '판단 보드', `기준일 ${S.today} · 필요일 = 컬러 투입 ${S.safetyC}일 · 도금 투입 ${S.safetyG}일 전 입고`, kp + ctl + `
-      <div class="scroll"><table class="t bd"><thead><tr><th class="l">첫 필요일</th><th class="l">소재</th><th>필요(t)</th><th>충당</th><th>발주 필요</th><th class="l">판단 · 사유</th><th class="l">결정 (업체 · 수량 · 상태 · 메모)</th></tr></thead>
+      <div class="scroll"><table class="t bd"><thead><tr><th class="l">첫 필요일</th><th class="l">소재</th><th>필요(t)</th><th>충당</th><th>발주 필요</th><th class="l">판단 · 사유</th><th class="l">결정</th></tr></thead>
       <tbody>${rows || '<tr><td colspan="7" class="c muted">이 기간에 해당 없음</td></tr>'}</tbody></table></div>
       <p class="small">판단 단위 = 필요 주차 × 소재. 충당 = 현재 재고 + 필요일까지의 입고예정(이른 주부터). 남은 일수 = 첫 필요일 − 여유일(컬러 ${S.safetyC}일·도금 ${S.safetyG}일, 팀 소재 리드타임 표) − 기준일. 업체는 리드타임 ≤ 남은 일수 · 두께 범위 안에서 우선순위가 가장 높은 곳을 추천 — 선택을 바꾸면 이 브라우저에 저장.</p>`);
   }
@@ -145,9 +149,19 @@
   function arrivals() {
     const rows = S.arr.map((a, i) => `<tr data-i="${i}"><td><input data-a="sup" value="${esc(a.sup)}" aria-label="업체"></td><td>${matSel('data-a="code"', a.code)}</td><td><input data-a="t" type="number" value="${esc(a.t)}" aria-label="수량"></td><td><input data-a="date" type="date" value="${esc(a.date)}" aria-label="입고예정일"></td><td><input data-a="po" value="${esc(a.po || '')}" aria-label="발주번호"></td><td><input data-a="memo" value="${esc(a.memo || '')}" aria-label="메모"></td><td><button type="button" class="x" data-del="arr" data-i="${i}" aria-label="삭제">✕</button></td></tr>`).join('');
     const AA = autoArr().filter((a) => UI.inScope(a.plant)).sort((a, b) => (a.date < b.date ? -1 : 1)), KI = D.knownInfo || {};
+    // 소재 × 기간 요약(예정일 지남 · 이번 주 · 다음 주 · 3~4주 · 5주 이후) + 소재별 상세(펼침)
+    const wk0 = monday(S.today), BK = [['late', '예정일 지남', (a) => /지남/.test(a.note || '')], ['w0', '이번 주', (a) => a.date < addD(wk0, 7)], ['w1', '다음 주', (a) => a.date < addD(wk0, 14)], ['w2', '3~4주', (a) => a.date < addD(wk0, 28)], ['w4', '5주 이후', () => true]];
+    const bOf = (a) => BK.find(([, , f]) => f(a))[0];
+    const G = {}; for (const a of AA) { const k = `${a.plant}:${a.code}`; const g = G[k] = G[k] || { plant: a.plant, code: a.code, n: 0, t: 0, b: {}, rows: [] }; g.n++; g.t += a.t; const b = bOf(a); g.b[b] = (g.b[b] || 0) + a.t; g.rows.push(a); }
+    const GL = Object.values(G).sort((x, y) => y.t - x.t), tot = (b) => GL.reduce((s_, g) => s_ + (g.b[b] || 0), 0);
     const auto = AA.length ? `<h3>MES 미입고 발주 <small>자동 · ${AA.length}건 · ${n0(AA.reduce((s, a) => s + a.t, 0))}t</small></h3>
-      <p class="small">발주(MES) − 입고(MES) 잔량, 자가·삭제·잔량 10% 이하 제외. 입고 예정일 = 발주일 + 그 업체 리드타임(추정)${KI.full ? '' : ` · 지금은 ${KI.from ? `${+KI.from.slice(4, 6)}/${+KI.from.slice(6)}` : ''} 이후 발주만(그 전 발주의 입고 기록이 아직 없음 — 다음 자동 조회부터 전체)`}. 아래에 같은 발주번호를 직접 넣으면 그 값을 씁니다.</p>
-      <div class="scroll"><table class="t"><thead><tr><th>입고 예정</th><th>업체</th><th>소재</th><th>잔량(t)</th><th>발주번호</th><th>비고</th></tr></thead><tbody>${AA.map((a) => `<tr><td>${md(a.date)}</td><td>${esc((D.supNames || {})[a.sup] || a.sup)}</td><td>${PL[a.plant]} ${esc(codeNm(a.code))}</td><td><b>${n0(a.t)}</b></td><td>${esc(a.po || '')}</td><td class="why">${esc(a.note || '')}</td></tr>`).join('')}</tbody></table></div>` : '<p class="small">MES 미입고 발주 자료 없음 — 사내 PC 자동 조회 후 표시</p>';
+      <p class="small">언제 얼마가 들어오나 — 소재별 미입고 잔량(톤)을 입고 예정 시기로 묶음. 입고 예정일 = 발주일 + 그 업체 리드타임(추정). '예정일 지남' = 리드타임이 지났는데 아직 안 들어온 것(내일 들어온다고 보고 계산 — 구매팀 확인).${KI.full ? '' : ` 지금은 ${KI.from ? `${+KI.from.slice(4, 6)}/${+KI.from.slice(6)}` : ''} 이후 발주만 정확(그 전 발주의 입고 기록이 아직 없음 — 다음 자동 조회부터 전체).`}</p>
+      <div class="scroll"><table class="t arrsum"><thead><tr><th class="l">소재</th>${BK.map(([k, n]) => `<th class="${k === 'late' ? 'late' : ''}">${n}</th>`).join('')}<th>합계</th><th>건수</th></tr></thead><tbody>
+      ${GL.map((g) => `<tr><td class="l"><b>${esc(codeNm(g.code))}</b> <small class="muted">${PL[g.plant]}</small></td>${BK.map(([k]) => `<td class="${k === 'late' && g.b[k] ? 'late' : ''}">${g.b[k] ? n0(g.b[k]) : '<span class="muted">·</span>'}</td>`).join('')}<td><b>${n0(g.t)}</b></td><td>${g.n}</td></tr>`).join('')}
+      <tr class="sum"><td class="l">합계</td>${BK.map(([k]) => `<td>${n0(tot(k))}</td>`).join('')}<td><b>${n0(AA.reduce((s_, a) => s_ + a.t, 0))}</b></td><td>${AA.length}</td></tr></tbody></table></div>
+      <h3>소재별 발주 목록 <small>소재를 누르면 발주번호별 잔량</small></h3>
+      ${GL.map((g) => `<details class="arrg"><summary><b>${esc(codeNm(g.code))}</b> <small class="muted">${PL[g.plant]}</small> · ${g.n}건 · <b>${n0(g.t)}t</b>${g.b.late ? ` · <span class="late">예정일 지남 ${n0(g.b.late)}t</span>` : ''}</summary>
+        <div class="scroll"><table class="t"><thead><tr><th>입고 예정</th><th>업체</th><th>잔량(t)</th><th>발주번호</th><th class="l">근거</th></tr></thead><tbody>${g.rows.map((a) => `<tr><td class="${/지남/.test(a.note || '') ? 'late' : ''}">${md(a.date)}${/지남/.test(a.note || '') ? ' <small>(지남)</small>' : ''}</td><td>${esc((D.supNames || {})[a.sup] || a.sup)}</td><td><b>${n0(a.t)}</b></td><td>${esc(a.po || '')}</td><td class="l why">${esc(String(a.note || '').replace(/^MES 미입고 발주 · /, '').replace(' · 예정일 지남(내일 입고로 봄)', ''))}</td></tr>`).join('')}</tbody></table></div></details>`).join('')}` : '<p class="small">MES 미입고 발주 자료 없음 — 사내 PC 자동 조회 후 표시</p>';
     return card('p-arr', '입고예정 · 기발주 잔량', `MES 자동 ${AA.length}건 + 직접 입력 ${S.arr.length}건`, `
       ${auto}<h3>직접 입력 <small>MES 에 없는 기발주(수입 등)나 날짜를 바꿀 때</small></h3>
       <div class="bar"><button type="button" class="btn" data-add="arr">+ 줄 추가</button><label class="btn">엑셀 업로드<input type="file" accept=".xlsx" data-up="arr" hidden></label><span class="small">양식: 소재조달_양식_v0.xlsx '입고예정' 시트 (업체 · 소재 · 수량(t) · 입고예정일 · 발주번호 · 메모)</span></div>
