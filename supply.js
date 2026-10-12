@@ -40,6 +40,7 @@
     const months = [...new Set(days.map((d) => d.slice(0, 7)))];
     return { W, V, days, months, pl, co, self, mat, ord, sw, est, flow, fMade, fUse, selfEst: V.selfEstFrom || '9999', matInfo: V.mat, groups: V.stockWeek.filter((s) => !/자가재|FH|구매소재/.test(s.k)).map((s) => s.k) };
   }
+  const calAll = (sel = '[data-d]') => document.querySelectorAll(`#s-cal ${sel}, #s-cal2 ${sel}`);
   const ordSum = (k, d) => (D.ord[k][d] || []).reduce((a, x) => a + x[1], 0);
   const useNext = (a, d, n) => { let s = 0; for (let i = 1; i <= n; i++) { const x = D.self[`${a}|${add(d, i)}`]; if (x) s += x.use; } return s; };
 
@@ -71,12 +72,15 @@
   function cal() {
     const ds = D.days.filter((d) => d.slice(0, 7) === mon);
     const head = `<thead><tr><th class="lb">구분</th>${ds.map((d) => `<th data-d="${d}" class="${[0, 6].includes(wd(d)) ? 'we' : ''} ${d === today ? 'today' : ''}">${+d.slice(8)}<br><span style="font-weight:500;font-size:11px">${WD[wd(d)]}</span></th>`).join('')}<th class="tot">계</th></tr></thead>`;
-    let h = '', ci = 0;
-    const sec = (t, dom) => { h += `<tr class="sec" data-dom="${dom}"><td class="lb">${t}</td><td colspan="${ds.length + 1}"></td></tr>`; };
-    const row = (lb, cell, tot, cls = '') => { let s = 0; h += `<tr class="${cls}"><td class="lb">${lb}</td>`; ds.forEach((d, i) => { const c = cell(d); s += c.n || 0; h += `<td data-d="${d}" data-l="${lb}" class="${c.c || ''}" style="--ci:${i}"${c.tip ? ` title="${esc(c.tip)}"` : ''}>${c.x == null ? '' : c.x}</td>`; }); h += `<td class="tot">${tot === false ? '' : n0(tot != null ? tot : s)}</td></tr>`; ci++; };
+    const H = { a: '', b: '' }; let tg = 'a', ci = 0;
+    const sec = (t, dom) => { H[tg] += `<tr class="sec" data-dom="${dom}"><td class="lb">${t}</td><td colspan="${ds.length + 1}"></td></tr>`; };
+    const row = (lb, cell, tot, cls = '') => { let s = 0, h = ''; h += `<tr class="${cls}"><td class="lb">${lb}</td>`; ds.forEach((d, i) => { const c = cell(d); s += c.n || 0; h += `<td data-d="${d}" data-l="${lb}" class="${c.c || ''}" style="--ci:${i}"${c.tip ? ` title="${esc(c.tip)}"` : ''}>${c.x == null ? '' : c.x}</td>`; }); h += `<td class="tot">${tot === false ? '' : n0(tot != null ? tot : s)}</td></tr>`; ci++;  H[tg] += h; };
     sec('가동 (생산량)', 'G');
     for (const l of ['1CGL', '2CGL']) row(l, (d) => { const x = D.pl[`${l}|${d}`]; if (!x) return { x: '·', c: 'z' }; const mc = /M\/C|재가동/.test(x.ev); return { x: x.t > 0.5 ? n0(x.t) : (mc ? 'M/C' : '·'), n: x.t, c: `f${x.fam} ${mc ? 'mc' : ''}`, tip: `${md(d)} ${l} ${x.fam} ${n0(x.t)}t ${x.ev}` }; });
     for (const l of ['1CCL', '2CCL', '3CCL', '4CCL']) row(l, (d) => { const x = D.co[`${l}|${d}`]; if (!x || x.t < 0.5) return { x: '·', c: 'z' }; return { x: n0(x.t), n: x.t, c: x.act ? 'act' : '', tip: `${md(d)} ${l} ${n0(x.t)}t${x.act ? ' (실적)' : ''} · ${Object.entries(x.g).map(([k, v]) => k + ' ' + n0(v)).join(', ')}` }; }, null, 'sub');
+    sec('제품 재고 (그날 끝, 추정)', 'G');
+    for (const g of D.groups) row(g, (d) => { const x = D.sw[`${g}|${d}`]; if (!x) return { x: '' }; return { x: n0(x.v), c: x.tgt && x.v > x.tgt * 1.3 ? 'hi' : '', tip: `${md(d)} ${g} 재고 ${n0(x.v)}t / 목표 ${n0(x.tgt)}t (${Math.round(x.v / x.tgt * 100)}%)` }; }, false, 'sub');
+    tg = 'b';
     sec('자가재 재고 (도금 → 컬러 소재, 그날 끝)', 'C');
     for (const a of ['AZ', 'MAC', 'AL']) row(`자가재 ${a}`, (d) => { const x = D.self[`${a}|${d}`]; if (!x) return {}; const nx = useNext(a, d, 3); return { x: n0(x.stock), c: (x.stock < 0 ? 'neg' : nx > 0 && x.stock < nx ? 'lo' : '') + (d >= D.selfEst ? ' est' : ''), tip: `${d >= D.selfEst ? '[추정: 1월 초 컬러 사용 = 12월 하루 평균] ' : ''}${md(d)} 자가재 ${a}: 도금 생산 +${n0(x.prod)} · 컬러 사용 −${n0(x.use)} → 재고 ${n0(x.stock)}t (다음 3일 사용 ${n0(nx)}t)` }; }, false, 'sub');
     sec('구매 소재 (발주 → 입고 → 재고)', 'M');
@@ -86,12 +90,12 @@
       row(`${nm} 입고`, (d) => { const x = D.mat[`${k}|${d}`]; return x && x.inb > 0.5 ? { x: n0(x.inb), n: x.inb, c: 'inb', tip: `${md(d)} 입고 필요 ${n0(x.inb)}t — 발주 ${x.od ? md(x.od) : '-'}` } : { x: '', n: 0 }; }, null, 'sub');
       row(`${nm} 발주`, (d) => { const t = ordSum(k, d); return t > 0.5 ? { x: n0(t), n: t, c: 'ord' + (D.est[`${k}|${d}`] ? ' est' : ''), tip: `${D.est[`${k}|${d}`] ? '[추정: 1월 이후 사용 = 4분기 하루 평균] ' : ''}${md(d)} 발주해야 할 양 ${n0(t)}t → 입고 ${(D.ord[k][d] || []).map((x) => md(x[0])).join(', ')}` } : { x: '', n: 0 }; }, null, 'sub');
     }
-    sec('제품 재고 (그날 끝, 추정)', 'G');
-    for (const g of D.groups) row(g, (d) => { const x = D.sw[`${g}|${d}`]; if (!x) return { x: '' }; return { x: n0(x.v), c: x.tgt && x.v > x.tgt * 1.3 ? 'hi' : '', tip: `${md(d)} ${g} 재고 ${n0(x.v)}t / 목표 ${n0(x.tgt)}t (${Math.round(x.v / x.tgt * 100)}%)` }; }, false, 'sub');
-    $('s-cal').innerHTML = head + '<tbody>' + h + '</tbody>';
-    $('s-cal').querySelectorAll('[data-d]').forEach((el) => el.onclick = () => pick(el.dataset.d));
-    const w = $('s-calw'), th = $('s-cal').querySelector(`thead th[data-d="${add(today, -2)}"]`);
-    if (th && w.scrollWidth > w.clientWidth) w.scrollLeft = th.getBoundingClientRect().left - $('s-cal').getBoundingClientRect().left - 140;
+    $('s-cal').innerHTML = head + '<tbody>' + H.a + '</tbody>';
+    $('s-cal2').innerHTML = head + '<tbody>' + H.b + '</tbody>';
+    calAll().forEach((el) => el.onclick = () => pick(el.dataset.d));
+    for (const [w, t] of [[$('s-calw'), $('s-cal')], [$('s-calw2'), $('s-cal2')]]) { const th = t.querySelector(`thead th[data-d="${add(today, -2)}"]`); if (th && w.scrollWidth > w.clientWidth) w.scrollLeft = th.getBoundingClientRect().left - t.getBoundingClientRect().left - 140; }
+    const sync = (a, b) => a.addEventListener('scroll', () => { if (Math.abs(b.scrollLeft - a.scrollLeft) > 1) b.scrollLeft = a.scrollLeft; });   // 두 달력 가로 스크롤 함께
+    if (!cal.synced) { sync($('s-calw'), $('s-calw2')); sync($('s-calw2'), $('s-calw')); cal.synced = true; }
     charts(ds); flows();
     if (sel && sel.slice(0, 7) === mon) pick(sel); else pick(ds.includes(today) ? today : ds[0]);
   }
@@ -118,23 +122,53 @@
     $('s-flow').querySelectorAll('tr[data-f]').forEach((tr) => tr.onclick = () => { const f = D.flow[+tr.dataset.f]; hiFlow(f); const d0 = (f.made[0] || f.use[0] || [])[0]; if (d0 && d0.slice(0, 7) === mon) pick(d0); hiFlow(f); $('s-calw').scrollIntoView({ behavior: 'smooth', block: 'center' }); });
   }
 
+  // ---------- 품목 한 줄: 요청 납기 → 생산 → 소재(자가재: 도금 생산·컬러 입고 / 구매: 발주 시한·입고 필요일) → 판정 ----------
+  // r = [구분, 품명, 규격/지역, 목적지, 선적, 톤, 분, t/h, 이유, 납기, 기본품명, 자가재비중, [[구역, 강종, 1t당]], 고객]
+  function matLine(r, d, l) {
+    const M = D.W.mat || {}, IN = (M.inLead || {}).C || 7, TL = M.selfLeadTeam || 8, out = [];
+    const sh = r[11] || 0, base = r[10] || r[1];
+    if (sh > 0.02) {
+      for (const [sec, a, w] of r[12] || []) {
+        const f = D.flow.find((x) => x.sec === sec && x.a === a && x.use.some((u) => u[0] === d && u[1] === l));
+        const made = f ? f.made.map((m) => m[0]).sort() : [];
+        const last = made[made.length - 1];
+        const gap = last ? Math.round((new Date(d) - new Date(last)) / 864e5) : null;
+        const st = !last ? ['warn', '도금 생산 연결 없음(재고에서)'] : gap >= TL ? ['ok', `여유 — 도금 생산 ${gap}일 전`] : gap >= 1 ? ['warn', `빠듯 — 도금 생산 ${gap}일 전(팀 기준 ${TL}일)`] : ['warn', '재고 선사용 — 도금 생산이 더 늦음'];
+        out.push({ kind: '자가재', what: `${a} ${Math.round(w * 100)}%`, src: last ? `도금 ${span(f.made)}` : '-', inb: last ? md(add(last, 1)) + ' 컬러 입고' : '-', ord: '-', st, f });
+      }
+    }
+    if (1 - sh > 0.02) {
+      const mix = (M.codeMix || {})[base] || (M.codeMix || {})[String(base).slice(0, 3)] || null;
+      const codes = mix ? Object.entries(mix).sort((x, y) => y[1] - x[1]) : [];
+      const need = add(d, -IN);
+      if (!codes.length) out.push({ kind: '구매', what: `${Math.round((1 - sh) * 100)}% (소재 미확인)`, src: '-', inb: `${md(need)}까지`, ord: '-', st: ['warn', '품명 → 소재 연결 없음'] });
+      for (const [code, w] of codes.slice(0, 2)) {
+        const sp = (M.sup || {})[code], nm = (M.matCode || {})[code] || code;
+        const ordBy = sp ? add(need, -sp[1]) : null;
+        const st = !sp ? ['warn', '업체 기준 없음'] : ordBy >= today ? ['ok', `발주 예정 — ${md(ordBy)}까지`] : ['info', '기발주분 사용(시한 지남 = 이미 발주됐어야 할 시점) — 부족 여부는 조달 판단'];
+        out.push({ kind: '구매', what: `${esc(nm)} ${Math.round((1 - sh) * w * 100)}%`, src: sp ? `${esc(sp[0])} · LT ${sp[1]}일` : '-', inb: `${md(need)}까지 입고`, ord: ordBy ? md(ordBy) : '-', st });
+      }
+    }
+    return out;
+  }
+
   // ---------- 날짜 상세 ----------
   function pick(d) {
     sel = d;
-    $('s-cal').querySelectorAll('.sel').forEach((el) => el.classList.remove('sel'));
-    $('s-cal').querySelectorAll(`[data-d="${d}"]`).forEach((el) => el.classList.add('sel'));
+    calAll('.sel').forEach((el) => el.classList.remove('sel'));
+    calAll(`[data-d="${d}"]`).forEach((el) => el.classList.add('sel'));
     const pcard = (l) => { const x = D.pl[`${l}|${d}`]; if (!x) return ''; return `<section class="card rv" data-noexport data-dom="G"><h3>${l} · ${x.fam} ${n0(x.t)}t ${x.ev ? `<small style="color:#8a5a00">${esc(x.ev)}</small>` : ''}</h3>
       <table class="dt"><thead><tr><th>강종</th><th>부서</th><th>목적지</th><th class="r">톤</th><th>납기</th></tr></thead><tbody>${x.items.map((r) => { const f = r[1] === '자가재' ? flowOf(r[6], r[2], r[0]) : null; return `<tr${f ? ` class="fl-r" data-f="${f.i}"` : ''}><td>${esc(r[0])}</td><td>${esc(r[1])}</td><td>${esc([r[2], r[3]].filter(Boolean).join(' · '))}${f ? `<div class="fto">→ 컬러 투입 ${span(f.use)}</div>` : ''}</td><td class="r">${n0(r[5])}</td><td>${md(r[6])}</td></tr>`; }).join('') || '<tr><td colspan="5" class="small">생산 없음</td></tr>'}</tbody></table>
       ${x.why.length ? `<div class="why">${x.why.map(esc).join('<br>')}</div>` : ''}</section>`; };
-    const ccard = (l) => { const x = D.co[`${l}|${d}`]; if (!x || x.t < 0.5) return ''; const fu = D.fUse[`${l}|${d}`] || []; return `<section class="card rv" data-noexport data-dom="C"><h3>${l} · ${n0(x.t)}t ${x.act ? '<small>(실적)</small>' : ''}</h3>
+    const ccard = (l) => { const x = D.co[`${l}|${d}`]; if (!x || x.t < 0.5) return ''; const fu = D.fUse[`${l}|${d}`] || []; return `<section class="card rv wide" data-noexport data-dom="C"><h3>${l} · ${n0(x.t)}t ${x.act ? '<small>(실적)</small>' : ''}</h3>
       ${fu.length ? `<div class="fin">${fu.map(([f, t]) => `<span class="fl-r" data-f="${f.i}">자가재 ${esc(f.a)} ${n0(t)}t ← 도금 ${span(f.made)}</span>`).join('')}</div>` : ''}
-      ${x.rows.length ? `<table class="dt"><thead><tr><th>구분</th><th>품명</th><th>고객·지역</th><th class="r">톤</th></tr></thead><tbody>${x.rows.slice(0, 12).map((r) => `<tr><td>${esc(r[0])}</td><td>${esc(r[1])}</td><td>${esc([r[2], r[3]].filter(Boolean).join(' · '))}</td><td class="r">${n0(r[5])}</td></tr>`).join('')}</tbody></table>${x.rows.length > 12 ? `<div class="why">외 ${x.rows.length - 12}건</div>` : ''}` : `<div class="why">${Object.entries(x.g).map(([k, v]) => `${esc(k)} ${n0(v)}t`).join(' · ')}</div>`}</section>`; };
+      ${x.rows.length ? `<table class="dt mt"><thead><tr><th>구분 · 품명</th><th>고객·지역</th><th class="r">톤</th><th>요청 납기</th><th>소재</th><th>공급 · 발주</th><th>입고</th><th>판정</th></tr></thead><tbody>${x.rows.slice(0, 12).map((r) => { const ML = x.act ? [] : matLine(r, d, l); const n = Math.max(1, ML.length); const due = r[9] ? `${md(r[9])} <small>(${Math.round((new Date(r[9]) - new Date(d)) / 864e5)}일 뒤)</small>` : esc(r[4] || '-'); return ML.length ? ML.map((m, k) => `<tr class="${k ? 'cont' : ''}">${k ? '' : `<td rowspan="${n}"><b>${esc(r[1])}</b><br><small>${esc(r[0])}</small></td><td rowspan="${n}">${esc([r[13] || r[2], r[3]].filter(Boolean).join(' · '))}</td><td class="r" rowspan="${n}">${n0(r[5])}</td><td rowspan="${n}">${due}</td>`}<td><small>${m.kind}</small> ${m.what}</td><td>${m.src}${m.ord !== '-' ? `<br><small>발주 시한 ${m.ord}</small>` : ''}</td><td>${m.inb}</td><td class="st ${m.st[0]}"${m.f ? ` data-f="${m.f.i}"` : ''}>${m.st[1]}</td></tr>`).join('') : `<tr><td><b>${esc(r[1])}</b><br><small>${esc(r[0])}</small></td><td>${esc([r[13] || r[2], r[3]].filter(Boolean).join(' · '))}</td><td class="r">${n0(r[5])}</td><td>${due}</td><td colspan="4" class="small">실적일</td></tr>`; }).join('')}</tbody></table>${x.rows.length > 12 ? `<div class="why">외 ${x.rows.length - 12}건</div>` : ''}` : `<div class="why">${Object.entries(x.g).map(([k, v]) => `${esc(k)} ${n0(v)}t`).join(' · ')}</div>`}</section>`; };
     const sc = `<section class="card rv" data-noexport data-dom="C"><h3>자가재 (그날)</h3><table class="dt"><thead><tr><th>강종</th><th class="r">도금 생산</th><th class="r">컬러 사용</th><th class="r">재고</th><th class="r">다음 3일 사용</th></tr></thead><tbody>${['AZ', 'MAC', 'AL'].map((a) => { const x = D.self[`${a}|${d}`] || {}; return `<tr><td>${a}</td><td class="r">${n0(x.prod)}</td><td class="r">${n0(x.use)}</td><td class="r"><b>${n0(x.stock)}</b></td><td class="r">${n0(useNext(a, d, 3))}</td></tr>`; }).join('')}</tbody></table></section>`;
     const mc = `<section class="card rv" data-noexport data-dom="M"><h3>구매 소재 (그날)</h3><table class="dt"><thead><tr><th>소재</th><th class="r">사용</th><th class="r">입고</th><th class="r">재고</th><th>이 입고의 발주일</th></tr></thead><tbody>${[['FH', 'F/H(도금)'], ['CMAT', '컬러 소재']].map(([k, nm]) => { const x = D.mat[`${k}|${d}`] || {}; return `<tr><td>${nm}</td><td class="r">${n0(x.use)}</td><td class="r">${n0(x.inb)}</td><td class="r"><b>${n0(x.stock)}</b></td><td>${x.od ? md(x.od) : '-'}</td></tr>`; }).join('')}</tbody></table>
       ${['FH', 'CMAT'].map((k) => (D.ord[k][d] || []).length ? `<div class="why"><b>이 날 ${k === 'FH' ? 'F/H' : '컬러 소재'} 발주 ${n0(ordSum(k, d))}t</b> → 입고 ${(D.ord[k][d]).map((x) => `${md(x[0])} ${n0(x[1])}t`).join(', ')}</div>` : '').join('')}</section>`;
     $('s-det').innerHTML = `<div style="grid-column:1/-1;font-size:15px;font-weight:800;margin-top:6px">${md(d)}(${WD[wd(d)]}) 상세</div>` + ['1CGL', '2CGL'].map(pcard).join('') + ['1CCL', '2CCL', '3CCL', '4CCL'].map(ccard).join('') + sc + mc;
     UI.reveal($('s-det'));
-    $('s-det').querySelectorAll('.fl-r').forEach((el) => el.onclick = () => hiFlow(D.flow[+el.dataset.f]));
+    $('s-det').querySelectorAll('.fl-r, td.st[data-f]').forEach((el) => el.onclick = () => hiFlow(D.flow[+el.dataset.f]));
   }
 
   // ---------- 추이 그래프(달 단위) ----------
