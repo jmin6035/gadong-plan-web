@@ -747,3 +747,24 @@ html .cc-line:hover { border-color: var(--brand-2); } html .cc-line.on { border-
 .cp-h { font-weight: 700; font-variant-numeric: tabular-nums; text-align: right; }
 .cp-more summary { cursor: pointer; padding: 10px 0; font-size: 13.5px; color: var(--ink-2); font-weight: 600; }
 @media (max-width: 900px) { .cp-head { display: none; } .cp-row { grid-template-columns: 1fr 1fr; } .cp-bar { grid-column: 1 / -1; } }
+/* 주간 보고 요약 타일 · 결정 카드 */
+.sum-tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 14px; }
+.sum-tile { border: 1px solid var(--line); border-top: 4px solid var(--steel-2); border-radius: 12px; padding: 14px 16px; background: var(--surface); display: flex; flex-direction: column; gap: 4px; }
+.sum-tile.st-good { border-top-color: var(--good); } .sum-tile.st-warn { border-top-color: var(--warn); } .sum-tile.st-bad { border-top-color: var(--bad); }
+.sum-h { display: flex; justify-content: space-between; align-items: center; gap: 8px; } .sum-h b { font-size: 17px; }
+.sum-v { font-size: 40px; font-weight: 800; letter-spacing: -.04em; line-height: 1.1; margin-top: 6px; font-variant-numeric: tabular-nums; } .sum-v small { font-size: 18px; margin-left: 2px; }
+.st-good .sum-v { color: var(--good); } .st-warn .sum-v { color: var(--warn); } .st-bad .sum-v { color: var(--bad); }
+.sum-l { font-size: 13px; color: var(--ink-3); font-weight: 600; }
+.sum-bar { position: relative; height: 8px; border-radius: 4px; background: var(--grid); margin: 8px 0 4px; }
+.sum-bar i { display: block; height: 100%; border-radius: 4px; background: var(--steel-3); transform-origin: left; animation: growL .9s var(--ease) both; }
+.st-good .sum-bar i { background: var(--good); } .st-warn .sum-bar i { background: var(--warn); } .st-bad .sum-bar i { background: var(--bad); }
+.sum-bar u { position: absolute; top: -4px; bottom: -4px; width: 2px; background: var(--ink); }
+.sum-s { font-size: 13.5px; color: var(--ink-2); line-height: 1.55; }
+.sum-a { margin-top: auto; padding-top: 10px; border-top: 1px dashed var(--line); font-size: 14px; line-height: 1.5; color: var(--ink); }
+.sum-a span { display: inline-block; font-size: 12px; font-weight: 800; color: var(--brand-2); background: color-mix(in srgb, var(--brand-2) 12%, transparent); border-radius: 4px; padding: 0 6px; margin-right: 6px; }
+.decide2 { margin-top: 18px; } .decide2 h3 { margin: 0 0 10px; font-size: 17px; } .decide2 h3 small { color: var(--ink-3); font-weight: 600; font-size: 13px; }
+.dc-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 12px; }
+.dc { display: flex; gap: 12px; border: 1px solid var(--line); border-left: 4px solid var(--warn); border-radius: 0 10px 10px 0; padding: 12px 14px; background: var(--surface); }
+.dc > i { flex: none; width: 26px; height: 26px; border-radius: 50%; background: var(--warn); color: #fff; font-style: normal; font-weight: 800; display: grid; place-items: center; font-size: 14px; }
+.dc b { display: block; font-size: 15.5px; line-height: 1.45; } .dc p { margin: 4px 0 0; font-size: 13.5px; color: var(--ink-2); line-height: 1.55; }
+@media print { .sum-tiles { grid-template-columns: repeat(4, 1fr); gap: 6px; } .sum-tile { padding: 8px; } .sum-v { font-size: 26px; } .dc-grid { grid-template-columns: repeat(3, 1fr); } }

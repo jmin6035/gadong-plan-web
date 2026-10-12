@@ -176,16 +176,27 @@
     let h = '';
     if (o.status && o.status.stale) h += `<div class="stale">⚠ 사내 PC 자동 실행이 하루 넘게 멈춰 있습니다(마지막 자료 ${new Date(o.status.savedAt).toLocaleString('ko-KR')}).</div>`;
 
-    // ① 한 장 요약
-    let t = '<div class="scroll"><table class="t sum"><thead><tr><th>구분</th><th>상태</th><th>핵심 수치</th><th>판단</th><th>조치</th></tr></thead><tbody>';
+    // ① 한 장 요약: 구분별 타일(상태 · 대표 수치 1개 · 진도 막대 · 조치 한 줄) + 결정 필요 사항 카드
+    const big = {
+      plating: pG && { v: rate(pG.actual, pG.sched), lbl: '10월 일정 대비', sub: `${n0(pG.actual)}t / 일정 ${n0(pG.sched)}t`, r: pG.actual / pG.sched, x2: pa ? `4분기 누적 계획 대비 ${sgn(pa.actualT - pa.planT)}t` : '' },
+      color: pC && { v: rate(pC.actual, pC.sched), lbl: '10월 일정 대비', sub: `${n0(pC.actual)}t / 일정 ${n0(pC.sched)}t`, r: pC.actual / pC.sched, x2: co ? `지난주 ${n0(sumC(co.rows, 'w1'))}t/일 · 12주 평균 대비 ${sgn(pct(sumC(co.rows, 'w1'), sumC(co.rows, 'w0')), n1)}%` : '' },
+      ship: shipT && { v: rate(shipT.actual, shipT.sched), lbl: '10월 출하 일정 대비', sub: `${n0(shipT.actual)}t / 일정 ${n0(shipT.sched)}t`, r: shipT.actual / shipT.sched, x2: (() => { const m = sh && sh.monthly && sh.monthly[sh.monthly.length - 1]; return m ? `${+m.month.slice(5)}월 말일 하루 출하가 월의 ${rate(m.lastDay, m.total)}%` : ''; })() },
+      stock: cp && { v: rate(cp.current, cp.target), lbl: '컬러 제품 재고 · 목표 대비', sub: `${n0(cp.current)}t / 목표 ${n0(cp.target)}t`, r: cp.current / cp.target, over: true, x2: gm ? `도금 소재 ${n0(gm.current)}t · 목표의 ${rate(gm.current, gm.target)}%` : '' },
+    };
+    let t = '<div class="sum-tiles">';
     ['plating', 'color', 'ship', 'stock'].forEach((a) => {
-      const k = K[a], s = sm[a] || {};
-      t += `<tr${a === 'plating' ? ' data-pl="G"' : a === 'color' ? ' data-pl="C"' : ''}><td class="l nm">${k.name} <span class="m-chip">${chip(s.status || k.st)}</span></td><td class="c d-chip">${chip(s.status || k.st) || '-'}</td><td class="l key">${k.key.filter(Boolean).join(' · ')}</td><td class="l wrap" data-l="판단">${esc(s.msg || '')}</td><td class="l wrap" data-l="조치">${esc(s.action || '')}</td></tr>`;
+      const k = K[a], s = sm[a] || {}, B = big[a], st = s.status || k.st;
+      const w = B ? Math.min(100, B.r / (B.over ? 2.5 : 1.2) * 100) : 0, mk = B ? (1 / (B.over ? 2.5 : 1.2)) * 100 : 0;
+      t += `<div class="sum-tile st-${st || 'none'}"${a === 'plating' ? ' data-pl="G"' : a === 'color' ? ' data-pl="C"' : ''}${s.msg ? ` title="${esc(s.msg)}"` : ''}>
+        <div class="sum-h"><b>${k.name}</b>${chip(st) || ''}</div>
+        ${B ? `<div class="sum-v">${B.v}<small>%</small></div><div class="sum-l">${B.lbl}</div>
+        <div class="sum-bar"><i style="width:${w}%"></i><u style="left:${mk}%"></u></div><div class="sum-s">${B.sub}${B.x2 ? `<br>${B.x2}` : ''}</div>` : `<div class="sum-s">${k.key.filter(Boolean).join(' · ')}</div>`}
+        ${s.action ? `<div class="sum-a"><span>조치</span>${esc(s.action)}</div>` : ''}</div>`;
     });
-    t += '</tbody></table></div>';
-    if (N.decisions && N.decisions.length) t += `<div class="decide"><h3>결정이 필요한 사항</h3><ol>${N.decisions.map((x) => `<li>${esc(x)}</li>`).join('')}</ol></div>`;
+    t += '</div>';
+    if (N.decisions && N.decisions.length) t += `<div class="decide2"><h3>결정이 필요한 사항 <small>${N.decisions.length}건</small></h3><div class="dc-grid">${N.decisions.map((x, i) => { const [hd, ...rest] = String(x).split(' — '); return `<div class="dc"><i>${i + 1}</i><div><b>${esc(hd)}</b>${rest.length ? `<p>${esc(rest.join(' — '))}</p>` : ''}</div></div>`; }).join('')}</div></div>`;
     else if (N.headline) t += notes(N.headline);
-    h += `<section class="card"><h2><span class="n">요약</span>${esc(o.title || w1)}</h2>${t}</section>`;
+    h += `<section class="card"><h2><span class="n">요약</span>${esc(o.title || w1)} <small>막대 세로선 = 100%(일정·목표) · 타일에 마우스를 올리면 판단 근거</small></h2>${t}</section>`;
 
     // ② 도금
     let b = '<div class="grid2">';
