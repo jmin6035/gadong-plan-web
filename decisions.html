@@ -22,11 +22,11 @@ td.dt { white-space: normal; min-width: 280px; text-align: left; }
 </style>
 </head>
 <body>
-<header id="shell" data-page="decisions" data-crumb="관리" data-title="결정 기록" data-sub="누가 · 무엇을 · 언제까지 — 회의·보고에서 정한 것을 남기고 진행을 추적"></header>
+<header id="shell" data-page="decisions" data-crumb="관리" data-title="결정 기록" data-sub="회의·보고 결정사항과 후속 조치(담당·기한) 관리"></header>
 <main class="wrap">
   <div id="d-main" style="margin-top:16px">
     <div class="mode off" id="d-mode"></div>
-    <section class="card"><h2>새로 남기기</h2>
+    <section class="card"><h2>신규 등록</h2>
       <form class="form" id="d-form">
         <label>분야<select id="f-area"><option>도금</option><option>컬러</option><option>소재</option><option>재고</option><option>판매</option><option>기타</option></select></label>
         <label>결정·할 일<input id="f-title" required placeholder="예: 12월 1CGL 공백 9천t → 1월분 선생산"></label>
@@ -34,12 +34,12 @@ td.dt { white-space: normal; min-width: 280px; text-align: left; }
         <label>담당<input id="f-owner" placeholder="부서·이름"></label>
         <label>기한<input id="f-due" type="date"></label>
         <label class="wide">상태<select id="f-status"><option>결정</option><option>할 일</option><option>확인 대기</option><option>완료</option><option>보류</option></select></label>
-        <button type="submit" class="btn primary">남기기</button>
+        <button type="submit" class="btn primary">등록</button>
       </form>
     </section>
     <section class="card" id="d-list"><h2>기록 <small id="d-count"></small></h2>
       <div class="pagebar"><div class="tabs" id="d-filter"></div></div>
-      <div class="scroll"><table class="t"><thead><tr><th>날짜</th><th>분야</th><th class="l">결정·할 일</th><th>담당</th><th>기한</th><th>상태</th><th>남긴 사람</th></tr></thead><tbody id="d-body"></tbody></table></div>
+      <div class="scroll"><table class="t"><thead><tr><th>날짜</th><th>분야</th><th class="l">결정·할 일</th><th>담당</th><th>기한</th><th>상태</th><th>작성자</th></tr></thead><tbody id="d-body"></tbody></table></div>
     </section>
     <section class="card"><h2>공유 설정</h2>
       <p class="small">여러 사람이 같은 기록을 보려면 공유 저장소에 표를 만들고 공개용 키를 넣습니다(설치 문서: docs/공유저장소_설정.sql). 공개용(publishable/anon) 키만 넣으세요 — 비밀 키는 절대 넣지 마세요.</p>

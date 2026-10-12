@@ -15,7 +15,7 @@
     ? { L: ['1CGL', '2CGL'], file: 'plating_actual.enc.json', name: '도금', prodHead: '제품 · 강종',
         stopNote: 'MES 휴지 실적의 사유로 분류 — 강종 전환(Mode change) / 정기수리(SINK ROLL 교체 등) / 설비·운전(기계·전기·운전이상) / 기타. 시간은 더미 코일 포함, 톤은 더미 제외.' }
     : { L: ['1CCL', '2CCL', '3CCL', '4CCL'], file: 'color_actual.enc.json', name: '컬러', prodHead: '품명',
-        stopNote: '휴지 사유 메모(SPL_REM)의 낱말로 분류 — 색상교체·청소 / 테스트·도막조정 / 폭·롤·두께 전환 / 기타. 주간 보고와 같은 기준.' };
+        stopNote: '휴지 사유 메모(SPL_REM)의 키워드로 분류 — 색상교체·청소 / 테스트·도막조정 / 폭·롤·두께 전환 / 기타. 주간 보고와 같은 기준.' };
   const L = CFG.L;
   const COL = ['var(--s1)', 'var(--s2)', 'var(--s3)', 'var(--s4)'];
   let O = null, pl = L[0];
@@ -31,42 +31,6 @@
       el.addEventListener('mouseleave', () => { tip().style.display = 'none'; });
     });
   }
-  function stackBars(data, H = 300) {
-    const W = 1200, pl0 = 56, pr = 12, pt = 14, pb = 34, n = data.length, bw = (W - pl0 - pr) / n;
-    const tot = data.map((d) => L.reduce((a, l) => a + (d[l] || 0), 0)), sc = UI.scale(Math.max(...tot, 1)), ym = sc.hi;
-    const y = (v) => pt + (H - pt - pb) * (1 - v / ym);
-    let g = '';
-    for (const v of sc.ticks) g += `<line class="gl" x1="${pl0}" x2="${W - pr}" y1="${y(v)}" y2="${y(v)}"/><text x="${pl0 - 8}" y="${y(v) + 4}" text-anchor="end">${UI.tick(v, sc.step)}</text>`;
-    data.forEach((d, i) => {
-      let acc = 0; const x = pl0 + i * bw + 3, w = Math.max(2, bw - 6);
-      const we = [0, 6].includes(new Date(d.d + 'T00:00:00').getDay());
-      L.forEach((l, j) => { const v = d[l] || 0; if (v <= 0) return; const y1 = y(acc + v), y0 = y(acc); g += `<rect class="bar" style="--i:${i}" x="${x}" y="${y1 + 1}" width="${w}" height="${Math.max(0, y0 - y1 - 2)}" rx="2" fill="${COL[j]}"/>`; acc += v; });
-      g += `<rect class="hit" x="${pl0 + i * bw}" y="${pt}" width="${bw}" height="${H - pt - pb}" data-tip="<b>${md(d.d)}</b> 합계 ${n0(tot[i])}t<br>${L.map((l) => `${l} ${n0(d[l])}t`).join('<br>')}"/>`;
-      if (i % 2 === 0 || n < 20) g += `<text x="${x + w / 2}" y="${H - 12}" text-anchor="middle" class="${we ? 'we' : ''}">${md(d.d)}</text>`;
-    });
-    return `<svg viewBox="0 0 ${W} ${H}" class="cv" role="img" aria-label="일별 ${CFG.name} 생산">${g}</svg>`;
-  }
-  function lines(xs, series, H = 300, fmt = n0, W = 1200) {
-    const pl0 = 56, pr = 104, pt = 14, pb = 34;
-    const all = series.flatMap((s) => s.v.filter((v) => v != null)), sc = UI.scale(Math.max(...all, 1)), ym = sc.hi;
-    const x = (i) => pl0 + (W - pl0 - pr) * (xs.length > 1 ? i / (xs.length - 1) : 0.5), y = (v) => pt + (H - pt - pb) * (1 - v / ym);
-    let g = '';
-    for (const v of sc.ticks) g += `<line class="gl" x1="${pl0}" x2="${W - pr}" y1="${y(v)}" y2="${y(v)}"/><text x="${pl0 - 8}" y="${y(v) + 4}" text-anchor="end">${UI.tick(v, sc.step)}</text>`;
-    const every = Math.ceil(xs.length / (W / 110));
-    xs.forEach((d, i) => { if (i % every === 0) g += `<text x="${x(i)}" y="${H - 12}" text-anchor="middle">${md(d)}</text>`; });
-    const ends = series.map((s, j) => { const k = s.v.length - 1; return { j, y: s.v[k] == null ? null : y(s.v[k]) }; }).filter((e) => e.y != null).sort((a, b) => a.y - b.y);
-    for (let k = 1; k < ends.length; k++) if (ends[k].y - ends[k - 1].y < 19) ends[k].y = ends[k - 1].y + 19;
-    const ly = Object.fromEntries(ends.map((e) => [e.j, e.y]));
-    series.forEach((s, j) => {
-      const pts = s.v.map((v, i) => (v == null ? null : [x(i), y(v)])).filter(Boolean);
-      g += `<polyline class="ln" fill="none" stroke="${s.c}" stroke-width="2.5" stroke-linejoin="round" points="${pts.map((p) => p.join(',')).join(' ')}"/>`;
-      pts.forEach((p, i) => { g += `<circle cx="${p[0]}" cy="${p[1]}" r="4" fill="${s.c}" stroke="var(--surface)" stroke-width="2"/>`; });
-      const lp = pts[pts.length - 1]; if (lp) g += `<text x="${lp[0] + 8}" y="${ly[j] + 5}" class="lab" fill="currentColor">${s.n} ${fmt(s.v[s.v.length - 1])}</text>`;
-    });
-    xs.forEach((d, i) => { g += `<rect class="hit" x="${x(i) - (W - pl0 - pr) / xs.length / 2}" y="${pt}" width="${(W - pl0 - pr) / xs.length}" height="${H - pt - pb}" data-tip="<b>${md(d)} 주</b><br>${series.map((s) => `${s.n} ${fmt(s.v[i])}`).join('<br>')}"/>`; });
-    return `<svg viewBox="0 0 ${W} ${H}" class="cv" role="img">${g}</svg>`;
-  }
-
   /* ---------- 절 ---------- */
   function kpis() {
     const M = O.month.rows, tot = M.find((x) => /계$/.test(x.line));
@@ -94,14 +58,56 @@
       ${t ? `<tr class="total"><td class="l">${CFG.name} 계</td><td>${n0(t.month)}</td><td>${n0(t.sched)}</td><td>${n0(t.actual)}</td><td class="pbar"><div><i class="ok" style="width:${Math.min(100, t.actual / t.sched * 100)}%"></i></div><b>${(t.actual / t.sched * 100).toFixed(1)}%</b></td><td>${n0(O.lines.reduce((a, x) => a + x.w0.tpd, 0))}</td><td>${n0(O.lines.reduce((a, x) => a + x.w1.tpd, 0))}</td><td></td><td></td><td></td><td></td><td></td></tr>` : ''}</tbody></table></div>
       <p class="small">속도 = 생산 t ÷ (작업 + 정지 시간) — 주간 보고와 같은 정의. MES 속보의 t/hr(정지 제외)와는 다름.</p>`);
   }
+  /* 막대 하나짜리 그래프: 값 막대 + 기준선(평균·목표) */
+  function bars(data, color, refs = [], H = 300, W = 1200, fmt = n0, xl = (d) => md(d.d), tipf = null) {
+    const pl0 = 56, pr = W > 800 ? 170 : 104, pt = 16, pb = 34, n = data.length, bw = (W - pl0 - pr) / n;
+    const mx = Math.max(...data.map((d) => d.v || 0), ...refs.map((r) => r.v || 0), 1), sc = UI.scale(mx), ym = sc.hi;
+    const y = (v) => pt + (H - pt - pb) * (1 - v / ym);
+    let g = '';
+    for (const v of sc.ticks) g += `<line class="gl" x1="${pl0}" x2="${W - pr}" y1="${y(v)}" y2="${y(v)}"/><text x="${pl0 - 8}" y="${y(v) + 4}" text-anchor="end">${UI.tick(v, sc.step)}</text>`;
+    const every = Math.max(1, Math.ceil(n / ((W - pl0 - pr) / 46)));
+    data.forEach((d, i) => {
+      const v = d.v || 0, x = pl0 + i * bw + bw * 0.16, w = Math.max(2, bw * 0.68);
+      if (v > 0) g += `<rect class="bar" style="--i:${i}" x="${x}" y="${y(v)}" width="${w}" height="${Math.max(0, y(0) - y(v))}" rx="3" fill="${color}" opacity="${d.dim ? 0.45 : 1}"/>`;
+      g += `<rect class="hit" x="${pl0 + i * bw}" y="${pt}" width="${bw}" height="${H - pt - pb}" data-tip="${tipf ? tipf(d) : `<b>${xl(d)}</b> ${fmt(v)}`}"/>`;
+      if ((n - 1 - i) % every === 0) g += `<text x="${x + w / 2}" y="${H - 12}" text-anchor="middle" class="${d.we ? 'we' : ''}">${xl(d)}</text>`;
+    });
+    refs.forEach((r) => { if (r.v == null) return; g += `<line x1="${pl0}" x2="${W - pr}" y1="${y(r.v)}" y2="${y(r.v)}" stroke="${r.c}" stroke-width="2" stroke-dasharray="${r.dash || '6 5'}"/><text x="${W - pr + 8}" y="${y(r.v) + 4}" class="lab" fill="${r.c}">${r.n} ${fmt(r.v)}</text>`; });
+    return `<svg viewBox="0 0 ${W} ${H}" class="cv" role="img">${g}</svg>`;
+  }
+  let dsel = 'all';
+  function dailyChart() {
+    const tot = (d) => (dsel === 'all' ? L.reduce((a, l) => a + (d[l] || 0), 0) : d[dsel] || 0);
+    const data = O.daily.map((d) => ({ d: d.d, v: tot(d), we: [0, 6].includes(new Date(d.d + 'T00:00:00').getDay()), raw: d }));
+    const avg = data.reduce((a, x) => a + x.v, 0) / Math.max(1, data.length);
+    const M = Object.fromEntries((O.month.rows || []).map((x) => [x.line, x]));
+    const [yy, mm] = String(O.asOf).split('-').map(Number), nd = new Date(yy, mm, 0).getDate();
+    const mon = dsel === 'all' ? L.reduce((a, l) => a + ((M[l] || {}).month || 0), 0) : (M[dsel] || {}).month;
+    const color = dsel === 'all' ? 'var(--brand-2)' : COL[L.indexOf(dsel)];
+    const refs = [{ n: '35일 평균', v: avg, c: 'var(--ink-3)', dash: '3 4' }, mon ? { n: `${mm}월 월차 일평균`, v: mon / nd, c: 'var(--warn)' } : null].filter(Boolean);
+    return bars(data, color, refs, 300, 1200, n0, (d) => md(d.d), (d) => `<b>${md(d.d)}</b> ${dsel === 'all' ? '합계' : dsel} ${n0(d.v)}t${dsel === 'all' ? '<br>' + L.map((l) => `${l} ${n0(d.raw[l])}t`).join('<br>') : ''}`);
+  }
   function daily() {
-    return card('ca-daily', '일별 생산', `최근 35일 · 라인 누적 · 막대에 마우스를 올리면 라인별 톤`, '단위: 톤', legend() + `<div class="chart">${stackBars(O.daily)}</div>
+    const seg = `<div class="seg" id="ca-dsel" role="group" aria-label="라인">${['all', ...L].map((k) => `<button type="button" data-k="${k}" aria-pressed="${k === dsel}">${k === 'all' ? `${CFG.name} 전체` : k}</button>`).join('')}</div>`;
+    return card('ca-daily', '일별 생산', `최근 35일 · 점선 = 35일 평균, 주황 = 이번 달 월차 일평균 · 막대에 마우스를 올리면 상세`, '단위: 톤', seg + `<div class="chart" id="ca-dchart" style="margin-top:12px">${dailyChart()}</div>
       <details class="tv"><summary>표로 보기</summary><div class="scroll"><table class="t"><thead><tr><th class="l">날짜</th>${L.map((l) => `<th>${l}</th>`).join('')}<th>합계</th></tr></thead><tbody>${O.daily.slice().reverse().map((d) => `<tr><td class="l">${md(d.d)}</td>${L.map((l) => `<td>${n0(d[l])}</td>`).join('')}<td><b>${n0(L.reduce((a, l) => a + d[l], 0))}</b></td></tr>`).join('')}</tbody></table></div></details>`);
   }
+  /* 주별 추이: 라인마다 작은 카드 하나(지난주 값 · 12주 평균 대비 + 14주 막대) — 선 4개가 엉키지 않게 */
   function weekly() {
-    const xs = O.weekly.map((w) => w.w);
-    return `<div class="grid2 rowc">${card('ca-wk', '주별 생산량', `${xs.length}주 · 라인별`, '단위: t/일', legend() + `<div class="chart">${lines(xs, L.map((l, i) => ({ n: l, c: COL[i], v: O.weekly.map((w) => w[l].tpd) })), 360, n0, 660)}</div>`)}
-      ${card('ca-tph', '주별 생산속도', '정지 포함', '단위: t/hr', legend() + `<div class="chart">${lines(xs, L.map((l, i) => ({ n: l, c: COL[i], v: O.weekly.map((w) => w[l].tph) })), 360, n1, 660)}</div>`)}</div>`;
+    const xs = O.weekly.map((w) => w.w), last = O.weekly.length - 1;
+    const mini = (l, i) => {
+      const t = O.weekly.map((w) => (w[l] || {}).tpd), h = O.weekly.map((w) => (w[l] || {}).tph);
+      const avg = (a) => { const v = a.slice(Math.max(0, last - 12), last).filter((x) => x != null); return v.length ? v.reduce((p, q) => p + q, 0) / v.length : null; };
+      const at = avg(t), ah = avg(h);
+      const td = O.weekly.map((w, k) => ({ d: w.w, v: t[k], dim: k !== last }));
+      const hd = O.weekly.map((w, k) => ({ d: w.w, v: h[k], dim: k !== last }));
+      const sw = (lbl, val, base, fmt, unit, good = true) => `<div class="wk-k"><span>${lbl}</span><b>${fmt(val)}<small>${unit}</small></b>${dl(pct(val, base), good)}<em>12주 평균 ${fmt(base)}</em></div>`;
+      return `<div class="wk-card"><h3><i style="background:${COL[i]}"></i>${l} <small>지난주 ${md(xs[last])}~</small></h3>
+        <div class="wk-ks">${sw('생산량', t[last], at, n0, 't/일')}${sw('생산속도', h[last], ah, n1, 't/hr')}</div>
+        <div class="wk-ch"><p>생산량 t/일</p>${bars(td, COL[i], [{ n: '평균', v: at, c: 'var(--ink-3)', dash: '3 4' }], 150, 560, n0, (d) => md(d.d), (d) => `<b>${md(d.d)} 주</b> ${n0(d.v)} t/일`)}</div>
+        <div class="wk-ch"><p>생산속도 t/hr (정지 포함)</p>${bars(hd, COL[i], [{ n: '평균', v: ah, c: 'var(--ink-3)', dash: '3 4' }], 150, 560, n1, (d) => md(d.d), (d) => `<b>${md(d.d)} 주</b> ${n1(d.v)} t/hr`)}</div></div>`;
+    };
+    return card('ca-wk', '라인별 주간 추이', `최근 ${xs.length}주 · 진한 막대 = 지난주, 점선 = 앞 12주 평균`, '', `<div class="wk-grid">${L.map(mini).join('')}</div>`);
   }
   function products() {
     const P = O.products[pl] || [];
@@ -128,12 +134,14 @@
       <div class="scroll"><table class="t big"><thead><tr><th class="l">월</th>${D.names.map((k) => `<th>${esc(nm(k))}</th>`).join('')}</tr></thead><tbody>${D.rows.map((m) => `<tr><td class="l">${monLabel(m.m)}</td>${D.names.map((k) => `<td>${n0(m[k])}</td>`).join('')}</tr>`).join('')}</tbody></table></div></div>`);
   }
   function render() {
-    $('ca-main').innerHTML = `<section class="card" id="ca-kpi"><h2>핵심 <small>실적 ~${md(O.asOf)} · MES 원자료 재계산</small><span class="unit">단위: 톤</span></h2>${kpis()}</section>` + lineTable() + daily() + weekly() + `<div class="grid2 rowc">${products()}${stops()}</div>` + (PLANT === 'G' ? mcCard() : '') + monthly();
+    $('ca-main').innerHTML = `<section class="card" id="ca-kpi"><h2>주요 지표 <small>실적 ~${md(O.asOf)} · MES 원자료 재계산</small><span class="unit">단위: 톤</span></h2>${kpis()}</section>` + lineTable() + daily() + weekly() + `<div class="grid2 rowc">${products()}${stops()}</div>` + (PLANT === 'G' ? mcCard() : '') + monthly();
     $('ca-meta').innerHTML = `<span><b>실적</b>~${O.asOf}</span><span><b>지난주</b>${md(O.w1)}~</span><span><b>비교</b>${md(O.w0[0])}~${md(O.w0[1])} 주 (12주)</span><span><b>계산</b>${String(O.built).replace('T', ' ')}</span>`;
     UI.reveal($('ca-main')); UI.count($('ca-main')); bindTip($('ca-main'));
     render2();
   }
-  function render2() { document.querySelectorAll('#ca-pl button').forEach((b) => b.addEventListener('click', () => { pl = b.dataset.l; $('ca-prod').outerHTML = products(); render2(); })); }
+  function render2() {
+    document.querySelectorAll('#ca-dsel button').forEach((b) => b.addEventListener('click', () => { dsel = b.dataset.k; document.querySelectorAll('#ca-dsel button').forEach((x) => x.setAttribute('aria-pressed', String(x === b))); $('ca-dchart').innerHTML = dailyChart(); bindTip($('ca-dchart')); }));
+    document.querySelectorAll('#ca-pl button').forEach((b) => b.addEventListener('click', () => { pl = b.dataset.l; $('ca-prod').outerHTML = products(); render2(); })); }
 
   let env = null;
   const envReady = GP.latest(CFG.file);

@@ -56,7 +56,7 @@
     $('d-kpis').innerHTML = [
       [`${mcT}회`, 'M/C(강종 전환)', `${L.map((l) => `${l} ${A.mc[l]}회`).join(' · ')}`],
       [`${GP.fmt(A.short + A.lateT)}t`, '결품·지연', `결품 ${GP.fmt(A.short)}t · 지연 ${GP.fmt(A.lateT)}t`, A.short + A.lateT > 0.5],
-      [`${GP.fmt(A.earlyT)}t`, '전월 선생산', '납기월보다 앞 달 생산'],
+      [`${GP.fmt(A.earlyT)}t`, '전월 선생산', '납기월 이전 생산'],
       [`${GP.fmt(maxLoad * 100, 1)}%`, '최대 월 부하', `${H.ym[+mi][1]}월 ${ml}`, maxLoad > 0.995],
     ].map(([v, l, sub, bad]) => `<div class="kpi ${bad ? 'bad' : ''}"><span class="kl">${l}</span><b>${v}</b><span class="ks">${sub}</span></div>`).join('');
     const fams = [...new Set(L.flatMap((l) => P.lineFamilies[l]))];
@@ -263,7 +263,7 @@
   }
   function renderEarly() {
     const er = GP.earlyReasons(R, A);
-    $('d-early').innerHTML = '<tr><th>라인</th><th>강종</th><th>부서</th><th>생산월</th><th>마감</th><th>물량(t)</th><th>이유</th></tr>' + er.map((x) => `<tr><td>${x.line}</td><td>${x.alloy}</td><td>${x.cls}</td><td>${x.prodMonth}월</td><td>${GP.md(x.due)}</td><td class="n">${GP.fmt(x.tons, 1)}</td><td class="l">${esc(x.why)}</td></tr>`).join('') + `<tr><td colspan="5"><b>합계</b></td><td class="n"><b>${GP.fmt(A.earlyT, 1)}</b></td><td></td></tr>`;
+    $('d-early').innerHTML = '<tr><th>라인</th><th>강종</th><th>부서</th><th>생산월</th><th>마감</th><th>물량(t)</th><th>사유</th></tr>' + er.map((x) => `<tr><td>${x.line}</td><td>${x.alloy}</td><td>${x.cls}</td><td>${x.prodMonth}월</td><td>${GP.md(x.due)}</td><td class="n">${GP.fmt(x.tons, 1)}</td><td class="l">${esc(x.why)}</td></tr>`).join('') + `<tr><td colspan="5"><b>합계</b></td><td class="n"><b>${GP.fmt(A.earlyT, 1)}</b></td><td></td></tr>`;
   }
   function drawTab(i) {
     gTab = i;

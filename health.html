@@ -47,7 +47,7 @@ ol.fix li { margin: 8px 0; font-size: 16px; } ol.fix code { background: var(--ti
         <div class="scroll"><table class="t"><thead><tr><th class="l">자료</th><th>마지막 날짜</th><th>경과</th><th>건수</th></tr></thead><tbody>${fs.map((f) => `<tr><td class="l"><b>${esc(f.name)}</b></td><td>${esc(f.last || '-')}</td><td class="c">${/월말/.test(f.name) ? '<span class="muted">월 1회</span>' : badge(age(f.last))}</td><td>${f.n != null ? f.n.toLocaleString('ko-KR') : '-'}</td></tr>`).join('')}</tbody></table></div></section>`;
     } else h += '<section class="card"><h2>원천 자료</h2><p class="lead">자료 상태 파일이 아직 없습니다(새 자동 실행기 설치 후 생김).</p></section>';
     h += `<section class="card"><h2>화면별 게시 시각 <small>매일 자동 갱신본과 수동 게시본 중 최신</small></h2><div class="scroll"><table class="t"><thead><tr><th class="l">화면</th><th>게시</th><th>경과</th><th class="l">출처</th><th class="l">갱신 방식</th></tr></thead><tbody>${PAGES.map(([n, nm, how], i) => { const e = envs[i]; return `<tr><td class="l"><b>${nm}</b></td><td>${e ? kst(e.at) : '-'}</td><td class="c">${badge(e ? age(new Date(e.at).toLocaleDateString('sv-SE', { timeZone: 'Asia/Seoul' })) : null)}</td><td class="l">${e ? e.src : '-'}</td><td class="l muted">${how}</td></tr>`; }).join('')}</tbody></table></div></section>`;
-    h += `<section class="card"><h2>멈췄을 때 점검 순서</h2><ol class="fix">
+    h += `<section class="card"><h2>갱신 중단 시 점검 절차</h2><ol class="fix">
       <li>사내 PC가 켜져 있고 로그인돼 있는지(MES 받기가 Edge 화면을 직접 조작)</li>
       <li>작업 스케줄러에 등록됐는지: 명령 프롬프트에서 <code>schtasks /Query /TN "CGL 자동수집"</code> — 없으면 설치 폴더의 <code>register_task.bat</code> 실행</li>
       <li>직접 한 번 실행: <code>run_auto.bat</code> → 끝나고 이 화면 새로고침</li>

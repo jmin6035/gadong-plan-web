@@ -61,8 +61,8 @@
 
   function renderExec() {
     const risks = [];
-    for (const l of LINES) MONTHS.forEach((m) => { const g = cap(m, l) - placed(m, l); if (g > 50) risks.push(`${+m.slice(5)}월 ${l} 편성 ${fmt(placed(m, l))}t — MES 월차 ${fmt(cap(m, l))}t보다 ${fmt(g)}t 적음(그 라인에 만들 물량 부족)`); });
-    MONTHS.forEach((m) => { const u = unT(m); if (u > 50) risks.push(`${+m.slice(5)}월 미편성 ${fmt(u)}t — 가능 라인 한도·시간 초과(${[...new Set(O.colorUnplaced.filter((x) => x.ym === m).map((x) => x.g))].join('·')})`); });
+    for (const l of LINES) MONTHS.forEach((m) => { const g = cap(m, l) - placed(m, l); if (g > 50) risks.push(`${+m.slice(5)}월 ${l} 편성 ${fmt(placed(m, l))}t — MES 월차 ${fmt(cap(m, l))}t 대비 ${fmt(g)}t 미달(해당 라인 배정 물량 부족)`); });
+    MONTHS.forEach((m) => { const u = unT(m); if (u > 50) risks.push(`${+m.slice(5)}월 미편성 ${fmt(u)}t — 가능 라인 월 한도·가동시간 초과(${[...new Set(O.colorUnplaced.filter((x) => x.ym === m).map((x) => x.g))].join('·')})`); });
     const q = sum(MONTHS, (m) => monT(m));
     $('d-exec').innerHTML = `<p class="headline">4분기 <b>${fmt(q)}t</b> · 미편성 <b>${fmt(unT())}t</b> · 계획재 <b>${fmt(sum(O.color, (c) => c.g['계획재'] || 0))}t</b> · 실적 ~${md(lastAct)}</p>`
       + (risks.length ? risks.map((t) => `<p class="risk">⚠ ${esc(t)}</p>`).join('') : '<p class="ok">✓ 미편성 없음, 모든 라인 월차 한도까지 편성</p>');
@@ -139,8 +139,8 @@
         <dt>그룹별</dt><dd>${gs || '-'}</dd>
         <dt>주요 품목</dt><dd>${items || '-'}</dd>
         <dt>휴지계획</dt><dd>${esc(dnTxt(l, d)) || '-'}</dd>
-        <dt>다음 S/D·수리</dt><dd>${(() => { const nx = (O.colorDown || []).filter((x) => x[1] === l && x[0] > d && HARD.includes(x[2])).sort((a, b) => (a[0] < b[0] ? -1 : 1))[0]; return nx ? `${md(nx[0])} ${KN[nx[2]]} (D-${Math.round((new Date(nx[0]) - new Date(d)) / 864e5)})` : '분기 내 없음'; })()}</dd>
-        <dt>다음 가동 없는 날</dt><dd>${next ? `${md(next)} (D-${Math.round((new Date(next) - new Date(d)) / 864e5)})` : '분기 내 없음'}</dd>
+        <dt>다음 S/D·수리</dt><dd>${(() => { const nx = (O.colorDown || []).filter((x) => x[1] === l && x[0] > d && HARD.includes(x[2])).sort((a, b) => (a[0] < b[0] ? -1 : 1))[0]; return nx ? `${md(nx[0])} ${KN[nx[2]]} (D-${Math.round((new Date(nx[0]) - new Date(d)) / 864e5)})` : '4분기 중 없음'; })()}</dd>
+        <dt>다음 비가동일</dt><dd>${next ? `${md(next)} (D-${Math.round((new Date(next) - new Date(d)) / 864e5)})` : '4분기 중 없음'}</dd>
         <dt>${+m.slice(5)}월 누계</dt><dd>${fmt(toDate)} / ${fmt(monT(m, l))}t · 월차 ${fmt(cap(m, l))}t</dd>
       </dl></div>`;
     }).join('');

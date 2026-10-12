@@ -12,13 +12,13 @@
 <link rel="stylesheet" href="ui/bridge.css">
 </head>
 <body class="dash">
-<header id="shell" data-page="analysis" data-crumb="도금" data-title="도금 조건 분석" data-sub="MES 실적으로 생산속도·M/C·손실을 다시 계산해 계획 조건과 비교 (계획 담당자용)"></header>
-<div class="wrap pagebar"><span class="small" id="a-meta">MES 실적으로 생산속도·M/C·손실을 다시 계산해 계획 조건과 비교합니다.</span></div>
+<header id="shell" data-page="analysis" data-crumb="도금" data-title="도금 조건 분석" data-sub="MES 실적으로 생산속도·M/C·손실을 재산출해 계획 조건과 비교 (계획 담당자용)"></header>
+<div class="wrap pagebar"><span class="small" id="a-meta">MES 실적으로 생산속도·M/C·손실을 재산출해 계획 조건과 비교합니다.</span></div>
 
 <main class="wrap">
   <section class="card empty" id="a-empty">
     <h2 id="a-empty-title">자동 분석 결과 불러오는 중…</h2>
-    <p id="a-empty-text">매일 자동으로 다시 계산되는 분석 결과를 엽니다.</p>
+    <p id="a-empty-text">매일 자동 재산출되는 분석 결과를 엽니다.</p>
     <form id="a-unlock" class="unlock" hidden>
       <p id="a-pubinfo"></p>
       <div class="row">
@@ -73,7 +73,7 @@
     <section class="card" id="a-reason-card" hidden>
       <h2>휴지 사유 <small class="muted">— 휴지 쿼리 기준, 많은 순</small></h2>
       <div class="scroll"><table class="data" id="a-reasons"></table></div>
-      <p class="hint">M/C = 강종전환(Mode change) 휴지, 계획 = 정기수리 등 계획휴지(SINK ROLL 교체 포함 — 계획 조건의 “설비정지”에 들어감), 비계획 = 설비고장·운전이상.</p>
+      <p class="hint">M/C = 강종 전환(Mode change) 휴지, 계획 = 정기수리 등 계획휴지(SINK ROLL 교체 포함 — 계획 조건의 “설비정지”에 들어감), 비계획 = 설비고장·운전이상.</p>
     </section>
 
     <details class="card more">
@@ -83,10 +83,10 @@
   </div>
 
   <details class="card more" id="a-manual">
-    <summary><h2>엑셀로 직접 분석 <small class="muted">— MES 생산실적 엑셀을 올려 바로 분석(자동 갱신 없이)</small></h2></summary>
-    <label class="ghost btnlike">MES 실적 엑셀 올리기(여러 개 가능)<input type="file" id="a-file" accept=".xlsx" multiple hidden></label>
+    <summary><h2>엑셀로 직접 분석 <small class="muted">— MES 생산실적 파일 업로드 후 즉시 분석(자동 갱신 미포함)</small></h2></summary>
+    <label class="ghost btnlike">MES 실적 파일 업로드(복수 선택 가능)<input type="file" id="a-file" accept=".xlsx" multiple hidden></label>
     <span id="a-file-name" class="muted"></span>
-    <p class="hint">파일은 이 브라우저 안에서만 읽습니다. 비교 기준은 이 기기의 계획 계산 조건(없으면 기본값)입니다.</p>
+    <p class="hint">파일은 서버로 전송되지 않습니다. 비교 기준은 이 기기의 계획 계산 조건(없으면 기본값)입니다.</p>
   </details>
 </main>
 <footer class="wrap foot">계획 담당자용 · 원자료: MES 도금 생산·휴지 실적</footer>

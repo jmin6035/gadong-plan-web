@@ -146,7 +146,7 @@
   GP.lockLines = function (rp) {
     if (!rp || rp.lockMC == null) return [];
     const ev = (x) => { const [d, l, e] = x.split('|'); return `${GP.md(d)} ${l} ${e}`; };
-    const o = [rp.lockMC ? 'M/C 고정: 확정된 M/C·S/D 재가동 날짜를 바꾸지 않고 계산(인원 편성 유지)' : 'M/C 고정: 꺼짐 — M/C 날짜가 바뀌었을 수 있음'];
+    const o = [rp.lockMC ? 'M/C 고정: 확정된 M/C·S/D 재가동 날짜를 바꾸지 않고 계산(인원 편성 유지)' : 'M/C 고정 해제 — M/C 일자 변경 가능'];
     for (const n of rp.lockNotes || []) o.push('⚠ ' + n);
     const q = rp.proposal;
     if (q) o.push(`검토 요청 — M/C 이동 시: M/C ${q.lockedK}→${q.freeK}회, 지연 ${GP.fmt(q.lockedLate)}→${GP.fmt(q.freeLate)}톤·일, 결품 ${GP.fmt(q.lockedShort)}→${GP.fmt(q.freeShort)}t`

@@ -18,7 +18,7 @@
 <main class="wrap">
   <section class="card empty" id="d-empty">
     <h2 id="d-empty-title">계획 결과를 여세요</h2>
-    <p id="d-empty-text">계획 계산 화면에서 받은 <b>결과 파일(.json)</b>을 위 버튼으로 열거나 이 창에 끌어다 놓으세요. 파일은 이 브라우저 안에서만 읽습니다.</p>
+    <p id="d-empty-text">계획 계산 화면에서 받은 <b>결과 파일(.json)</b>을 위 버튼으로 열거나 이 창에 끌어다 놓으세요. 파일은 서버로 전송되지 않습니다.</p>
     <form id="d-unlock" class="unlock" hidden>
       <p id="d-pubinfo"></p>
       <div class="row">
@@ -43,14 +43,14 @@
       </div>
       <div class="glegend" id="g-legend"></div>
       <div class="gtable-wrap"><table class="gtable" id="g-table"></table></div>
-      <p class="hint">숫자 단위: 톤. 강종 행 = 그날 생산 강종과 물량, 부서 행 = 같은 날 부서별 물량. 노란색 = 강종 전환(M/C)·정기수리 후 재가동, 회색 = 정기수리.</p>
+      <p class="hint">숫자 단위: 톤. 강종 행 = 당일 생산 강종과 물량, 부서 행 = 당일 부서별 물량. 노란색 = 강종 전환(M/C)·정기수리 후 재가동, 회색 = 정기수리.</p>
     </section>
 
     <div class="two">
       <section class="card">
         <h2>강종 전환 일정</h2>
         <table class="data evt" id="d-events"></table>
-        <p class="hint">행을 누르면 전환 이유가 펼쳐집니다.</p>
+        <p class="hint">행 선택 시 전환 사유 표시.</p>
       </section>
       <section class="card">
         <h2>월별 부하</h2>
@@ -72,11 +72,11 @@
     </section>
 
     <details class="card more">
-      <summary><h2>상세: 일별 생산 추이 · 전월 선생산 이유 · 간트 이미지</h2></summary>
+      <summary><h2>상세: 일별 생산 추이 · 전월 선생산 사유 · 간트 이미지</h2></summary>
       <h3>일별 계획 생산량</h3>
       <div class="legend" id="d-legend"></div>
       <div id="d-daily"></div>
-      <h3>전월 선생산과 이유</h3>
+      <h3>전월 선생산 사유</h3>
       <div class="scroll"><table class="data" id="d-early"></table></div>
       <h3>간트 이미지(보고서 붙여넣기용)</h3>
       <div class="tabs" id="d-tabs"></div>

@@ -709,3 +709,15 @@ html .kpi::before { background: var(--gc, var(--ps-4)); }
 /* 카드 제목 줄이 오른쪽 위 '엑셀' 단추 밑으로 들어가지 않게 */
 html .card:has(> .xbtn) > h2 { padding-right: 92px; }
 html .card:has(> .xbtn) > h2 .unit { margin-right: 0; }
+/* 실적: 라인별 주간 추이 작은 카드 */
+.wk-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(420px, 1fr)); gap: 14px; }
+.wk-card { border: 1px solid var(--line); border-radius: 10px; padding: 14px 16px 8px; background: var(--surface); }
+.wk-card h3 { margin: 0 0 10px; font-size: 17px; display: flex; align-items: center; gap: 8px; color: var(--ink); }
+.wk-card h3 i { width: 12px; height: 12px; border-radius: 3px; } .wk-card h3 small { font-size: 13px; color: var(--ink-3); font-weight: 500; }
+.wk-ks { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 4px; }
+.wk-k { display: grid; grid-template-columns: auto 1fr; align-items: baseline; gap: 2px 8px; }
+.wk-k span { grid-column: 1 / -1; font-size: 13px; color: var(--ink-2); font-weight: 650; }
+.wk-k b { font-size: 26px; font-weight: 800; letter-spacing: -.03em; font-variant-numeric: tabular-nums; } .wk-k b small { font-size: 13px; font-weight: 500; color: var(--ink-3); margin-left: 3px; }
+.wk-k .dlt { font-size: 13.5px; } .wk-k em { grid-column: 1 / -1; font-style: normal; font-size: 12.5px; color: var(--ink-3); }
+.wk-ch p { margin: 8px 0 0; font-size: 12.5px; font-weight: 700; color: var(--ink-3); }
+@media (max-width: 640px) { .wk-grid { grid-template-columns: 1fr; } }

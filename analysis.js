@@ -119,7 +119,7 @@
   $('a-unlock').onsubmit = (ev) => { ev.preventDefault(); unlock(); };
   const src = new URLSearchParams(location.search).get('src');
   GP.fetchPublished(src ? [src] : SRC).then((e) => {
-    if (!e) { $('a-empty-title').textContent = '아직 자동 분석 결과가 없습니다'; $('a-empty-text').textContent = '사내 PC 자동 실행기가 처음 돌면 여기에 표시됩니다. 아래 “엑셀로 직접 분석”으로 바로 볼 수도 있습니다.'; return; }
+    if (!e) { $('a-empty-title').textContent = '아직 자동 분석 결과가 없습니다'; $('a-empty-text').textContent = '사내 PC 자동 실행 후 표시됩니다. 아래 “엑셀로 직접 분석”으로 바로 볼 수도 있습니다.'; return; }
     if (e.app === 'cgl-analysis') { render(e, '분석 결과'); return; }
     env = e;
     $('a-empty-title').textContent = '자동 분석 결과';

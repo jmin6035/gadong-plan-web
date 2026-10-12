@@ -128,7 +128,7 @@
       <div class="legend"><span><i class="box h-ok"></i>목표 부근</span><span><i class="box h-warn"></i>목표의 90% 미만</span><span><i class="box h-bad"></i>안전재고 미만·부족</span><span><i class="box h-over"></i>목표의 130% 초과</span></div>
       <div class="scroll"><table class="t heat"><thead>${head}</thead><tbody>${body}
       </tbody></table></div><p class="small">구매 소재(F/H · 컬러 소재)의 입고·발주는 <a href="procure.html">소재 발주</a> 캘린더에서.</p>
-      <p class="small">제품 = 9월말 재고 + 생산(컬러 실적·계획, 도금 계획) − 판매(컬러 = 월 판매 ÷ 일수, 도금 = 판매계획 품목이 납기일에 출고). 자가재 = 9월말 + 도금 자가재 − 컬러 필요(생산일 − 5일). 소재 = 9월말 + 입고 필요 − 사용.</p>`) };
+      <p class="small">제품 = 9월말 재고 + 생산(컬러 실적·계획, 도금 계획) − 판매(컬러 = 월 판매 ÷ 일수, 도금 = 판매계획 품목이 납기일에 출고). 자가재 = 9월말 재고 + 도금 입고 − 컬러 출고(생산일 5일 전). 소재 = 9월말 재고 + 입고 필요량 − 소요.</p>`) };
   }
 
   // ---------- ③ 일별 가동(달력 표) ----------
@@ -171,7 +171,7 @@
     const tabs = `<div class="tabs">${MONTHS.map((m) => `<button type="button" data-m="${m}" aria-pressed="${m === mon}">${+m.slice(5)}월</button>`).join('')}</div>`;
     const lg = `<div class="legend" data-pl="C"><b class="small">컬러 칸 색 = 그 날 가장 많은 그룹</b>${CG.map((k, j) => `<span><i class="box" style="background:var(${SER[j]})"></i>${k}</span>`).join('')}<span><i class="box" style="background:var(--line)"></i>흐림 = 실적</span></div>
       <div class="legend" data-pl="G"><b class="small">도금 칸 색 = 가장 많은 구분</b>${PC.map((k, j) => `<span><i class="box" style="background:var(${SER[j]})"></i>${k}</span>`).join('')}<span>강종 띠: <i class="box" style="background:var(--s1)"></i>AL <i class="box" style="background:var(--s2)"></i>AZ <i class="box" style="background:var(--s3)"></i>MAC</span></div>`;
-    return { html: card('s-daily', '②', '일별 가동', `${VN[V]} · 칸 숫자 = 그날 생산 톤, 칸을 누르면 품목·이유`, tabs + lg + h + `<div class="detail" id="d-detail"></div>`),
+    return { html: card('s-daily', '②', '일별 가동', `${VN[V]} · 칸 숫자 = 당일 생산 톤, 칸 선택 시 품목·사유`, tabs + lg + h + `<div class="detail" id="d-detail"></div>`),
       after: () => {
         document.querySelectorAll('#s-daily .tabs button').forEach((b) => b.addEventListener('click', () => { mon = b.dataset.m; rerender(); }));
         document.querySelectorAll('#s-daily td[data-k]').forEach((el) => el.addEventListener('click', () => { sel = el.dataset.k; showDetail(); }));
@@ -200,15 +200,15 @@
   // ---------- ④ 일별 배치 기준 ----------
   function secRule() {
     const R = [
-      ['월 물량', '그룹별 월 생산', '목표재고(생산주기/2 + 안전재고)에 맞추되 능력 안에서. 모자라면 바로 채우고, 넘치면 두 달에 나눠 줄임, 대수리 달은 앞 달에 미리'],
-      ['컬러', '① 계획재', '계획재 운영안(TF) 사양·물량·순서 그대로, 날짜만 월 전체에 고르게(교체시간 포함)'],
-      ['', '② 전용 라인 품명', 'STS → 3CCL, 후물·AL → 4CCL, PVS → 1CCL 먼저(범용 품명이 자리 차지 못 하게)'],
+      ['월 물량', '그룹별 월 생산', '목표재고(생산주기/2 + 안전재고) 기준, 생산능력 범위 내. 부족분 즉시 보충, 초과분 2개월 분할 감축, 대수리 월은 전월 선생산'],
+      ['컬러', '① 계획재', '계획재 운영안(TF) 사양·물량·순서 준수, 생산일만 월 전체에 균등 배분(교체시간 포함)'],
+      ['', '② 전용 라인 품명', 'STS → 3CCL, 후물·AL → 4CCL, PVS → 1CCL 우선 배정(범용 품명 선점 방지)'],
       ['', '③ 우선순위', '수출 벌크(선적 완료기한 전 10일) > 가전 내수 > 컨테이너 수출·수요개발 > 건재 주문재'],
-      ['', '④ 라인·날짜', '실적 T/hr 빠른 라인부터, 2CCL 은 마지막(가동일에 몰아서), 하루 1,440분·라인 월차 한도 안'],
+      ['', '④ 라인·날짜', '실적 t/hr 높은 라인 우선, 2CCL 후순위(가동일 집중 배정), 일 1,440분·라인 월차 한도 이내'],
       ['도금', '① 강종 캠페인', 'M/C 횟수 최소'],
-      ['', '② 날짜', '납기(선적창·자가재 필요일) 안에서 미리 쌓아 두는 톤·일 최소 → 대부분 납기 직전, 캠페인·대수리 때문에 앞당김'],
-      ['자가재', '필요일', '컬러 생산일 − 5일, 품명별 자가재 비중(PGS 72% · PCS 0% · POR2 100% …), 10일 단위로 묶음'],
-      ['소재', '입고·발주', '재고가 목표(FH 16,000 · 컬러 15,500t) 밑으로 가는 날 = 입고기한, 발주 = 입고 − 리드타임'],
+      ['', '② 날짜', '납기(선적창·자가재 필요일) 이내에서 선행 생산량(톤·일) 최소화 → 대부분 납기 직전 생산, 캠페인·대수리 구간은 선행 생산'],
+      ['자가재', '필요일', '컬러 생산일 5일 전, 품명별 자가재 비중(PGS 72% · PCS 0% · POR2 100% …), 10일 단위 집계'],
+      ['소재', '입고·발주', '재고가 목표(FH 16,000 · 컬러 15,500t) 미만이 되는 날 = 입고 기한, 발주 마감 = 입고 기한 − 리드타임'],
     ];
     let cur = '';
     const R2 = R.filter((r) => { if (r[0]) cur = r[0]; return inS(cur === '컬러' ? 'C' : cur === '도금' ? 'G' : 'GC'); });
@@ -266,16 +266,16 @@
   // ---------- ⑥ 더 필요한 데이터 ----------
   function secNeed() {
     const R = [
-      ['bad', '일별 재고(재고현황 일자별)', '주간 재계획의 출발 재고', '월말만 있음 → 생산·출하로 추정 중. mes_download --stock-only 실행 필요(도구 준비됨)'],
-      ['bad', '소재 기발주·입고 예정', '소재 발주량 = 필요 − 기발주', '없음 → 현재는 "입고 필요량"까지만'],
-      ['warn', '최신 판매계획(월 갱신본)', '월 물량·컬러 로트', 'TF 파일(9월 작성) 사용 — 새 파일 넣으면 재계산'],
+      ['bad', '일별 재고(재고현황 일자별)', '주간 재계획의 출발 재고', '월말 재고만 있음 → 생산·출하로 추정 중(일자별 재고 수집 기능 준비 완료, 사내 PC 적용 필요)'],
+      ['bad', '소재 기발주·입고 예정', '소재 발주량 = 필요 − 기발주', '미수령 → 현재는 입고 필요량까지만 산출'],
+      ['warn', '최신 판매계획(월 갱신본)', '월 물량·컬러 로트', 'TF 파일(9월 작성) 사용 — 신규 파일 수령 시 재계산'],
       ['warn', '컬러 11·12월 월차', '컬러 라인 한도', '10월 월차를 11·12월에도 가정', 'C'],
-      ['warn', '2CCL·컬러 휴지 계획', '2CCL 가동일(10월 미편성 0.9천t 해소)', '없음', 'C'],
-      ['warn', '임가공 제품재고', '도금 자동차 재고', '재고현황에 없음 → 자동차 재고 낮게 잡힘', 'G'],
-      ['warn', '판매계획 vs 실적 이력(3~6개월)', '안전재고를 "예측 오차"로(현재는 출고 편차)', '없음'],
+      ['warn', '2CCL 가동일', '2CCL 편성(10월 미편성 해소)', '컬러 휴지계획(10/12 수령) 반영 — 2CCL 가동일 확정 필요', 'C'],
+      ['warn', '임가공 제품재고', '도금 자동차 재고', '재고현황에 미포함 → 자동차 재고 과소 산정', 'G'],
+      ['warn', '판매계획 vs 실적 이력(3~6개월)', '안전재고를 예측 오차 기준으로 산정(현재는 출고 편차 기준)', '미수령'],
     ];
-    const S = { bad: '꼭 필요', warn: '있으면 정확' };
-    return { html: card('s-need', '③', '더 필요한 데이터', '', `<table class="t sum"><thead><tr><th></th><th>데이터</th><th>쓰는 곳</th><th>현재</th></tr></thead><tbody>${R.filter((r) => inS(r[4])).map((r) => `<tr><td class="c"><span class="st ${r[0]}">${S[r[0]]}</span></td><td class="l nm">${r[1]}</td><td class="l wrap">${r[2]}</td><td class="l wrap">${r[3]}</td></tr>`).join('')}</tbody></table>`) };
+    const S = { bad: '필수', warn: '권장' };
+    return { html: card('s-need', '③', '추가 필요 자료', '', `<table class="t sum"><thead><tr><th></th><th>자료</th><th>활용처</th><th>현황</th></tr></thead><tbody>${R.filter((r) => inS(r[4])).map((r) => `<tr><td class="c"><span class="st ${r[0]}">${S[r[0]]}</span></td><td class="l nm">${r[1]}</td><td class="l wrap">${r[2]}</td><td class="l wrap">${r[3]}</td></tr>`).join('')}</tbody></table>`) };
   }
 
   function rerender() { const y = window.scrollY; render(); window.scrollTo(0, y); }

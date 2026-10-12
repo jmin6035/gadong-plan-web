@@ -13,7 +13,7 @@
   const worker = new Worker('worker.js');
 
   // ---------------- 파라미터 폼 ----------------
-  const LOSS = [['switchDummy', '강종전환(M/C) 손실, 분/회'], ['nonfamDummy', '비강종 더미, 분/일'], ['equipDown', '설비정지, 분/일'], ['restartFamchg', 'S/D 재가동 — 강종 바뀜, 분'], ['restartSame', 'S/D 재가동 — 같은 강종, 분']];
+  const LOSS = [['switchDummy', '강종 전환(M/C) 손실, 분/회'], ['nonfamDummy', '비강종 더미, 분/일'], ['equipDown', '설비정지, 분/일'], ['restartFamchg', 'S/D 재가동 — 강종 바뀜, 분'], ['restartSame', 'S/D 재가동 — 같은 강종, 분']];
   function renderParams() {
     $('p-year').value = P.year;
     $('p-q').value = String(P.months[0]);
@@ -165,9 +165,9 @@
     const tabs = A.H.ym.map(([, m]) => `${m}월`).concat(['분기 요약']);
     $('gantt-tabs').innerHTML = tabs.map((t, i) => `<button type="button" data-tab="${i}" class="${i === gTab ? 'on' : ''}">${t}</button>`).join('');
     drawTab(gTab);
-    $('events').innerHTML = '<tr><th>일자</th><th>라인</th><th>구분</th><th>전환</th><th>손실(분)</th><th>이유</th></tr>' + A.events.map((e) => `<tr><td>${GP.md(e.date)}(${GP.weekday(e.date)})</td><td>${e.line}</td><td>${e.kind}</td><td>${e.from === e.to ? e.to + ' 유지' : `${e.from}→${e.to}`}</td><td class="n">${GP.fmt(e.loss, 1)}</td><td class="l">${esc(GP.eventReason(R, A, e))}</td></tr>`).join('');
+    $('events').innerHTML = '<tr><th>일자</th><th>라인</th><th>구분</th><th>전환</th><th>손실(분)</th><th>사유</th></tr>' + A.events.map((e) => `<tr><td>${GP.md(e.date)}(${GP.weekday(e.date)})</td><td>${e.line}</td><td>${e.kind}</td><td>${e.from === e.to ? e.to + ' 유지' : `${e.from}→${e.to}`}</td><td class="n">${GP.fmt(e.loss, 1)}</td><td class="l">${esc(GP.eventReason(R, A, e))}</td></tr>`).join('');
     const er = GP.earlyReasons(R, A);
-    $('early').innerHTML = '<tr><th>라인</th><th>강종</th><th>부서</th><th>생산월</th><th>마감</th><th>물량(t)</th><th>이유</th></tr>' + er.map((x) => `<tr><td>${x.line}</td><td>${x.alloy}</td><td>${x.cls}</td><td>${x.prodMonth}월</td><td>${GP.md(x.due)}</td><td class="n">${GP.fmt(x.tons, 1)}</td><td class="l">${esc(x.why)}</td></tr>`).join('') + `<tr><td colspan="5"><b>합계</b></td><td class="n"><b>${GP.fmt(A.earlyT, 1)}</b></td><td></td></tr>`;
+    $('early').innerHTML = '<tr><th>라인</th><th>강종</th><th>부서</th><th>생산월</th><th>마감</th><th>물량(t)</th><th>사유</th></tr>' + er.map((x) => `<tr><td>${x.line}</td><td>${x.alloy}</td><td>${x.cls}</td><td>${x.prodMonth}월</td><td>${GP.md(x.due)}</td><td class="n">${GP.fmt(x.tons, 1)}</td><td class="l">${esc(x.why)}</td></tr>`).join('') + `<tr><td colspan="5"><b>합계</b></td><td class="n"><b>${GP.fmt(A.earlyT, 1)}</b></td><td></td></tr>`;
     renderReplanBox();
     show('sec-replan', true);
     const H = A.H, today = (() => { const d = new Date(); return GP.ymd(d.getFullYear(), d.getMonth() + 1, d.getDate()); })();

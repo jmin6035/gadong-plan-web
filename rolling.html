@@ -112,13 +112,13 @@
     </div>
     <div id="replan-box" class="lines" hidden></div>
     <details class="detail-results">
-      <summary>상세 결과 보기(요약·간트·전환 이유·선생산) — 전체 화면은 대시보드에서</summary>
+      <summary>상세 결과 보기(요약·간트·전환 사유·선생산) — 전체 화면은 대시보드에서</summary>
     <div id="summary-lines" class="lines"></div>
     <h3>월별 간트</h3>
     <div class="tabs" id="gantt-tabs"></div>
     <div class="gantt-box"><img id="gantt-img" alt="월별 간트"></div>
-    <p class="hint">이미지를 누르면 원본 크기로 열립니다. 굵은 파란 숫자 = 자가재 포함일, 노란색 = M/C·재가동, 회색 = 정기수리.</p>
-    <h3>M/C·S/D 일정과 이유</h3>
+    <p class="hint">이미지 선택 시 원본 크기로 표시. 굵은 파란 숫자 = 자가재 포함일, 노란색 = M/C·재가동, 회색 = 정기수리.</p>
+    <h3>M/C·S/D 일정과 사유</h3>
     <div class="scroll"><table class="data" id="events"></table></div>
     <h3>전월 선생산</h3>
     <div class="scroll"><table class="data" id="early"></table></div>
@@ -137,7 +137,7 @@
     <h3>방법 1 — 실적 엑셀 <small>(이 양식 또는 MES 실적 쿼리 엑셀 그대로 — 자동 인식, 기준일은 실적이 다 들어온 날까지로 맞춤)</small></h3>
     <div class="row">
       <button type="button" class="ghost" id="rp-template">양식 받기(기존 계획으로 채움)</button>
-      <label class="ghost btnlike">실적 엑셀 올리기<input type="file" id="rp-file" accept=".xlsx" hidden></label>
+      <label class="ghost btnlike">실적 파일 업로드<input type="file" id="rp-file" accept=".xlsx" hidden></label>
       <span id="rp-file-name" class="muted"></span>
     </div>
     <h3>방법 2 — 간단 입력 <small>(엑셀 없이: 기존 계획대로 생산했다고 보고 아래 사건만 반영)</small></h3>

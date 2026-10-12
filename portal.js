@@ -21,10 +21,10 @@
   };
   const GROUPS = [
     ['종합', [['supply.html', 'plan', '수급 캘린더', '일별 가동·자가재·구매 소재(발주·입고·재고)·제품 재고', true], ['integrated.html', 'plan', '재고 추이', '확정 계획 기준 주별 제품·자가재 재고와 배치 기준'], ['report.html', 'report', '주간 보고', '도금·컬러 주간 계획 대비 실적 보고 양식']]],
-    ['도금', [['status.html', 'gantt', '가동 현황', '1·2CGL 월별 간트, 강종 전환, 부서별 물량', 0, 'G'], ['rolling.html', 'calc', '계획 계산', '도금 실적을 넣어 다시 계산하고 게시', 0, 'G'], ['analysis.html', 'chart', '조건 분석', 'MES 실적으로 속도·M/C 손실·정지를 다시 재서 계획 조건과 비교', 0, 'G'], ['plating_actual.html', 'chart', '도금 실적', '진도·일별·주별 생산·속도·강종·휴지·강종 전환', 0, 'G']]],
-    ['컬러', [['color_status.html', 'gantt', '가동 현황', '1~4CCL 월별 간트, 라인 한도·편성, 그룹별 물량, 미편성', true, 'C'], ['color_analysis.html', 'chart', '조건 분석', 'MES 실적으로 라인·품명 t/hr 를 다시 재서 계획 조건과 비교', true, 'C'], ['color_actual.html', 'chart', '컬러 실적', '진도·일별·주별 생산·속도·품명·휴지', 0, 'C'], ['planstock.html', 'box', '계획재', '계획재 운영안 187개 사양 재고·생산·판매 진도와 월말 재고 예측', true, 'C']]],
+    ['도금', [['status.html', 'gantt', '가동 현황', '1·2CGL 월별 간트, 강종 전환, 부서별 물량', 0, 'G'], ['rolling.html', 'calc', '계획 계산', '도금 실적 반영 재계산 및 게시', 0, 'G'], ['analysis.html', 'chart', '조건 분석', 'MES 실적으로 속도·M/C 손실·정지를 재산출해 계획 조건과 비교', 0, 'G'], ['plating_actual.html', 'chart', '도금 실적', '진도·일별·주별 생산·속도·강종·휴지·강종 전환', 0, 'G']]],
+    ['컬러', [['color_status.html', 'gantt', '가동 현황', '1~4CCL 월별 간트, 라인 한도·편성, 그룹별 물량, 미편성', true, 'C'], ['color_analysis.html', 'chart', '조건 분석', 'MES 실적으로 라인·품명 t/hr 를 재산출해 계획 조건과 비교', true, 'C'], ['color_actual.html', 'chart', '컬러 실적', '진도·일별·주별 생산·속도·품명·휴지', 0, 'C'], ['planstock.html', 'box', '계획재', '계획재 운영안 187개 사양 재고·생산·판매 진도와 월말 재고 예측', true, 'C']]],
     ['소재', [['procure.html', 'truck', '소재 발주', '날짜별 발주 마감·입고 필요 캘린더, 업체 판단, 구매 요청서', true]]],
-    ['관리', [['decisions.html', 'report', '결정 기록', '누가·무엇을·언제까지 — 결정과 할 일 추적', true], ['health.html', 'help', '자료 상태', '원천 자료별 마지막 날짜·화면별 게시 시각 — 자동 실행 점검'], ['doc.html?d=glossary', 'book', '용어·정의 · 확인 대기', '숫자 정의 사전과 아직 확인 안 된 가정 목록', true], ['doc.html?d=conditions', 'book', '계획 조건식', '컬러·도금·소재 계산식과 보완할 점'], ['doc.html?d=procure_guide', 'help', '발주 검토 사용법', '사용 순서 10단계와 계산 조건'], ['doc.html?d=requests', 'mail', '협조 요청 메일', '전산·구매·판매·생산 요청 사항']]],
+    ['관리', [['decisions.html', 'report', '결정 기록', '회의·보고 결정사항과 후속 조치(담당·기한) 관리', true], ['health.html', 'help', '자료 상태', '원천 자료별 마지막 날짜·화면별 게시 시각 — 자동 실행 점검'], ['doc.html?d=glossary', 'book', '용어·정의 · 확인 대기', '지표 정의와 근거 미확인 가정 목록', true], ['doc.html?d=conditions', 'book', '계획 조건식', '컬러·도금·소재 계산식과 보완할 점'], ['doc.html?d=procure_guide', 'help', '발주 검토 사용법', '사용 순서 10단계와 계산 조건'], ['doc.html?d=requests', 'mail', '협조 요청 메일', '전산·구매·판매·생산 요청 사항']]],
   ];
 
   $('h-groups').innerHTML = GROUPS.map(([g, L]) => `<div><h3>${g}</h3>${L.map(([u, ic, t, d, nw, only]) => `<a href="${u}" title="${esc(d)}"${only ? ` data-only="${only}"` : ''}>${IC[ic]}${t}</a>`).join('')}</div>`).join('');
@@ -67,8 +67,8 @@
       ['G', K('G', tone(g.a / g.s), '도금 생산 누계', g.a, 't', `일정 ${n0(g.s)} 대비 ${sg(g.a - g.s)} · 월차 ${n0(g.m)}`, pc(g.a, g.m), 'status.html', 'kg')],
       ['C', K('C', tone(c.a / c.s), '컬러 생산 누계', c.a, 't', `일정 ${n0(c.s)} 대비 ${sg(c.a - c.s)} · 월차 ${n0(c.m)}`, pc(c.a, c.m), 'color_actual.html', 'kc')],
       ['GC', K('M', tone((sh.actual || 0) / (sh.sched || 1)), '출하 누계(전체)', sh.actual || 0, 't', `일정 ${n0(sh.sched || 0)} 대비 ${sg((sh.actual || 0) - (sh.sched || 0))}`, pc(sh.actual || 0, sh.month || 1), 'report.html', 'ks')],
-      ['G', K('G', now.short ? 'bad' : now.late ? 'warn' : 'good', '도금 결품 예상', now.short || 0, 't', `지연 ${n0(now.late || 0)}톤·일 · 납기 빠듯 ${pl.tightN || 0}건`, null, 'status.html', 'kx')],
-      ['GC', K('M', q.near ? 'warn' : 'good', '발주 시한 2주 안', q.near || 0, '건', q.nearTop && q.nearTop[0] ? `가장 급함 ${esc(q.nearTop[0].mat)} ${md(q.nearTop[0].deadline)}` : '-', null, 'procure.html', 'kq')],
+      ['G', K('G', now.short ? 'bad' : now.late ? 'warn' : 'good', '도금 결품 예상', now.short || 0, 't', `지연 ${n0(now.late || 0)}톤·일 · 납기 임박 ${pl.tightN || 0}건`, null, 'status.html', 'kx')],
+      ['GC', K('M', q.near ? 'warn' : 'good', '2주 내 발주 마감', q.near || 0, '건', q.nearTop && q.nearTop[0] ? `최우선 ${esc(q.nearTop[0].mat)} ${md(q.nearTop[0].deadline)}` : '-', null, 'procure.html', 'kq')],
       ['GC', (() => { const hi = (cs || 0) >= (gs || 0) ? ['컬러 제품', cs] : ['도금 제품', gs]; return K('M', (hi[1] || 0) > 1.3 || (hi[1] || 0) < 0.7 ? 'bad' : (hi[1] || 0) > 1.15 ? 'warn' : 'good', `재고 / 목표 (${hi[0]})`, Math.round((hi[1] || 0) * 100), '%', `컬러 제품 ${cs ? Math.round(cs * 100) + '%' : '-'} · 도금 제품 ${gs ? Math.round(gs * 100) + '%' : '-'}`, null, 'report.html', 'kr'); })()],
     ];
     const has = [L.some((x) => x.pl === 'G'), L.some((x) => x.pl === 'C'), !!sh.month, !!pl.now, true, !!(sr.stock || []).length];   // 예전 형식 자료(라인·속보 요약 없음)면 그 칸은 숨김
@@ -117,9 +117,9 @@
     if (role === 'exec') E = E.filter((e) => e.lvl === 'bad').concat(E.filter((e) => e.lvl !== 'bad')).slice(0, 5);
     else if (RWHO[role]) E = E.filter((e) => String(e.who).includes(RWHO[role]) || e.area === '자료');
     const nb = E.filter((e) => e.lvl === 'bad').length, N = 8;
-    return `<h2>오늘 볼 것 <small>${E.length}건${nb ? ` · 심각 ${nb}` : ''}</small></h2>
+    return `<h2>금일 확인 사항 <small>${E.length}건${nb ? `(긴급 ${nb})` : ''}</small></h2>
       <div class="exl">${E.slice(0, N).map((e) => `<a class="ex ${e.lvl}" href="${e.link}" title="${esc(e.text)} — ${esc(e.who)}"><i></i><span class="ar">${esc(e.area)}</span><span class="t">${esc(e.text)}</span></a>`).join('') || '<p class="small">기준을 넘은 항목 없음</p>'}</div>
-      ${E.length > N ? `<details class="more"><summary>${E.length - N}건 더</summary><div class="exl">${E.slice(N).map((e) => `<a class="ex ${e.lvl}" href="${e.link}"><i></i><span class="ar">${esc(e.area)}</span><span class="t">${esc(e.text)}</span></a>`).join('')}</div></details>` : ''}`;
+      ${E.length > N ? `<details class="more"><summary>외 ${E.length - N}건</summary><div class="exl">${E.slice(N).map((e) => `<a class="ex ${e.lvl}" href="${e.link}"><i></i><span class="ar">${esc(e.area)}</span><span class="t">${esc(e.text)}</span></a>`).join('')}</div></details>` : ''}`;
   }
   function loadCard(O) {
     const p = O.planMonth || O.plating, mx = Math.max(...O.months.map((m, i) => p.g1[i] + p.g2[i])) * 1.04;
@@ -142,13 +142,13 @@
   function dueCard(O) {
     const sc = UI.scope(), q = sc === 'all' ? O.procure : (O.procureBy || {})[sc] || O.procure;
     if (!q) return '';
-    return `<h2>발주 시한 임박 <small>1순위 업체 · 2주 안</small><span class="unit">톤</span></h2>
+    return `<h2>발주 마감 임박 <small>1순위 업체 · 2주 내</small><span class="unit">톤</span></h2>
       <table class="mini"><tbody>${(q.nearTop || []).slice(0, 6).map((x) => `<tr><td><b>${md(x.deadline)}</b></td><td>${esc(x.mat)}</td><td class="r">${n0(x.t)}</td><td class="small">${esc(String(x.sup || '').slice(0, 10))}</td></tr>`).join('') || '<tr><td class="small">없음</td></tr>'}</tbody></table>
       <a class="more" href="procure.html">소재 발주 →</a>`;
   }
   function basis(O) {
     const now = (O.plating || {}).now || {};
-    return `<summary>숫자 기준 · 알림</summary><ul>
+    return `<summary>산출 기준 · 알림</summary><ul>
       <li>생산·출하 누계, 월차, 일정 = 판매생산속보(공식). 라인 14일 추이 = MES 코일(도금 더미 제외).</li>
       <li>그룹 실적 = MES 판매그룹. 계획 = 도금 확정 계획 일별 합 · 컬러 편성. 월말 예상 = 실적 + 남은 계획(도금 매일 재계획).</li>
       <li>그룹별 날짜 계획 누계는 비교하지 않음(부서 배정일은 계획 모델상 정해지지 않음). 컬러 그룹 합은 MES 코일 합이라 속보 누계와 다를 수 있음.</li>
@@ -167,7 +167,7 @@
     const cl = C && UI.inScope('C') ? `<table class="gt wo-c"><thead><tr><th class="l">컬러 예정(t)</th>${C.days.map((d, i) => `<th>${md(d)}</th>`).join('')}<th>확정</th><th>예정 끝</th></tr></thead><tbody>${C.lines.map((x) => `<tr><td class="l">${x.line}</td>${x.days.map((v) => `<td>${v ? n0(v) : '·'}</td>`).join('')}<td>${x.confRate == null ? '-' : Math.round(x.confRate * 100) + '%'}</td><td>${x.until ? md(x.until) : '-'}</td></tr>`).join('')}</tbody></table>` : '';
     if (!gl && !cl) return '';
     return `<h2>현장 작업지시 vs 계획 <small>MES 작업지시 ${ymd((W.plating || {}).asOf)} 기준</small></h2><div class="wo-g">${gl}</div>${cl}
-      <p class="small">도금: 미완료 지시 코일의 강종(생산번호로 판별, 톤은 최근 코일 평균으로 추정)이 계획의 다음 3일 강종 안에 있으면 '맞음'. 도금 지시는 보통 1~2일치만 나옴. 컬러 = 작업 예정일별 지시 예정 중량 — 첫날 값이 하루 능력보다 큰 것(예: 1CCL)은 밀린 지시가 그날로 잡힌 것으로 보여 확인 중.</p>`;
+      <p class="small">도금: 미완료 지시 코일의 강종(생산번호로 판별, 톤은 최근 코일 평균으로 추정)이 계획의 향후 3일 강종 안에 있으면 '맞음'. 도금 지시는 보통 1~2일치만 나옴. 컬러 = 작업 예정일별 지시 예정 중량 — 첫날 값이 하루 능력보다 큰 것(예: 1CCL)은 밀린 지시가 그날로 잡힌 것으로 보여 확인 중.</p>`;
   }
 
   // ---------- 2주 일정: 이번 주 월요일부터 14일, 날짜마다 할 일(도금 M/C·정지 / 컬러 S/D·수리 / 소재 발주 / 계획재 발주) ----------
@@ -181,7 +181,7 @@
     const cells = days.map((d, i) => { const es = ev.filter((e) => e.d === d);
       return `<div class="calc ${d === today ? 'today' : ''} ${d < today ? 'past' : ''}" style="--ci:${i}"><span class="dn ${i % 7 >= 5 ? 'we' : ''}">${+d.slice(5, 7)}/${+d.slice(8)}</span>${es.slice(0, 4).map((e) => `<span class="chip" style="--kc:${WK[e.kind][1]}" title="${esc(e.text)}">${esc(e.text)}</span>`).join('')}${es.length > 4 ? `<span class="more">+${es.length - 4}건</span>` : ''}</div>`; }).join('');
     const cnt = (k) => ev.filter((e) => e.kind === k && e.d >= today).length;
-    return `<h2>2주 일정 <small>이번 주·다음 주에 할 일 — 자세한 내용은 각 화면에서</small></h2>
+    return `<h2>2주 일정 <small>금주·차주 주요 일정 (상세는 각 화면)</small></h2>
       <div class="cal-lg" style="margin-bottom:10px">${Object.entries(WK).map(([k, [n, c]]) => `<span class="lg" style="--kc:${c};cursor:default"><i></i>${n} <small>${cnt(k)}</small></span>`).join('')}</div>
       <div class="calg wk2">${['월', '화', '수', '목', '금', '토', '일'].map((w, i) => `<div class="calh ${i >= 5 ? 'we' : ''}">${w}</div>`).join('')}${cells}</div>
       <p class="small" style="margin:10px 0 0">바로 가기: <a href="status.html">도금 가동 현황</a> · <a href="color_status.html">컬러 가동 현황</a> · <a href="procure.html">소재 발주</a> · <a href="planstock.html">계획재</a></p>`;
