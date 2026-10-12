@@ -104,7 +104,7 @@
     el.hidden = false;
     el.innerHTML = `<h2>실적 반영 재계획 <small class="muted">— ${GP.md(rp.t0)}까지 실적, ${rp.freezeUntil ? GP.md(rp.freezeUntil) + '까지 강종 동결' : '동결 없음'}</small></h2>
       <ul class="changes">${rp.notes.concat(GP.lockLines ? GP.lockLines(rp) : []).map((n) => `<li>${esc(n)}</li>`).join('')}
-      <li>실적 ${GP.fmt(rp.actualT)}t / 같은 기간 계획 ${GP.fmt(rp.planToDateT)}t (${rp.actualT >= rp.planToDateT ? '+' : ''}${GP.fmt(rp.actualT - rp.planToDateT)}t)</li>
+      ${(() => { const a = rp.actualWinT != null ? rp.actualWinT : rp.actualT; return rp.vsFrom && !(rp.vsPlan || []).length ? '' : `<li>실적 ${GP.fmt(a)}t / 같은 기간 계획 ${GP.fmt(rp.planToDateT)}t (${a >= rp.planToDateT ? '+' : ''}${GP.fmt(a - rp.planToDateT)}t)${rp.vsFrom ? ` — ${GP.md(rp.vsFrom)} 다음 날부터` : ''}</li>`; })()}
       <li>전환 일정: ${rp.removed.length || rp.added.length ? `<b>취소</b> ${rp.removed.map(ev).join(', ') || '-'} · <b>신규</b> ${rp.added.map(ev).join(', ') || '-'}` : '변경 없음'}</li>
       <li>지연 ${GP.fmt(rp.late)}톤·일 · 결품 ${rp.shortBy.length ? rp.shortBy.map(esc).join(', ') : '없음'}</li></ul>` + vsPlanHtml(rp);
   }
@@ -236,7 +236,7 @@
           else { const u = (A.used[`${l}|${d}`] || 0) / 60; txt = u > 0 ? u.toFixed(1) : ''; }
           tot += v;
           const cls = [GP.isSwitch(c) ? 'mc' : '', GP.isDown(c) ? 'down' : '', d === today ? 'today' : ''].filter(Boolean).join(' ');
-          h += `<td class="${cls}">${txt}</td>`;
+          h += `<td class="${cls}${txt === 'M/C' ? ' mclab' : ''}" style="--ci:${i}">${txt}</td>`;
         });
         h += `<td class="tot">${r.kind === 'hrs' ? '' : GP.fmt(tot)}</td></tr>`;
       });
@@ -244,7 +244,7 @@
     $('g-table').innerHTML = h + '</tbody>';
     // 모바일 등 좁은 화면: 오늘(없으면 1일) 열이 보이게 가로 스크롤
     const wrap = document.querySelector('.gtable-wrap'), ti = ds.indexOf(today);
-    if (wrap && wrap.scrollWidth > wrap.clientWidth) { const th = $('g-table').querySelectorAll('thead tr:first-child th')[2 + Math.max(0, ti - 1)]; wrap.scrollLeft = ti > 0 && th ? th.offsetLeft - 144 - 8 : 0; }
+    if (wrap && wrap.scrollWidth > wrap.clientWidth) { const hs = $('g-table').querySelectorAll('thead tr:first-child th'), th = hs[2 + Math.max(0, ti - 1)], stick = hs[0].offsetWidth + hs[1].offsetWidth; wrap.scrollLeft = ti > 0 && th ? th.getBoundingClientRect().left - $('g-table').getBoundingClientRect().left - stick : 0; }   // 고정 열(라인·구분) 폭만큼 빼서 칸이 잘리지 않게
   }
   $('g-tabs').onclick = (ev) => { if (ev.target.dataset.g != null) renderGantt(+ev.target.dataset.g); };
   document.querySelector('details.more').addEventListener('toggle', (ev) => { if (ev.target.open && R) { renderDaily(); drawTab(Math.min(gTab, A.H.ym.length)); } });

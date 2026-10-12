@@ -346,6 +346,50 @@ table.t tbody tr:where(:hover) td { background: var(--hover); }
 .lead { background: var(--gt, var(--tint)); border-left-color: var(--gc, var(--brand-3)); }
 .docmeta span { box-shadow: none; }
 
+
+/* ---------- 움직임: 표 행이 차례로 나타나고, 차트 선은 그려지고 막대는 자라남(움직임 줄이기 설정이면 꺼짐) ---------- */
+@keyframes rowin { from { opacity: 0; } to { opacity: 1; } }
+@keyframes growy { from { transform: scaleY(0); } to { transform: scaleY(1); } }
+@keyframes popin { from { opacity: 0; transform: scale(.6); } to { opacity: 1; transform: none; } }
+@keyframes cellin { from { opacity: 0; } to { opacity: 1; } }
+table.t tbody tr, table.mini tbody tr, table.gt tbody tr { animation: rowin .5s var(--ease) both; }
+table.t tbody tr:nth-child(1), table.mini tbody tr:nth-child(1), table.gt tbody tr:nth-child(1) { animation-delay: 35ms; }
+table.t tbody tr:nth-child(2), table.mini tbody tr:nth-child(2), table.gt tbody tr:nth-child(2) { animation-delay: 70ms; }
+table.t tbody tr:nth-child(3), table.mini tbody tr:nth-child(3), table.gt tbody tr:nth-child(3) { animation-delay: 105ms; }
+table.t tbody tr:nth-child(4), table.mini tbody tr:nth-child(4), table.gt tbody tr:nth-child(4) { animation-delay: 140ms; }
+table.t tbody tr:nth-child(5), table.mini tbody tr:nth-child(5), table.gt tbody tr:nth-child(5) { animation-delay: 175ms; }
+table.t tbody tr:nth-child(6), table.mini tbody tr:nth-child(6), table.gt tbody tr:nth-child(6) { animation-delay: 210ms; }
+table.t tbody tr:nth-child(7), table.mini tbody tr:nth-child(7), table.gt tbody tr:nth-child(7) { animation-delay: 245ms; }
+table.t tbody tr:nth-child(8), table.mini tbody tr:nth-child(8), table.gt tbody tr:nth-child(8) { animation-delay: 280ms; }
+table.t tbody tr:nth-child(9), table.mini tbody tr:nth-child(9), table.gt tbody tr:nth-child(9) { animation-delay: 315ms; }
+table.t tbody tr:nth-child(10), table.mini tbody tr:nth-child(10), table.gt tbody tr:nth-child(10) { animation-delay: 350ms; }
+table.t tbody tr:nth-child(11), table.mini tbody tr:nth-child(11), table.gt tbody tr:nth-child(11) { animation-delay: 385ms; }
+table.t tbody tr:nth-child(12), table.mini tbody tr:nth-child(12), table.gt tbody tr:nth-child(12) { animation-delay: 420ms; }
+table.t tbody tr:nth-child(13), table.mini tbody tr:nth-child(13), table.gt tbody tr:nth-child(13) { animation-delay: 455ms; }
+table.t tbody tr:nth-child(14), table.mini tbody tr:nth-child(14), table.gt tbody tr:nth-child(14) { animation-delay: 490ms; }
+table.t tbody tr:nth-child(15), table.mini tbody tr:nth-child(15), table.gt tbody tr:nth-child(15) { animation-delay: 525ms; }
+table.t tbody tr:nth-child(16), table.mini tbody tr:nth-child(16), table.gt tbody tr:nth-child(16) { animation-delay: 560ms; }
+table.t tbody tr:nth-child(17), table.mini tbody tr:nth-child(17), table.gt tbody tr:nth-child(17) { animation-delay: 595ms; }
+table.t tbody tr:nth-child(18), table.mini tbody tr:nth-child(18), table.gt tbody tr:nth-child(18) { animation-delay: 630ms; }
+table.t tbody tr:nth-child(19), table.mini tbody tr:nth-child(19), table.gt tbody tr:nth-child(19) { animation-delay: 665ms; }
+table.t tbody tr:nth-child(20), table.mini tbody tr:nth-child(20), table.gt tbody tr:nth-child(20) { animation-delay: 700ms; }
+table.t tbody tr:nth-child(21), table.mini tbody tr:nth-child(21), table.gt tbody tr:nth-child(21) { animation-delay: 735ms; }
+table.t tbody tr:nth-child(22), table.mini tbody tr:nth-child(22), table.gt tbody tr:nth-child(22) { animation-delay: 770ms; }
+table.t tbody tr:nth-child(23), table.mini tbody tr:nth-child(23), table.gt tbody tr:nth-child(23) { animation-delay: 805ms; }
+table.t tbody tr:nth-child(24), table.mini tbody tr:nth-child(24), table.gt tbody tr:nth-child(24) { animation-delay: 840ms; }
+table.t tbody tr:nth-child(n+25) { animation-delay: 850ms; }
+svg path[fill="none"], svg polyline.ln { stroke-dasharray: 4000; stroke-dashoffset: 4000; animation: draw 1.6s var(--ease) forwards .15s; }
+svg rect.bar, .chart svg rect:not(.hb):not(.hit):not([fill="none"]) { transform-box: fill-box; transform-origin: 50% 100%; animation: growy .8s var(--ease) both .1s; }
+.chart svg circle, svg.cv circle { transform-box: fill-box; transform-origin: center; animation: popin .45s var(--ease) both 1s; }
+@keyframes draw { to { stroke-dashoffset: 0; } }
+/* 가동표(가동 현황): 오늘 = 연한 열 + 머리글 강조, M/C = 열 전체 같은 연한 노랑 + 글자 진하게 */
+html .gtable td.mc, html .gtable tr.r-hrs td.mc { background: color-mix(in srgb, #f2b705 24%, var(--surface)); color: var(--ink); }
+html .gtable td.mclab { color: #8a5a00; font-weight: 900; letter-spacing: 0; }
+html .gtable th.today, html .gtable td.today { outline: 0; box-shadow: inset 2px 0 0 var(--brand-2), inset -2px 0 0 var(--brand-2); }
+html .gtable thead th.today { background: var(--brand-2); color: #fff; }
+html .gtable tbody td { animation: cellin .5s var(--ease) both; animation-delay: calc(var(--ci, 0) * 18ms); }
+html .bar-cell i { top: auto; bottom: 5px; height: 4px; transform: none; opacity: .55; background: var(--brand-2); }
+
 /* ---------- 휴대폰(≤640px): 위 큰 글씨 규칙보다 뒤에 둬야 적용됨 ---------- */
 @media (max-width: 640px) {
   html body { font-size: 15px; }

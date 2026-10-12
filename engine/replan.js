@@ -104,10 +104,23 @@
     const actDay = {};
     for (const r of act.rows) actDay[`${r[1]}|${r[0]}`] = (actDay[`${r[1]}|${r[0]}`] || 0) + r[4];
     const planDay = {};
-    for (const r of R.rows) if (r[0] <= act.t0) planDay[`${r[1]}|${r[0]}`] = (planDay[`${r[1]}|${r[0]}`] || 0) + r[4];
-    const past = R.cal.filter((c) => c.date <= act.t0).map((c) => {
-      const k = `${c.line}|${c.date}`, gap = (planDay[k] || 0) - (actDay[k] || 0);
-      return gap > 1 ? Object.assign({}, c, { event: (c.event ? c.event + ' · ' : '') + `실적 미달 ${GP.fmt(gap)}t` }) : c;
+    // 계획 대비 실적은 기준 결과에서 '계획'이었던 날만(기준이 재계획이면 그 기준일 b0 까지는 이미 실적) — Python 과 동일
+    const b0 = R.replan ? R.replan.t0 : null, inwin = (d) => d <= act.t0 && (b0 == null || d > b0);
+    for (const r of R.rows) if (inwin(r[0])) planDay[`${r[1]}|${r[0]}`] = (planDay[`${r[1]}|${r[0]}`] || 0) + r[4];
+    // 지난 날짜(~t0)는 실적 기준: 강종 = 그날 실적의 주 강종, 전환 표시는 실적 강종이 바뀐 날만(예전 계획의 'M/C 예정'은 지움) — Python 과 동일
+    const famT = {}, famAct = {};
+    for (const r of act.rows) { const k = `${r[1]}|${r[0]}|${P.alloyFamily[r[2]]}`; famT[k] = (famT[k] || 0) + r[4]; }
+    for (const [k, t] of Object.entries(famT)) { const [l, d, fm] = k.split('|'); const kk = `${l}|${d}`; if (!famAct[kk] || t > famAct[kk][1]) famAct[kk] = [fm, t]; }
+    const prevF = {};
+    const past = R.cal.filter((c) => c.date <= act.t0).slice().sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : 0)).map((c) => {
+      const l = c.line, d = c.date, k = `${l}|${d}`;
+      const parts = (c.event || '').split(' · ').filter((x) => x && !/^(M\/C|S\/D 재가동|실적 미달)/.test(x));
+      const fa = famAct[k] ? famAct[k][0] : null;
+      if (fa) { if (prevF[l] && prevF[l] !== fa) parts.unshift(`M/C(${prevF[l]}→${fa})`); prevF[l] = fa; }
+      else if (/^(M\/C|S\/D 재가동)/.test(c.event || '') && !(l in prevF)) parts.unshift(c.event.split(' · ')[0]);
+      const gap = inwin(d) ? (planDay[k] || 0) - (actDay[k] || 0) : 0;
+      if (gap > 1) parts.push(`실적 미달 ${GP.fmt(gap)}t`);
+      return Object.assign({}, c, { fam: fa || c.fam, event: parts.join(' · ') });
     });
     const cal = past.concat(lev.cal).sort((a, b) => (a.date + a.line < b.date + b.line ? -1 : 1));
     const dest = GP.splitDest(rows, R.items, P);
@@ -117,14 +130,14 @@
     const shortBy = (lev.shortBy.length ? lev.shortBy : milp.shortBy).map(([id, t]) => { const b = rem.find((x) => x.id === id); return `${b.cls} ${b.alloy} ${GP.md(b.due)} ${GP.fmt(t)}t`; });
     const replan = {
       t0: act.t0, freezeUntil: MO.freezeUntil, notes: act.notes || [], actualT: GP.sum(act.rows, (r) => r[4]),
-      planToDateT: GP.sum(R.rows.filter((r) => r[0] <= act.t0), (r) => r[4]),
+      planToDateT: GP.sum(R.rows.filter((r) => inwin(r[0])), (r) => r[4]), actualWinT: GP.sum(act.rows.filter((r) => inwin(r[0])), (r) => r[4]), vsFrom: b0,
       removed: before.filter((x) => !after.includes(x)), added: after.filter((x) => !before.includes(x)),
       over, shortBy, late: milp.late, baseMC: R.milp && R.milp.K, options: O, lockMC: !!MO.lock, lockNotes, proposal, optimal: !!(milp.optimal1 && milp.optimal2 && milp.phase2Exact),
     };
     // 계획 대비 실적(대시보드): 라인×일, 부서 누계
     replan.vsPlan = [];
-    for (const d of GP.dateRange(H.D0, act.t0)) for (const l of P.lines) replan.vsPlan.push([d, l, GP.round(planDay[`${l}|${d}`] || 0, 1), GP.round(actDay[`${l}|${d}`] || 0, 1)]);
-    replan.byDept = GP.DEPTS_ALL.map((c) => [c, GP.round(GP.sum(R.rows.filter((r) => r[0] <= act.t0 && r[3] === c), (r) => r[4]), 1), GP.round(GP.sum(act.rows.filter((r) => r[3] === c), (r) => r[4]), 1)]);
+    for (const d of GP.dateRange(H.D0, act.t0)) if (inwin(d)) for (const l of P.lines) replan.vsPlan.push([d, l, GP.round(planDay[`${l}|${d}`] || 0, 1), GP.round(actDay[`${l}|${d}`] || 0, 1)]);
+    replan.byDept = GP.DEPTS_ALL.map((c) => [c, GP.round(GP.sum(R.rows.filter((r) => inwin(r[0]) && r[3] === c), (r) => r[4]), 1), GP.round(GP.sum(act.rows.filter((r) => inwin(r[0]) && r[3] === c), (r) => r[4]), 1)]);
     log && log(`M/C 고정 ${MO.lock ? '켬' : '끔'}` + (lockNotes.length ? ' — ' + lockNotes.join(' / ') : ''));
     log && log(`재계획${replan.optimal ? '(최적 증명)' : '(최적 미증명 — 시간 제한)'}: M/C(남은 기간) ${milp.K}회, 지연 ${GP.fmt(milp.late)}톤·일, 결품 ${GP.fmt(milp.short)}t, 전환 변경 −${replan.removed.length}/+${replan.added.length}`);
     return Object.assign({}, R, { rows, cal, dest: dest.rows, destBad: dest.bad, slack: lev.slack, milp: Object.assign({}, milp, { base: R.milp }), replan });
