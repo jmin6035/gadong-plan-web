@@ -67,22 +67,22 @@
     const has = [L.some((x) => x.pl === 'G'), L.some((x) => x.pl === 'C'), !!sh.month, !!pl.now, true, !!(sr.stock || []).length];   // 예전 형식 자료(라인·속보 요약 없음)면 그 칸은 숨김
     return it.filter(([p], j) => has[j] && UI.inScope(p)).map((x) => x[1]).join('');
   }
-  // 라인 타일: 월차·누계·일정 대비 + 14일 추이(선이 그려지는 애니메이션) + 다음 전환
+  // 라인 타일: 월차·누계·일정 대비 + 이번 달 일별 추이(선이 그려지는 애니메이션) + 다음 전환
   function spark(days) {
     const v = days.map((d) => d[1]), mx = Math.max(...v, 1), W = 140, H = 34, n = v.length;
-    const xy = v.map((y, i) => [i * W / (n - 1), H - 3 - y / mx * (H - 6)]);
+    const xy = v.map((y, i) => [n > 1 ? i * W / (n - 1) : W / 2, H - 3 - y / mx * (H - 6)]);
     const li = 'M' + xy.map(([x, y]) => `${x.toFixed(1)},${y.toFixed(1)}`).join(' L');
     const dots = xy.map(([x, y], i) => `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="6" class="pt"><title>${md(days[i][0])} ${n0(days[i][1])}t</title></circle>`).join('');
-    return `<svg class="sp" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" role="img" aria-label="최근 14일 하루 생산량"><path class="ar" d="${li} L${W},${H} L0,${H} Z"/><path class="li" d="${li}"/>${dots}</svg>`;
+    return `<svg class="sp" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" role="img" aria-label="이번 달 하루 생산량"><path class="ar" d="${li} L${W},${H} L0,${H} Z"/><path class="li" d="${li}"/>${dots}</svg>`;
   }
   function lines(O) {
     return (O.lines || []).filter((x) => UI.inScope(x.pl)).map((x) => {
       const r = x.sched ? x.actual / x.sched : null, cls = r == null ? '' : r >= 0.98 ? 'good' : r >= 0.9 ? 'warn' : 'bad';
       const t = x.days.map((d) => `${md(d[0])} ${n0(d[1])}t`).join(' · ');
-      return `<div class="ln" data-dom="${x.pl}" title="최근 14일: ${t}"><div class="hd"><b>${x.line}</b>${x.fam ? `<span class="fam">${esc(x.fam)}</span>` : ''}<span class="pc ${cls}">${r == null ? '-' : Math.round(r * 100) + '%'}</span></div>
+      return `<div class="ln" data-dom="${x.pl}" title="이번 달: ${t}"><div class="hd"><b>${x.line}</b>${x.fam ? `<span class="fam">${esc(x.fam)}</span>` : ''}<span class="pc ${cls}">${r == null ? '-' : Math.round(r * 100) + '%'}</span></div>
         <div class="nums"><b>${x.actual != null ? n0(x.actual) : '-'}</b> / 월차 ${x.month != null ? n0(x.month) : '-'}t · 일정 ${x.sched != null ? n0(x.sched) : '-'}</div>
         ${x.month ? `<div class="pb"><i style="width:${Math.min(100, x.actual / x.month * 100)}%"></i><em style="left:${Math.min(100, x.sched / x.month * 100)}%"></em></div>` : ''}
-        <div class="sp-cap small muted">14일 하루 생산(t) · 최고 ${n0(Math.max(...x.days.map((d) => d[1])))} · 평균 ${n0(x.days.reduce((a, d) => a + d[1], 0) / x.days.length)}</div>
+        <div class="sp-cap small muted">이번 달 하루 생산(t) · 최고 ${n0(Math.max(...x.days.map((d) => d[1])))} · 평균 ${n0(x.days.reduce((a, d) => a + d[1], 0) / x.days.length)}</div>
         ${spark(x.days)}<div class="sp-ax small muted"><span>${md(x.days[0][0])} ${n0(x.days[0][1])}</span><span>어제 ${n0(x.days[x.days.length - 1][1])}</span></div><div class="nx">${x.next ? `다음 ${md(x.next[0])} ${esc(x.next[1])}` : `어제 ${n0(x.days[x.days.length - 1][1])}t`}</div></div>`;
     }).join('');
   }
@@ -142,7 +142,7 @@
   function basis(O) {
     const now = (O.plating || {}).now || {};
     return `<summary>산출 기준 · 알림</summary><ul>
-      <li>생산·출하 누계, 월차, 일정 = 판매생산속보(공식). 라인 14일 추이 = MES 코일(도금 더미 제외).</li>
+      <li>생산·출하 누계, 월차, 일정 = 판매생산속보(공식). 라인 이번 달 일별 추이 = MES 코일(도금 더미 제외, 1일부터).</li>
       <li>그룹 실적 = MES 판매그룹. 계획 = 도금 확정 계획 일별 합 · 컬러 편성. 월말 예상 = 실적 + 남은 계획(도금 매일 재계획).</li>
       <li>그룹별 날짜 계획 누계는 비교하지 않음(부서 배정일은 계획 모델상 정해지지 않음). 컬러 그룹 합은 MES 코일 합이라 속보 누계와 다를 수 있음.</li>
       ${(now.lockNotes || []).map((n) => `<li>재계획: ${esc(n)}</li>`).join('')}${(now.shortBy || []).length ? `<li>결품 예상: ${now.shortBy.map(esc).join(', ')}</li>` : ''}</ul>`;

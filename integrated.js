@@ -104,7 +104,6 @@
   // ---------- ② 재고·소재 추이 표 ----------
   // ---------- 실제 재고(판매생산속보 + MES 일별 재고) — 아래 주별 추이는 계획 기준 예측 ----------
   let PT = null;                                                     // portal.enc.json(사내 PC 매일 게시): sr.stock · stockHist · stockTrend
-  const KIND = { '도금 소재(F/H)': '소재_G', '컬러 소재': '소재_C', '도금 제품(판매재)': '도금제품', '컬러 제품': '컬러제품' };
   function trendSvg(pts) {                                           // pts = [[날짜, t]] — 점마다 날짜·값(마우스를 올리면 보임), 양 끝 날짜·값 글자
     if (!pts.length) return '';
     const W = 260, H = 70, v = pts.map((p) => p[1]), mx = Math.max(...v), mn = Math.min(...v), sp = mx - mn || 1, n = pts.length;
@@ -117,18 +116,17 @@
   function secActual() {
     if (!PT || !PT.sr || !(PT.sr.stock || []).length) return { html: '' };
     const sc = UI.scope(), inS = (nm) => sc === 'all' || (sc === 'G' ? nm.startsWith('도금') : nm.startsWith('컬러'));
-    const H = PT.stockHist || [], T = PT.stockTrend || [];
+    const T = PT.stockTrend || [];
     const rows = PT.sr.stock.filter((x) => inS(x.name)).map((x) => {
       const r = x.target ? x.current / x.target : null, tone = r == null ? '' : r > 1.3 || r < 0.7 ? 'bad' : r > 1.15 || r < 0.9 ? 'warn' : 'good';
-      const hs = H.filter((h) => h[x.name]).map((h) => [h.d, h[x.name][1]]);
-      const mk = KIND[x.name], tr = mk ? T.filter((t) => t[1] === mk).map((t) => [t[0], t[2]]) : [];
+      const tr = T.filter((t) => t[1] === x.name).map((t) => [t[0], t[2]]);
       return `<tr><td class="l"><b>${esc(x.name)}</b></td><td>${x.target ? n0(x.target) : '-'}</td><td><b>${n0(x.current)}</b></td><td class="${tone}">${r == null ? '-' : Math.round(r * 100) + '%'}</td>
-        <td>${hs.length > 1 ? trendSvg(hs) : `<span class="muted small">${hs.length ? '속보 날짜별 기록 쌓는 중(' + hs.length + '일)' : '-'}</span>`}</td>
-        <td>${tr.length ? trendSvg(tr) + (mk === '소재_G' ? '' : '<div class="small muted">집계 범위가 속보와 다름 — 흐름만 참고</div>') : '-'}</td></tr>`;
+        <td>${tr.length ? trendSvg(tr) : '-'}</td></tr>`;
     }).join('');
-    return { html: `<section class="card" id="s-actual"><h2>실제 재고 <small>판매생산속보 ${esc(PT.sr.asOf || '')} · MES 일별 재고 — 예측 아님</small></h2>
-      <div class="scroll"><table class="t"><thead><tr><th class="l">항목</th><th>목표(t)</th><th>현재(t)</th><th>목표 대비</th><th>날짜별(속보)</th><th>MES 일별 재고(9/30~어제)</th></tr></thead><tbody>${rows}</tbody></table></div>
-      <p class="small">현재·목표 = 판매생산속보(매일 07:16 갱신)의 재고 현황 그대로. 날짜별(속보) = 사내 PC가 매일 받은 속보를 쌓은 값. MES 일별 재고 = 속보 원천 표(7·8·9)의 일별 합계(사내·사외 창고) — 도금 F/H는 속보와 같고, 나머지는 집계 범위가 달라 값이 다를 수 있음. 점에 마우스를 올리면 날짜별 값이 보입니다.<br>아래 '주별 추이'는 계획(생산 계획·판매 계획)으로 계산한 <b>예측</b>입니다.</p></section>` };
+    const d0 = T.length ? T[0][0] : null, d1 = T.length ? T[T.length - 1][0] : null, md = (d) => `${+d.slice(5, 7)}/${+d.slice(8, 10)}`;
+    return { html: `<section class="card" id="s-actual"><h2>실제 재고 <small>판매생산속보 ${esc(PT.sr.asOf || '')} — 예측 아님</small></h2>
+      <div class="scroll"><table class="t"><thead><tr><th class="l">항목</th><th>목표(t)</th><th>현재(t)</th><th>목표 대비</th><th>이번 달 일별${d0 ? ` (${md(d0)}~${md(d1)} 말)` : ''}</th></tr></thead><tbody>${rows}</tbody></table></div>
+      <p class="small">현재·목표 = 판매생산속보(매일 07:16)의 재고 현황. 이번 달 일별 = 속보 원천 표(MES 판매생산속보 7·8·9번 표)의 날짜별 합계 — 속보와 같은 값(전날 말 재고). 점에 마우스를 올리면 날짜별 값이 보입니다.<br>아래 '주별 추이'는 계획(생산 계획·판매 계획)으로 계산한 <b>예측</b>입니다.</p></section>` };
   }
   function secStock() {
     const P = O.variants[V], W = O.weeks, today = new Date(Date.now() + 9 * 3600e3).toISOString().slice(0, 10);
