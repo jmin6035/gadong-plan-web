@@ -158,14 +158,14 @@
         const subRow = Object.values(rows).find((x) => x.key === grp.sub);
         if (!subRow) { checks.push({ level: 'error', msg: `판매계획: 합계행 '${grp.sub}' 없음 (양식 변경?)` }); continue; }
         subRow.used = true;
-        const addTons = (dest, sailLabel, vals) => {
+        const addTons = (dest, sailLabel, vals, alloy = grp.alloy) => {
           vals.forEach((v, mi) => {
             if (!(v > 0)) return;
             const [y, m] = H.ym[mi];
             if (grp.sail) {
               const regs = sailRegions(SAIL, P, grp.sail, grp.alloy, sailLabel);
-              for (const [w, port, t] of splitBySail(SAIL, grp.sail, grp.alloy, regs, v)) addItem(items, grp.cls, grp.alloy, mi, y, m, dest, port, w, t);
-            } else addItem(items, grp.cls, grp.alloy, mi, y, m, dest, '', null, v);
+              for (const [w, port, t] of splitBySail(SAIL, grp.sail, grp.alloy, regs, v)) addItem(items, grp.cls, alloy, mi, y, m, dest, port, w, t);
+            } else addItem(items, grp.cls, alloy, mi, y, m, dest, '', null, v);
           });
         };
         if (grp.self) { addTons(grp.self, grp.selfSail || subRow.label, subRow.vals); continue; }
@@ -174,12 +174,12 @@
         for (let r = subRow.r - 1; r > hr; r--) { if (isStop(rows[r])) break; win.push(rows[r]); }
         const got = new Array(nMonths).fill(0);
         for (const ch of grp.children) {
-          const [lab, dest] = Array.isArray(ch) ? ch : [ch, ch];
+          const [lab, dest, alloyOv] = Array.isArray(ch) ? ch : [ch, ch];   // 3번째 = 행 단위 강종(라인 제약용, 예: 도금판매 AL 가전용 → 1CGL 전용 AL-LG)
           const row = win.find((x) => x.label === lab && !x.used);
           if (!row) continue;
           row.used = true;
           row.vals.forEach((v, i) => { got[i] += v; });
-          addTons(dest, lab, row.vals);
+          addTons(dest, lab, row.vals, alloyOv || grp.alloy);
         }
         for (const lab of grp.info || []) win.filter((x) => x.label === lab).forEach((x) => { x.used = true; });
         subRow.vals.forEach((v, i) => {

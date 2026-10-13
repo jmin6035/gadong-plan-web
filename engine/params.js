@@ -66,7 +66,7 @@
     groups: [
       { sec: 'dom', sub: '도금국내::내수::MAC', cls: '도금국내', alloy: 'MAC', children: ['패턴맥', '건재용', '가전용', '자동차용', '임가공 이관/컬러소재용'] },
       { sec: 'dom', sub: '도금국내::내수::AZ', cls: '도금국내', alloy: 'AZ', children: ['건재용', '가전용', '컬러소재용', '기타'] },
-      { sec: 'dom', sub: '도금국내::내수::AL', cls: '도금국내', alloy: 'AL', children: ['실수요', '건재용(유통)', '페일캔용', '가전용'] },
+      { sec: 'dom', sub: '도금국내::내수::AL', cls: '도금국내', alloy: 'AL', children: ['실수요', '건재용(유통)', '페일캔용', ['가전용', '가전용', 'AL-LG']] },   // 가전용 직판 = 1CGL 전용(품목별 적용 라인, 2026-10-13 사용자 결정) → 1CGL 전용 강종 AL-LG 로
       { sec: 'exp', sub: '도금수출::수출::MAC', cls: '도금수출', alloy: 'MAC', sail: '도금수출', children: EXP_REGIONS, info: ['북미'] },
       { sec: 'exp', sub: '도금수출::수출::A Z', cls: '도금수출', alloy: 'AZ', sail: '도금수출', children: EXP_REGIONS, info: ['북미'] },
       { sec: 'exp', sub: '도금수출::수출::일반 AL', cls: '도금수출', alloy: 'AL', sail: '도금수출', children: EXP_REGIONS, info: ['북미', '가공센터', '기타(유통/실수요)'] },
