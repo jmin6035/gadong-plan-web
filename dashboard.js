@@ -225,13 +225,13 @@
         let tot = 0;
         ds.forEach((d, i) => {
           if (sdIdx.includes(i)) {
-            if (ri === 0 && i === sdIdx[0]) { const sd = P.shutdowns.find((x) => x.line === l && x.start <= d && d <= x.end); h += `<td class="sdblock" colspan="${sdIdx.length}" rowspan="${rows.length}">정기수리 ${sd ? `${GP.md(sd.start)}~${GP.md(sd.end)}` : ''}</td>`; }
+            if (ri === 0 && i === sdIdx[0]) { const sd = P.shutdowns.find((x) => x.line === l && x.start <= d && d <= x.end); h += `<td class="sdblock${sdIdx.length === 1 ? ' one' : ''}" colspan="${sdIdx.length}" rowspan="${rows.length}">정기수리${sd ? `<small>${GP.md(sd.start)}~${GP.md(sd.end)}</small>` : ''}</td>`; }
             return;
           }
           const c = A.calBy[`${l}|${d}`];
           let v = 0, txt = '';
-          if (r.kind === 'fam') { v = fam[`${l}|${d}|${r.f}`] || 0; const mm = GP.isSwitch(c) && /\((.+)→/.exec(c.event); txt = v > 0.5 ? GP.fmt(v) : (mm && mm[1] === r.f && c.event.startsWith('M/C') ? 'M/C' : ''); }
-          else if (r.kind === 'dep') { v = dep[`${l}|${d}|${r.c}`] || 0; txt = v > 0.5 ? GP.fmt(v) : ''; }
+          if (r.kind === 'fam') { v = fam[`${l}|${d}|${r.f}`] || 0; const mm = GP.isSwitch(c) && /\((.+)→/.exec(c.event); txt = v > 0.5 ? String(Math.round(v)) : (mm && mm[1] === r.f && c.event.startsWith('M/C') ? 'M/C' : ''); }
+          else if (r.kind === 'dep') { v = dep[`${l}|${d}|${r.c}`] || 0; txt = v > 0.5 ? String(Math.round(v)) : ''; }   // 일별 칸은 쉼표 없이(한 달이 폭에 맞게)
           else { const u = (A.used[`${l}|${d}`] || 0) / 60; txt = u > 0 ? u.toFixed(1) : ''; }
           tot += v;
           const cls = [GP.isSwitch(c) ? 'mc' : '', GP.isDown(c) ? 'down' : '', d === today ? 'today' : ''].filter(Boolean).join(' ');
@@ -241,6 +241,7 @@
       });
     }
     $('g-table').innerHTML = h + '</tbody>';
+    { const r0 = $('g-table').tHead && $('g-table').tHead.rows[0]; if (r0) $('g-table').style.setProperty('--h1', r0.getBoundingClientRect().height + 'px'); }   // 둘째 머리줄(요일) 고정 위치 = 첫 줄 높이
     // 모바일 등 좁은 화면: 오늘(없으면 1일) 열이 보이게 가로 스크롤
     const wrap = document.querySelector('.gtable-wrap'), ti = ds.indexOf(today);
     if (wrap && wrap.scrollWidth > wrap.clientWidth) { const hs = $('g-table').querySelectorAll('thead tr:first-child th'), th = hs[2 + Math.max(0, ti - 1)], stick = hs[0].offsetWidth + hs[1].offsetWidth; wrap.scrollLeft = ti > 0 && th ? th.getBoundingClientRect().left - $('g-table').getBoundingClientRect().left - stick : 0; }   // 고정 열(라인·구분) 폭만큼 빼서 칸이 잘리지 않게

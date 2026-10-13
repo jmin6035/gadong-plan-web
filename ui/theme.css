@@ -805,3 +805,26 @@ div.up input { display: none; }
 div.up label .dl-tpl { align-self: flex-start; margin-top: 4px; font-size: 12.5px; font-weight: 700; color: var(--brand-2); background: none; border: 1px solid var(--line); border-radius: 7px; padding: 3px 9px; cursor: pointer; }
 div.up label .dl-tpl:hover { border-color: var(--brand-2); }
 .cc-src .tpl { margin-top: 8px; font-size: 12.5px; }
+
+/* 가동계획 표(도금·컬러 가동 현황): 넓은 화면은 한 달을 가로 스크롤 없이 폭에 맞춤, 표 안 세로 스크롤 대신 페이지 스크롤 + 날짜 머리줄 화면 위 고정 */
+@media (min-width: 1400px) {
+  html body .card:has(> .gtable-wrap), html body .card:has(.gtable-wrap) { overflow: visible; }
+  html body .gtable-wrap { overflow: visible; max-height: none; }
+  html body table.gtable { min-width: 0; width: 100%; font-size: 11px; }
+  html body .gtable th, html body .gtable td { min-width: 0; padding: 4px 0; letter-spacing: -0.5px; }
+  html body .gtable tr.r-fam td, html body .gtable tr.r-fam .c1 { font-size: 11px; }
+  html body .gtable tr.r-hrs td, html body .gtable tr.r-hrs .c1 { font-size: 10.5px; }
+  html body .gtable th.line { font-size: 13px; }
+  html body .gtable col.cc0 { width: 46px; } html body .gtable col.cc1 { width: 76px; } html body .gtable col.ctot { width: 54px; }
+  html body .gtable .c1 { left: 46px; padding-left: 4px; }
+  html body .gtable .tot { min-width: 0; }
+}
+@media (min-width: 1600px) {
+  html body table.gtable { font-size: 12.5px; }
+  html body .gtable tr.r-fam td, html body .gtable tr.r-fam .c1 { font-size: 13.5px; }
+  html body .gtable tr.r-hrs td, html body .gtable tr.r-hrs .c1 { font-size: 12px; }
+  html body .gtable th, html body .gtable td { padding: 6px 2px; letter-spacing: -0.2px; }
+  html body .gtable col.cc0 { width: 56px; } html body .gtable col.cc1 { width: 96px; } html body .gtable col.ctot { width: 70px; }
+  html body .gtable .c1 { left: 56px; }
+}
+html body .gtable td.sdblock { white-space: normal; word-break: keep-all; line-height: 1.35; font-size: 13px; padding: 4px 2px; }

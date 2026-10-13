@@ -89,13 +89,13 @@
         ds.forEach((d, i) => {
           const run = runs.find((x) => x[0] <= i && i <= x[1]);
           if (run) {
-            if (ri === 0 && i === run[0]) { const k = (dn[`${l}|${d}`] || []).find((x) => HARD.includes(x[0])); h += `<td class="sdblock" colspan="${run[1] - run[0] + 1}" rowspan="${rows.length}" title="${esc(dnTxt(l, d))}">${KN[k ? k[0] : 'repair']} ${md(ds[run[0]])}${run[1] > run[0] ? '~' + md(ds[run[1]]) : ''}</td>`; }
+            if (ri === 0 && i === run[0]) { const k = (dn[`${l}|${d}`] || []).find((x) => HARD.includes(x[0])); h += `<td class="sdblock${run[1] === run[0] ? ' one' : ''}" colspan="${run[1] - run[0] + 1}" rowspan="${rows.length}" title="${esc(dnTxt(l, d))}">${KN[k ? k[0] : 'repair']}<small>${md(ds[run[0]])}${run[1] > run[0] ? '~' + md(ds[run[1]]) : ''}</small></td>`; }
             return;
           }
           const c = by[`${l}|${d}`], T = c ? tot(c) : 0, idle = T < 0.5;
           let v = 0, txt = '';
-          if (r.k === 'fam') { v = T; txt = idle ? '' : fmt(v); }
-          else if (r.k === 'dep') { v = c ? c.g[r.g] || 0 : 0; txt = v > 0.5 ? fmt(v) : ''; }
+          if (r.k === 'fam') { v = T; txt = idle ? '' : String(Math.round(v)); }
+          else if (r.k === 'dep') { v = c ? c.g[r.g] || 0 : 0; txt = v > 0.5 ? String(Math.round(v)) : ''; }   // 일별 칸은 쉼표 없이
           else { const u = c ? c.min / 60 : 0; txt = u > 0 ? u.toFixed(1) : ''; }
           t += v;
           const part = dn[`${l}|${d}`];

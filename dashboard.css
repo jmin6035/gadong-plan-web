@@ -140,3 +140,9 @@ table.vs td small { color: var(--muted); font-weight: normal; }
 .report h3 { font-size: 15px; margin: 14px 0 4px; }
 .report p, .report li { line-height: 1.6; margin: 3px 0; }
 .report code { background: var(--soft); padding: 0 4px; border-radius: 3px; }
+
+/* 종일 정지 칸: 글자가 칸 밖으로 넘치지 않게 줄바꿈, 하루짜리는 세로쓰기 */
+.gtable td.sdblock { white-space: normal; word-break: keep-all; line-height: 1.35; font-size: 13px; padding: 4px 2px; overflow: hidden; }
+.gtable td.sdblock small { display: block; font-size: 11.5px; font-weight: 600; }
+.gtable td.sdblock.one { writing-mode: vertical-rl; text-orientation: upright; letter-spacing: 1px; font-size: 12px; }
+.gtable td.sdblock.one small { display: none; }
