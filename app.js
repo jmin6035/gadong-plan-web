@@ -211,7 +211,7 @@
     box.innerHTML = `<p><b>재계획 결과</b> — 실적 기준일 ${GP.md(rp.t0)}, 강종 동결 ~${rp.freezeUntil ? GP.md(rp.freezeUntil) : '없음'}${rp.optimal === true ? ' · 최적 증명 완료' : rp.optimal === false ? ' · ⚠ 최적 미증명(시간 제한)' : ''}</p>`
       + rp.notes.concat(GP.lockLines ? GP.lockLines(rp) : []).map((n) => `<p>· ${esc(n)}</p>`).join('')
       + `<p>· 전환 일정 변경: ${rp.removed.length || rp.added.length ? `없어짐 [${rp.removed.map(ev).join(', ') || '-'}] / 새로 생김 [${rp.added.map(ev).join(', ') || '-'}]` : '없음(기존 전환 일정 유지)'}</p>`
-      + `<p>· 지연 ${GP.fmt(rp.late)}톤·일${rp.shortBy.length ? `, 결품: ${rp.shortBy.map(esc).join(', ')}` : ', 결품 없음'}${rp.over.length ? `, 초과 생산: ${rp.over.map(esc).join(', ')}` : ''}</p>`;
+      + `<p>· 납기 지연 ${GP.fmt(GP.dueLate ? GP.dueLate(result) : rp.late)}톤·일${rp.shortBy.length ? `, 결품: ${rp.shortBy.map(esc).join(', ')}` : ', 결품 없음'}${rp.over.length ? `, 초과 생산: ${rp.over.map(esc).join(', ')}` : ''}</p>`;
   }
   function canvasFor(i) {
     const c = document.createElement('canvas');

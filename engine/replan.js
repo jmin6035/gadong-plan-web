@@ -142,6 +142,12 @@
     log && log(`재계획${replan.optimal ? '(최적 증명)' : '(최적 미증명 — 시간 제한)'}: M/C(남은 기간) ${milp.K}회, 지연 ${GP.fmt(milp.late)}톤·일, 결품 ${GP.fmt(milp.short)}t, 전환 변경 −${replan.removed.length}/+${replan.added.length}`);
     return Object.assign({}, R, { rows, cal, dest: dest.rows, destBad: dest.bad, slack: lev.slack, milp: Object.assign({}, milp, { base: R.milp }), replan });
   };
+  /* 납기 지연(톤·일) = 기준일 뒤 생산 중 원래 납기(수출 선적창 끝·월말)를 넘긴 양 × 일수. 결과 행으로 계산 —
+     재계획 MILP 의 지연 값에는 자가재 반순 납기(가중 0.01)도 섞여 있어 화면에는 이 값을 씀 */
+  GP.dueLate = function (R) {
+    const t0 = (R && R.replan && R.replan.t0) || '';
+    return GP.sum((R && R.rows || []).filter((r) => r[0] > t0 && r[0] > r[5]), (r) => r[4] * GP.diffDays(r[0], r[5]));
+  };
   /* 화면·보고 공용 문구: M/C 고정 상태와 이동 제안 */
   GP.lockLines = function (rp) {
     if (!rp || rp.lockMC == null) return [];
@@ -149,7 +155,8 @@
     const o = [rp.lockMC ? 'M/C 고정: 확정된 M/C·S/D 재가동 날짜를 바꾸지 않고 계산(인원 편성 유지)' : 'M/C 고정 해제 — M/C 일자 변경 가능'];
     for (const n of rp.lockNotes || []) o.push('⚠ ' + n);
     const q = rp.proposal;
-    if (q) o.push(`검토 요청 — M/C 이동 시: M/C ${q.lockedK}→${q.freeK}회, 지연 ${GP.fmt(q.lockedLate)}→${GP.fmt(q.freeLate)}톤·일, 결품 ${GP.fmt(q.lockedShort)}→${GP.fmt(q.freeShort)}t`
+    const sw = (rp.lockNotes || []).some((n) => n.indexOf('자가재 반순') >= 0);   // 자가재 반순 납기를 쓴 재계획: 지연 값 = 직판재 톤·일 + 자가재 반순 톤·일 × 0.01
+    if (q) o.push(`검토 요청 — M/C 이동 시: M/C ${q.lockedK}→${q.freeK}회, ${sw ? '지연 점수(직판재 톤·일 + 자가재 반순 톤·일×0.01)' : '지연'} ${GP.fmt(q.lockedLate)}→${GP.fmt(q.freeLate)}${sw ? '' : '톤·일'}, 결품 ${GP.fmt(q.lockedShort)}→${GP.fmt(q.freeShort)}t`
       + ` (빼기 ${q.drop.map(ev).join(', ') || '-'} / 넣기 ${q.add.map(ev).join(', ') || '-'}). 게시 계획은 고정안 — 바꾸려면 결정 후 기준 계획 수정`);
     return o;
   };

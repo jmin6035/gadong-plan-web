@@ -106,7 +106,7 @@
       <ul class="changes">${rp.notes.concat(GP.lockLines ? GP.lockLines(rp) : []).map((n) => `<li>${esc(n)}</li>`).join('')}
       ${(() => { const a = rp.actualWinT != null ? rp.actualWinT : rp.actualT; return rp.vsFrom && !(rp.vsPlan || []).length ? '' : `<li>실적 ${GP.fmt(a)}t / 같은 기간 계획 ${GP.fmt(rp.planToDateT)}t (${a >= rp.planToDateT ? '+' : ''}${GP.fmt(a - rp.planToDateT)}t)${rp.vsFrom ? ` — ${GP.md(rp.vsFrom)} 다음 날부터` : ''}</li>`; })()}
       <li>전환 일정: ${rp.removed.length || rp.added.length ? `<b>취소</b> ${rp.removed.map(ev).join(', ') || '-'} · <b>신규</b> ${rp.added.map(ev).join(', ') || '-'}` : '변경 없음'}</li>
-      <li>지연 ${GP.fmt(rp.late)}톤·일 · 결품 ${rp.shortBy.length ? rp.shortBy.map(esc).join(', ') : '없음'}</li></ul>` + vsPlanHtml(rp);
+      <li>납기 지연 ${GP.fmt(GP.dueLate ? GP.dueLate(R) : rp.late)}톤·일 · 결품 ${rp.shortBy.length ? rp.shortBy.map(esc).join(', ') : '없음'}</li></ul>` + vsPlanHtml(rp);
   }
   // 계획 대비 실적: 라인별 누계 달성률 + 최근 7일 + 부서 누계
   function vsPlanHtml(rp) {
