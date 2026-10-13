@@ -47,7 +47,9 @@
       [`${fmt(pl)}t`, '계획재', `4분기 생산의 ${fmt(pl / q * 100)}%`],
       [`${fmt(mx * 100, 1)}%`, '최대 월 부하', `${mxK} (편성 ÷ MES 월차)`, mx > 0.995],
     ].map(([v, l, sub, bad]) => `<div class="kpi ${bad ? 'bad' : ''}"><span class="kl">${l}</span><b>${v}</b><span class="ks">${sub}</span></div>`).join('');
-    const leg = '<span><i class="sw" style="background:var(--mc)"></i>휴지계획(S/D·청소·Test·샘플, 마우스를 올리면 시간)</span><span><i class="sw" style="background:var(--sd)"></i>종일 정지(수리·계획휴지) · 가동 없음</span>';
+    const kinds = new Set((O.colorDown || []).map((x) => x[2]));
+    const leg = Object.keys(KN).filter((k) => kinds.has(k)).map((k) => `<span><i class="sw k-${k}"></i>${KN[k]}</span>`).join('')
+      + '<span>· 휴지(h) 행 = 그날 휴지 시간(종류 색), 종일 정지는 블록</span><span><i class="sw" style="background:var(--sd)"></i>가동 없음</span>';
     $('g-legend').innerHTML = leg;
     $('g-tabs').innerHTML = MONTHS.map((m, i) => `<button type="button" data-g="${i}">${+m.slice(5)}월</button>`).join('');
     const t0 = localToday(), ti = MONTHS.indexOf(t0.slice(0, 7)), la = MONTHS.indexOf(lastAct.slice(0, 7));
@@ -78,31 +80,32 @@
       + ds.map((d) => { const w = wd(d); return `<th class="wk ${w === '토' ? 'sat' : w === '일' ? 'sun' : ''}">${w}</th>`; }).join('') + '</tr></thead><tbody>';
     for (const l of LINES) {
       const gs = CG.filter((g) => ds.some((d) => ((by[`${l}|${d}`] || { g: {} }).g[g] || 0) > 0.5));
-      const rows = [{ k: 'fam' }].concat(gs.map((g) => ({ k: 'dep', g })), [{ k: 'hrs' }]);
+      const rows = [{ k: 'fam' }].concat(gs.map((g) => ({ k: 'dep', g })), [{ k: 'hrs' }], ds.some((d) => dn[`${l}|${d}`]) ? [{ k: 'stop' }] : []);
       rows.forEach((r, ri) => {
         h += `<tr class="r-${r.k}${ri === 0 ? ' first' : ''}">`;
         if (ri === 0) h += `<th class="c0 line" rowspan="${rows.length}">${l}</th>`;
-        h += `<th class="c1">${r.k === 'fam' ? '<b>합계</b>' : r.k === 'dep' ? GL(r.g) : '가동시간(h)'}</th>`;
+        h += `<th class="c1">${r.k === 'fam' ? '<b>합계</b>' : r.k === 'dep' ? GL(r.g) : r.k === 'hrs' ? '가동시간(h)' : '휴지(h)'}</th>`;
         let t = 0;
         const fdIdx = ds.map((d, i) => (fullDay(l, d) ? i : -1)).filter((i) => i >= 0);
         const runs = []; fdIdx.forEach((i) => { const r0 = runs[runs.length - 1]; if (r0 && r0[1] === i - 1) r0[1] = i; else runs.push([i, i]); });
         ds.forEach((d, i) => {
           const run = runs.find((x) => x[0] <= i && i <= x[1]);
           if (run) {
-            if (ri === 0 && i === run[0]) { const k = (dn[`${l}|${d}`] || []).find((x) => HARD.includes(x[0])); h += `<td class="sdblock${run[1] === run[0] ? ' one' : ''}" colspan="${run[1] - run[0] + 1}" rowspan="${rows.length}" title="${esc(dnTxt(l, d))}">${KN[k ? k[0] : 'repair']}<small>${md(ds[run[0]])}${run[1] > run[0] ? '~' + md(ds[run[1]]) : ''}</small></td>`; }
+            if (ri === 0 && i === run[0]) { const k = (dn[`${l}|${d}`] || []).find((x) => HARD.includes(x[0])), kk = k ? k[0] : 'repair', n = run[1] - run[0] + 1; h += `<td class="sdblock k-${kk}${n === 1 ? ' one' : ''}" colspan="${n}" rowspan="${rows.length}" title="${esc(dnTxt(l, d))}">${KN[kk]}<small>${md(ds[run[0]])}${run[1] > run[0] ? '~' + md(ds[run[1]]) : ''}</small><small>${n * 24}h</small></td>`; }
             return;
           }
           const c = by[`${l}|${d}`], T = c ? tot(c) : 0, idle = T < 0.5;
           let v = 0, txt = '';
           if (r.k === 'fam') { v = T; txt = idle ? '' : String(Math.round(v)); }
           else if (r.k === 'dep') { v = c ? c.g[r.g] || 0 : 0; txt = v > 0.5 ? String(Math.round(v)) : ''; }   // 일별 칸은 쉼표 없이
-          else { const u = c ? c.min / 60 : 0; txt = u > 0 ? u.toFixed(1) : ''; }
+          else if (r.k === 'hrs') { const u = c ? c.min / 60 : 0; txt = u > 0 ? u.toFixed(1) : ''; }
+          else { const m0 = sum(dn[`${l}|${d}`] || [], (x) => x[1]); txt = m0 > 0 ? (m0 / 60).toFixed(m0 % 60 ? 1 : 0) : ''; }
           t += v;
-          const part = dn[`${l}|${d}`];
-          const cls = [idle ? 'idle' : '', part ? 'mc' : '', d === today ? 'today' : '', c && c.act ? 'act' : ''].filter(Boolean).join(' ');
+          const part = dn[`${l}|${d}`], pk = part ? part.slice().sort((a, b) => b[1] - a[1])[0][0] : '';   // 그날 가장 긴 휴지 종류의 색
+          const cls = [idle ? 'idle' : '', part ? (r.k === 'stop' ? `k-${pk}` : `kt-${pk}`) : '', d === today ? 'today' : '', c && c.act ? 'act' : ''].filter(Boolean).join(' ');
           h += `<td class="${cls}" style="--ci:${i}" data-d="${d}"${part ? ` title="${esc(dnTxt(l, d))}"` : ''}>${txt}</td>`;
         });
-        h += `<td class="tot">${r.k === 'hrs' ? '' : fmt(t)}</td></tr>`;
+        h += `<td class="tot">${r.k === 'hrs' ? '' : r.k === 'stop' ? fmt(sum(ds, (d) => sum(dn[`${l}|${d}`] || [], (x) => x[1])) / 60) : fmt(t)}</td></tr>`;
       });
     }
     $('g-table').innerHTML = h + '</tbody>';

@@ -828,3 +828,15 @@ div.up label .dl-tpl:hover { border-color: var(--brand-2); }
   html body .gtable .c1 { left: 56px; }
 }
 html body .gtable td.sdblock { white-space: normal; word-break: keep-all; line-height: 1.35; font-size: 13px; padding: 4px 2px; }
+/* 휴지 종류별 색(컬러 가동계획 표·범례): 계획휴지 회색, S/D 파랑, 수리 빨강, 청소 청록, Test 보라, 샘플 주황 */
+:root { --k-plan: #c9ced6; --k-sd: #8fb8ec; --k-repair: #f0a19a; --k-clean: #8fd6c0; --k-test: #cdb6ef; --k-sample: #f4c78e; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --k-plan: #4a515c; --k-sd: #2f5f99; --k-repair: #8a3a34; --k-clean: #24705d; --k-test: #5c4692; --k-sample: #8a6328; } }
+:root[data-theme="dark"] { --k-plan: #4a515c; --k-sd: #2f5f99; --k-repair: #8a3a34; --k-clean: #24705d; --k-test: #5c4692; --k-sample: #8a6328; }
+.sw.k-plan, html body .gtable td.k-plan { background: var(--k-plan); } .sw.k-sd, html body .gtable td.k-sd { background: var(--k-sd); }
+.sw.k-repair, html body .gtable td.k-repair { background: var(--k-repair); } .sw.k-clean, html body .gtable td.k-clean { background: var(--k-clean); }
+.sw.k-test, html body .gtable td.k-test { background: var(--k-test); } .sw.k-sample, html body .gtable td.k-sample { background: var(--k-sample); }
+html body .gtable tr.r-stop td, html body .gtable tr.r-stop .c1 { font-size: 11px; color: var(--ink); font-weight: 700; }
+html body .gtable tr.r-stop .c1 { font-weight: 500; color: var(--muted); }
+html body .gtable td.kt-plan { background: color-mix(in srgb, var(--k-plan) 35%, transparent); } html body .gtable td.kt-sd { background: color-mix(in srgb, var(--k-sd) 35%, transparent); }
+html body .gtable td.kt-repair { background: color-mix(in srgb, var(--k-repair) 35%, transparent); } html body .gtable td.kt-clean { background: color-mix(in srgb, var(--k-clean) 35%, transparent); }
+html body .gtable td.kt-test { background: color-mix(in srgb, var(--k-test) 35%, transparent); } html body .gtable td.kt-sample { background: color-mix(in srgb, var(--k-sample) 35%, transparent); }
