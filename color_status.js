@@ -98,7 +98,7 @@
           let v = 0, txt = '';
           if (r.k === 'fam') { v = T; txt = idle ? '' : String(Math.round(v)); }
           else if (r.k === 'dep') { v = c ? c.g[r.g] || 0 : 0; txt = v > 0.5 ? String(Math.round(v)) : ''; }   // 일별 칸은 쉼표 없이
-          else if (r.k === 'hrs') { const u = c ? c.min / 60 : 0; txt = u > 0 ? u.toFixed(1) : ''; }
+          else if (r.k === 'hrs') { const u = c ? Math.min(1440, c.min || 0) / 60 : 0; txt = u > 0 ? u.toFixed(1) : ''; }
           else { const m0 = sum(dn[`${l}|${d}`] || [], (x) => x[1]); txt = m0 > 0 ? (m0 / 60).toFixed(m0 % 60 ? 1 : 0) : ''; }
           t += v;
           const part = dn[`${l}|${d}`], pk = part ? part.slice().sort((a, b) => b[1] - a[1])[0][0] : '';   // 그날 가장 긴 휴지 종류의 색
@@ -135,7 +135,7 @@
     const m = d.slice(0, 7), mm = +m.slice(5), nd = daysOf(m).length, el = +d.slice(8) / nd;
     const dd = (x) => Math.round((new Date(x) - new Date(d)) / 864e5);
     $('d-now').innerHTML = LINES.map((l) => {
-      const c = by[`${l}|${d}`], T = c ? tot(c) : 0, hrs = c ? (c.min || 0) / 60 : 0;
+      const c = by[`${l}|${d}`], T = c ? tot(c) : 0, hrs = c ? Math.min(1440, c.min || 0) / 60 : 0;
       const gs = c ? Object.entries(c.g).filter(([, v]) => v > 0.5).sort((a, b) => b[1] - a[1]) : [];
       const pa = {}; if (c) for (const r of c.rows) pa[r[1]] = (pa[r[1]] || 0) + (+r[5] || 0);
       const items = Object.entries(pa).sort((a, b) => b[1] - a[1]).slice(0, 3).map(([k, v]) => `<li><span>${esc(k)}</span><b>${fmt(v)}t</b></li>`).join('');

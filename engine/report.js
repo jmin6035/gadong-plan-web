@@ -61,7 +61,9 @@
     const late = R.rows.filter((r) => r[0] > r[5]);
     const earlyT = GP.sum(early, (r) => r[4]), lateT = GP.sum(late, (r) => r[4]);
     const demand = GP.sum(R.buckets, (b) => b.orig), prod = GP.sum(R.rows, (r) => r[4]);
-    return { H, mIdx, used, prodLD, calBy, load, capM, usedM, idle, events, mc, campaigns, campOf, early, earlyT, late, lateT, demand, prod, short: Math.max(0, demand - prod) };
+    // 화면 가동시간(분): 하루 1,440분을 넘지 않게. 실적 날은 MES 실제 가동시간(actMin, 화면이 도금 실적 자료로 채움)을 우선, 없으면 생산 t ÷ 계획 속도(최대 1,440)
+    const dayMin = function (l, d) { const a = this.actMin && this.actMin[`${l}|${d}`]; return Math.min(1440, a != null ? a : (used[`${l}|${d}`] || 0)); };
+    return { dayMin, actMin: null, H, mIdx, used, prodLD, calBy, load, capM, usedM, idle, events, mc, campaigns, campOf, early, earlyT, late, lateT, demand, prod, short: Math.max(0, demand - prod) };
   };
 
   const topBy = (by, n) => Object.entries(by).sort((a, b) => b[1] - a[1]).slice(0, n);

@@ -102,6 +102,34 @@
   }
 
   // ---------- ② 재고·소재 추이 표 ----------
+  // ---------- 실제 재고(판매생산속보 + MES 일별 재고) — 아래 주별 추이는 계획 기준 예측 ----------
+  let PT = null;                                                     // portal.enc.json(사내 PC 매일 게시): sr.stock · stockHist · stockTrend
+  const KIND = { '도금 소재(F/H)': '소재_G', '컬러 소재': '소재_C', '도금 제품(판매재)': '도금제품', '컬러 제품': '컬러제품' };
+  function trendSvg(pts) {                                           // pts = [[날짜, t]] — 점마다 날짜·값(마우스를 올리면 보임), 양 끝 날짜·값 글자
+    if (!pts.length) return '';
+    const W = 260, H = 70, v = pts.map((p) => p[1]), mx = Math.max(...v), mn = Math.min(...v), sp = mx - mn || 1, n = pts.length;
+    const xy = pts.map(([d, t], i) => [8 + i * (W - 16) / Math.max(1, n - 1), 12 + (1 - (t - mn) / sp) * (H - 30)]);
+    const md = (d) => `${+d.slice(5, 7)}/${+d.slice(8, 10)}`;
+    return `<svg viewBox="0 0 ${W} ${H}" class="st-tr" role="img" aria-label="일별 재고"><polyline fill="none" stroke="var(--brand)" stroke-width="1.6" points="${xy.map(([x, y]) => `${x.toFixed(1)},${y.toFixed(1)}`).join(' ')}"/>
+      ${xy.map(([x, y], i) => `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="2.4" fill="var(--brand)"><title>${md(pts[i][0])} ${n0(pts[i][1])}t</title></circle>`).join('')}
+      <text x="4" y="${H - 3}" font-size="9" fill="var(--ink-2)">${md(pts[0][0])} ${n0(pts[0][1])}</text><text x="${W - 4}" y="${H - 3}" font-size="9" fill="var(--ink-2)" text-anchor="end">${md(pts[n - 1][0])} ${n0(pts[n - 1][1])}</text></svg>`;
+  }
+  function secActual() {
+    if (!PT || !PT.sr || !(PT.sr.stock || []).length) return { html: '' };
+    const sc = UI.scope(), inS = (nm) => sc === 'all' || (sc === 'G' ? nm.startsWith('도금') : nm.startsWith('컬러'));
+    const H = PT.stockHist || [], T = PT.stockTrend || [];
+    const rows = PT.sr.stock.filter((x) => inS(x.name)).map((x) => {
+      const r = x.target ? x.current / x.target : null, tone = r == null ? '' : r > 1.3 || r < 0.7 ? 'bad' : r > 1.15 || r < 0.9 ? 'warn' : 'good';
+      const hs = H.filter((h) => h[x.name]).map((h) => [h.d, h[x.name][1]]);
+      const mk = KIND[x.name], tr = mk ? T.filter((t) => t[1] === mk).map((t) => [t[0], t[2]]) : [];
+      return `<tr><td class="l"><b>${esc(x.name)}</b></td><td>${x.target ? n0(x.target) : '-'}</td><td><b>${n0(x.current)}</b></td><td class="${tone}">${r == null ? '-' : Math.round(r * 100) + '%'}</td>
+        <td>${hs.length > 1 ? trendSvg(hs) : `<span class="muted small">${hs.length ? '속보 날짜별 기록 쌓는 중(' + hs.length + '일)' : '-'}</span>`}</td>
+        <td>${tr.length ? trendSvg(tr) + (mk === '소재_G' ? '' : '<div class="small muted">집계 범위가 속보와 다름 — 흐름만 참고</div>') : '-'}</td></tr>`;
+    }).join('');
+    return { html: `<section class="card" id="s-actual"><h2>실제 재고 <small>판매생산속보 ${esc(PT.sr.asOf || '')} · MES 일별 재고 — 예측 아님</small></h2>
+      <div class="scroll"><table class="t"><thead><tr><th class="l">항목</th><th>목표(t)</th><th>현재(t)</th><th>목표 대비</th><th>날짜별(속보)</th><th>MES 일별 재고(9/30~어제)</th></tr></thead><tbody>${rows}</tbody></table></div>
+      <p class="small">현재·목표 = 판매생산속보(매일 07:16 갱신)의 재고 현황 그대로. 날짜별(속보) = 사내 PC가 매일 받은 속보를 쌓은 값. MES 일별 재고 = 속보 원천 표(7·8·9)의 일별 합계(사내·사외 창고) — 도금 F/H는 속보와 같고, 나머지는 집계 범위가 달라 값이 다를 수 있음. 점에 마우스를 올리면 날짜별 값이 보입니다.<br>아래 '주별 추이'는 계획(생산 계획·판매 계획)으로 계산한 <b>예측</b>입니다.</p></section>` };
+  }
   function secStock() {
     const P = O.variants[V], W = O.weeks, today = new Date(Date.now() + 9 * 3600e3).toISOString().slice(0, 10);
     const wi = Math.max(0, W.findIndex((d) => d >= today)), last = W.length - 1;
@@ -309,7 +337,7 @@
   function render() {
     const r1 = secRule(), r2 = secNeed(), strip = (h) => h.replace(/^<section class="card" id="[^"]+">/, '').replace(/<\/section>$/, '');
     const refs = { html: `<details class="card more" id="s-refs"><summary><h2>계획 기준 · 추가 필요 자료 <small>배치 규칙과 아직 받지 못한 자료</small></h2></summary>${strip(r1.html)}${strip(r2.html)}</details>` };
-    const secs = [secStock(), refs];   // 일별 가동 = 가동·재고 캘린더·가동 현황, 매일 감시 = 자료 상태·가동 현황(겹쳐서 뺌)
+    const secs = [secActual(), secStock(), refs];   // 일별 가동 = 가동·재고 캘린더·가동 현황, 매일 감시 = 자료 상태·가동 현황(겹쳐서 뺌)
     $('g-main').innerHTML = secs.map((s) => s.html).join('');
     secs.forEach((s) => s.after && s.after());
     UI.sub(`${{ all: '제품·자가재', G: '도금 제품·자가재', C: '컬러 제품' }[UI.scope()]} 주말 재고 — 목표 대비 · 2026년 10~12월 · 계산 ${O.built.replace('T', ' ')}`);
@@ -328,6 +356,7 @@
       try { localStorage.setItem(PW_KEY, pw); } catch (e) { /* 저장 불가 무시 */ }
       V = O.rec && O.variants[O.rec] ? O.rec : vlist()[0];
       render();
+      GP.latest('portal.enc.json').then((e) => (e ? GP.decryptJSON(e, pw) : null)).then((x) => { if (x) { PT = x; rerender(); } }).catch(() => { /* 실제 재고 없으면 예측만 */ });
       UI.onScope(() => rerender());
     } catch (e) { $('g-form').hidden = false; $('g-msg').textContent = pw ? '암호가 맞지 않습니다' : ''; }
   }

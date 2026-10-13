@@ -28,6 +28,7 @@
       try { if ($('d-remember').checked) localStorage.setItem(PW_KEY, $('d-pw').value); else localStorage.removeItem(PW_KEY); } catch (e) { /* 저장 불가 */ }
       $('d-unlock-msg').textContent = '';
       load(o);
+      actualMinutes($('d-pw').value);
     } catch (e) { $('d-unlock-msg').textContent = '⚠ ' + e.message; try { localStorage.removeItem(PW_KEY); } catch (x) { /* 무시 */ } }
   }
   $('d-unlock').onsubmit = (ev) => { ev.preventDefault(); unlock(); };
@@ -41,6 +42,15 @@
     $('d-date').min = H.D0; $('d-date').max = H.D1;
     $('d-date').value = today < H.D0 ? H.D0 : today > H.D1 ? H.D1 : today;
     render();
+  }
+  // 지난 날짜 가동시간 = MES 도금 실적(사내 PC 게시 plating_actual.enc.json 의 dayMin) — 없으면 환산값(최대 24h)
+  async function actualMinutes(pw) {
+    try {
+      const e = await GP.latest('plating_actual.enc.json'); if (!e || !A) return;
+      const x = await GP.decryptJSON(e, pw); if (!x || !x.dayMin) return;
+      A.actMin = {}; for (const [d, L] of Object.entries(x.dayMin)) for (const [l, m] of Object.entries(L)) A.actMin[`${l}|${d}`] = m;
+      render();
+    } catch (err) { /* 실적 자료 없으면 환산값 */ }
   }
   function localToday() { const d = new Date(); return GP.ymd(d.getFullYear(), d.getMonth() + 1, d.getDate()); }
 
@@ -161,7 +171,7 @@
   function showTip(el, ev) {
     const l = el.dataset.l, d = el.dataset.d, c = A.calBy[`${l}|${d}`];
     const deps = {}; for (const [dd, ll, a, cl, t] of R.rows) if (dd === d && ll === l) deps[cl] = (deps[cl] || 0) + t;
-    const u = A.used[`${l}|${d}`] || 0;
+    const u = A.dayMin(l, d);
     tip.innerHTML = `<b>${l} · ${GP.md(d)}(${GP.weekday(d)}) · ${c.fam}</b>${c.event ? `<div>${esc(c.event)} (손실 ${GP.fmt(c.mcdummy)}분)</div>` : ''}<div>생산 ${GP.fmt(A.prodLD[`${l}|${d}`] || 0)}t · 가동률 ${c.cap > 0 ? GP.fmt(u / c.cap * 100) : 0}%</div><table>${Object.entries(deps).sort((a, b) => b[1] - a[1]).map(([k, v]) => `<tr><td>${k}</td><td class="n">${GP.fmt(v)}t</td></tr>`).join('')}</table>`;
     tip.hidden = false;
     const x = Math.min(ev.clientX + 12, window.innerWidth - tip.offsetWidth - 8), yy = Math.max(8, ev.clientY - tip.offsetHeight - 12);
@@ -232,7 +242,7 @@
           let v = 0, txt = '';
           if (r.kind === 'fam') { v = fam[`${l}|${d}|${r.f}`] || 0; const mm = GP.isSwitch(c) && /\((.+)→/.exec(c.event); txt = v > 0.5 ? String(Math.round(v)) : (mm && mm[1] === r.f && c.event.startsWith('M/C') ? 'M/C' : ''); }
           else if (r.kind === 'dep') { v = dep[`${l}|${d}|${r.c}`] || 0; txt = v > 0.5 ? String(Math.round(v)) : ''; }   // 일별 칸은 쉼표 없이(한 달이 폭에 맞게)
-          else { const u = (A.used[`${l}|${d}`] || 0) / 60; txt = u > 0 ? u.toFixed(1) : ''; }
+          else { const u = A.dayMin(l, d) / 60; txt = u > 0 ? u.toFixed(1) : ''; }
           tot += v;
           const cls = [GP.isSwitch(c) ? 'mc' : '', GP.isDown(c) ? 'down' : '', d === today ? 'today' : ''].filter(Boolean).join(' ');
           h += `<td class="${cls}${txt === 'M/C' ? ' mclab' : ''}" style="--ci:${i}">${txt}</td>`;

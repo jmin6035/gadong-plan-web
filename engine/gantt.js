@@ -62,7 +62,7 @@
           if (c.blackout) o.bg = C.sd;
           else {
             if (GP.isSwitch(c)) o.bg = C.mc; else if (GP.isDown(c)) o.bg = C.down;
-            if (key === 'hrs') { const h = (A.used[`${l}|${ds}`] || 0) / 60; t = h > 0 ? h.toFixed(0) : ''; }
+            if (key === 'hrs') { const h = (A.dayMin ? A.dayMin(l, ds) : Math.min(1440, A.used[`${l}|${ds}`] || 0)) / 60; t = h > 0 ? h.toFixed(0) : ''; }
             else {
               const v = famLD[`${l}|${ds}|${key}`] || 0; tot += v;
               t = v > 0.5 ? GP.fmt(v) : (GP.isSwitch(c) && /\((.+)→/.exec(c.event) && /\((.+)→/.exec(c.event)[1] === key ? (c.event.startsWith('M/C') ? 'M/C' : '') : '');
