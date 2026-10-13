@@ -133,7 +133,7 @@
   function dueCard(O) {
     const sc = UI.scope(), q = sc === 'all' ? O.procure : (O.procureBy || {})[sc] || O.procure;
     if (!q) return '';
-    return `<h2>발주 마감 임박 <small>1순위 업체 · 2주 내</small><span class="unit">톤</span></h2>
+    return `<h2>발주 마감 임박 <small>기본 업체(27년 배정 최대) · 2주 내</small><span class="unit">톤</span></h2>
       <table class="mini"><tbody>${(q.nearTop || []).slice(0, 6).map((x) => `<tr><td><b>${md(x.deadline)}</b></td><td>${esc(x.mat)}</td><td class="r">${n0(x.t)}</td><td class="small">${esc(String(x.sup || '').slice(0, 10))}</td></tr>`).join('') || '<tr><td class="small">없음</td></tr>'}</tbody></table>
       <a class="more" href="procure.html">소재 발주 →</a>`;
   }
