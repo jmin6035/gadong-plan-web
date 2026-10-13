@@ -67,25 +67,35 @@
       const cand = S.sup.filter((s) => s.on && s.plant === u.plant && s.code === u.code).sort((a, b) => a.prio - b.prio);
       const specOk = (s) => !u.thk || !s.thk || (u.thk[0] >= s.thk[0] - 0.005 && u.thk[1] <= s.thk[1] + 0.005);
       const feas = cand.filter((s) => +s.lt <= left && specOk(s));
-      const first = cand[0];
       const dec = S.dec[u.key] || {};
-      const rec = feas[0] || null;
+      // 업체별 나눔(2026-10-14): 부족량을 27년 배정 비중대로 나눔(사양 맞는 업체만, 배정 없으면 균등) → 리드타임 안에 못 맞추는 업체 몫은 맞추는 업체로 넘김(배정 비중대로) → 담당자가 업체별 수량을 고치면 그 값
+      const elig = cand.filter(specOk), wsum = elig.reduce((a, x) => a + (+x.share || 0), 0);
+      const split = elig.map((x) => ({ s: x, t: short * (wsum > 0 ? (+x.share || 0) / wsum : 1 / elig.length), late: +x.lt > left, moved: 0, dl: addD(needBy, -x.lt) }));
+      const okP = split.filter((x) => !x.late), lateT = split.filter((x) => x.late).reduce((a, x) => a + x.t, 0);
+      if (lateT > 0 && okP.length) {
+        const ow = okP.reduce((a, x) => a + (+x.s.share || 0), 0);
+        okP.forEach((x) => { x.moved = lateT * (ow > 0 ? (+x.s.share || 0) / ow : 1 / okP.length); x.t += x.moved; });
+        split.forEach((x) => { if (x.late) { x.from = x.t; x.t = 0; } });
+      }
+      split.forEach((x) => { const q = dec['q:' + x.s.sup]; if (q != null && q !== '') x.t = +q || 0; });
+      const parts = split.filter((x) => x.t >= 1 && !x.late);
+      const rec = parts.slice().sort((a, b) => b.t - a.t)[0]?.s || feas[0] || null;
       let kind;
       if (POS) kind = 'pos';
       else if (short < 1) kind = 'ok';
       else if (!cand.length) kind = 'nosup';
-      else if (!rec) kind = S.arr.some((a) => a.code === u.code && plantOf(a.code) === u.plant) || autoArr().some((a) => a.code === u.code && a.plant === u.plant) ? 'adjust' : 'check';   // 그 소재 기발주를 넣었으면 '조정', 아니면 '기발주 확인'
-      else if (first && rec !== first) kind = 'alt';
+      else if (!okP.length) kind = S.arr.some((a) => a.code === u.code && plantOf(a.code) === u.plant) || autoArr().some((a) => a.code === u.code && a.plant === u.plant) ? 'adjust' : 'check';   // 그 소재 기발주를 넣었으면 '조정', 아니면 '기발주 확인'
+      else if (lateT >= 1) kind = 'alt';
       else kind = 'normal';
-      const deadline = first ? addD(needBy, -first.lt) : null;
-      return { ...u, needBy, left, short: POS ? 0 : short, cover, cand, feas, rec, kind, deadline, dec, specOk };
+      const deadline = parts.length ? parts.map((x) => x.dl).sort()[0] : (cand[0] ? addD(needBy, -cand[0].lt) : null);
+      return { ...u, needBy, left, short: POS ? 0 : short, cover, cand, feas, rec, kind, deadline, dec, specOk, split, parts: POS || short < 1 ? [] : parts };
     });
   }
   const inPeriod = (j) => {
     const w = diff(j.wk, monday(S.today)) / 7;
     return period === 'all' || (period === 'w1' && w < 1) || (period === 'w4' && w >= 1 && w < 4) || (period === 'w8' && w >= 4 && w < 8) || (period === 'w9' && w >= 8);
   };
-  const KIND = { ok: ['재고 충당', 'good'], normal: ['기본 업체', 'good'], alt: ['대체 업체', 'warn'], adjust: ['조정 필요', 'bad'], check: ['기발주 확인', 'warn'], nosup: ['업체 없음', 'bad'], pos: ['포스코 지급(임가공)', 'good'] };
+  const KIND = { ok: ['재고 충당', 'good'], normal: ['배정대로 나눔', 'good'], alt: ['일부 다른 업체로', 'warn'], adjust: ['조정 필요', 'bad'], check: ['기발주 확인', 'warn'], nosup: ['업체 없음', 'bad'], pos: ['포스코 지급(임가공)', 'good'] };
   const supName = (s) => (s ? ((D && D.supNames || {})[s.sup] || (s.name && s.name !== s.sup ? s.name : `업체 코드 ${s.sup}(이름 확인 중)`)) : '-');
 
   /* ---------- 화면 ---------- */
@@ -98,14 +108,14 @@
     const J = judge(), V0 = J.filter((j) => inPeriod(j) && UI.inScope(j.plant)), V = V0;
     const sum = (f) => V.filter(f).reduce((a, j) => a + j.short, 0);
     const cnt = (k) => V.filter((j) => j.kind === k).length;
-    const near = J.filter((j) => j.deadline && j.short >= 1 && diff(j.deadline, S.today) >= 0 && diff(j.deadline, S.today) <= 14).sort((a, b) => (a.deadline < b.deadline ? -1 : 1));
+    const near = J.flatMap((j) => (j.parts || []).filter((p) => diff(p.dl, S.today) >= 0 && diff(p.dl, S.today) <= 14).map((p) => ({ ...j, deadline: p.dl, p }))).sort((a, b) => (a.deadline < b.deadline ? -1 : 1));
     const nAdj = cnt('adjust') + cnt('nosup'), nChk = cnt('check');
     const kpiBox = (tone, l, v, unit, b, ck, extra = '') => `<div class="kpi tone-${tone}" data-rk="k-${ck}"><div class="l">${l}</div><div class="v ${extra}"><b data-count="${v}" data-ck="${ck}">${n0(v)}</b><small>${unit}</small></div><div class="b">${b}</div></div>`;
     const kp = `<div class="kpis">
       ${kpiBox('brand', '발주 필요(이 기간)', Math.round(sum(() => true)), 't', `${V.filter((j) => j.short >= 1).length}건 · 재고·입고예정 충당 후`, 'need')}
-      ${kpiBox(cnt('alt') ? 'warn' : 'good', '대체 업체 필요', cnt('alt'), '건', `배정이 가장 큰 업체의 리드타임이 남은 일수보다 김 · ${n0(sum((j) => j.kind === 'alt'))}t`, 'alt', cnt('alt') ? 'wv' : '')}
+      ${kpiBox(cnt('alt') ? 'warn' : 'good', '일부 다른 업체로', cnt('alt'), '건', `배정 업체 중 리드타임 안에 못 맞추는 몫을 다른 배정 업체로 넘김 · ${n0(sum((j) => j.kind === 'alt'))}t`, 'alt', cnt('alt') ? 'wv' : '')}
       <div class="kpi tone-${nAdj ? 'bad' : nChk ? 'warn' : 'good'}" data-rk="k-adj"><div class="l">기발주 확인 · 조정 필요</div><div class="v ${nAdj ? 'bv' : nChk ? 'wv' : ''}"><b data-count="${nChk}" data-ck="chk">${nChk}</b> · <b data-count="${nAdj}" data-ck="adj">${nAdj}</b><small>건</small></div><div class="b">리드타임 안쪽이라 새 발주로는 못 맞춤 · ${n0(sum((j) => ['adjust', 'nosup', 'check'].includes(j.kind)))}t</div></div>
-      ${kpiBox(near.length ? 'warn' : 'good', '2주 내 발주 마감(기본 업체)', near.length, '건', near[0] ? `최우선 ${esc(codeNm(near[0].code))} ${md(near[0].first)} 소요분 · ${md(near[0].deadline)} 마감` : '-', 'near')}</div>`;
+      ${kpiBox(near.length ? 'warn' : 'good', '2주 내 발주 마감(업체별)', near.length, '건', near[0] ? `최우선 ${esc(codeNm(near[0].code))} ${esc(supName(near[0].p.s))} ${n0(near[0].p.t)}t · ${md(near[0].deadline)} 마감` : '-', 'near')}</div>`;
     const ctl = `<div class="bar">
       <div class="tabs">${PERIODS.map(([k, n]) => `<button type="button" data-per="${k}" aria-pressed="${k === period}">${n}</button>`).join('')}</div>
       <label class="onlyshort"><input type="checkbox" id="p-only" ${onlyShort ? 'checked' : ''}> 발주 필요만 보기 <span class="muted">(${V.filter((j) => j.short >= 1).length}/${V.length})</span></label>
@@ -119,17 +129,13 @@
       const [kn, kc] = KIND[j.kind], d = j.dec;
       const okL = j.cand.filter((x) => j.specOk(x)).map((x) => +x.lt), minLT = okL.length ? Math.min(...okL) : null;
       const specNote = j.cand.some((x) => !j.specOk(x) && +x.lt <= j.left) ? ' · 더 빠른 업체는 두께 범위 밖' : '';
-      const sel = d.sup || (j.rec && j.rec.sup) || '';
-      const qty = d.qty != null && d.qty !== '' ? d.qty : Math.ceil(j.short);
-      const opts = ['<option value="">-</option>'].concat(j.cand.map((s) => `<option value="${esc(s.sup)}" ${s.sup === sel ? 'selected' : ''}>${esc(supName(s))} · LT ${s.lt}일${+s.lt > j.left ? ' (늦음)' : ''}${j.specOk(s) ? '' : ' (사양 밖)'}</option>`)).join('');
       const why = j.kind === 'pos' ? 'AL-STS 임가공 소재 — 포스코가 지급(팀 확인 10/12), 발주 대상 아님' : j.kind === 'ok' ? '재고·입고예정으로 충당'
         : j.kind === 'nosup' ? '등록된 업체 없음 → 업체 기준정보에 추가'
           : j.kind === 'check' ? `${minLT == null ? '두께 범위에 맞는 등록 업체 없음' : `남은 ${j.left}일 < 리드타임(최단 ${minLT}일)`} → 이미 발주돼 있어야 할 양(입고예정에 기발주 입력)${specNote}`
           : j.kind === 'adjust' ? `${minLT == null ? '두께 범위에 맞는 등록 업체 없음' : `남은 ${j.left}일 < 최단 LT ${minLT}일`} → 재고 전환·투입 순서 변경·자가재 대체 검토${specNote}`
-            : j.kind === 'alt' ? `기본 ${esc(supName(j.cand[0]))} LT ${j.cand[0].lt}일 > 남은 ${j.left}일 → ${esc(supName(j.rec))}(LT ${j.rec.lt}일)`
-              : `남은 ${j.left}일 ≥ LT ${j.rec.lt}일 · 시한 ${md(j.deadline)}`;
+            : `${j.parts.map((p) => `${esc(supName(p.s))} <b>${n0(p.t)}t</b> · 마감 ${md(p.dl)}`).join(' / ')}${j.kind === 'alt' ? ` <span class="muted">(${j.split.filter((x) => x.late && x.from >= 1).map((x) => `${esc(supName(x.s))} LT ${x.s.lt}일 > 남은 ${j.left}일 → ${n0(x.from)}t 넘김`).join(', ')})</span>` : ''}`;
       const isOpen = open[j.key], g = gi(j), gh = g !== lastG ? `<tr class="grp-h g${g}"><td colspan="7">${GH[g]} <span class="muted">${VR.filter((x) => gi(x) === g).length}건 · ${n0(VR.filter((x) => gi(x) === g).reduce((a, x) => a + x.short, 0))}t</span></td></tr>` : ''; lastG = g;
-      const decSum = j.short >= 1 ? `<button type="button" class="tg dsum" aria-expanded="${!!isOpen}"><span class="ds ${d.status && d.status !== '판단대기' ? 'set' : ''}">${esc(d.status || '판단대기')}</span>${sel ? ` <span class="muted">${esc(supName(j.cand.find((x) => x.sup === sel) || { sup: sel }))} · ${n0(qty)}t</span>` : ''}${d.memo ? ' <span class="muted">· 메모</span>' : ''} <b class="go">${isOpen ? '닫기 ▴' : '결정 입력 ▾'}</b></button>` : '<span class="muted">발주 불필요</span>';
+      const decSum = j.short >= 1 ? `<button type="button" class="tg dsum" aria-expanded="${!!isOpen}"><span class="ds ${d.status && d.status !== '판단대기' ? 'set' : ''}">${esc(d.status || '판단대기')}</span>${j.parts.length ? ` <span class="muted">${j.parts.length}개 업체 · ${n0(j.parts.reduce((a, p) => a + p.t, 0))}t</span>` : ''}${d.memo ? ' <span class="muted">· 메모</span>' : ''} <b class="go">${isOpen ? '닫기 ▴' : '결정 입력 ▾'}</b></button>` : '<span class="muted">발주 불필요</span>';
       return gh + `<tr class="u ${isOpen ? 'on' : ''}" data-k="${esc(j.key)}">
         <td class="l"><button type="button" class="tg" aria-expanded="${!!isOpen}" aria-label="용도 보기">${isOpen ? '▾' : '▸'}</button> ${md(j.first)} <span class="muted">(${j.left >= 0 ? 'D-' + j.left : -j.left + '일 지남'})</span></td>
         <td class="l">${PL[j.plant]} <b>${esc(codeNm(j.code))}</b>${j.thk ? ` <span class="muted">${j.thk[0]}~${j.thk[1]}mm</span>` : ''}</td>
@@ -137,13 +143,13 @@
         <td class="l jd"><span class="st ${kc}">${kn}</span><div class="why">${why}</div></td>
         <td class="l dec">${decSum}</td></tr>
         ${isOpen ? `<tr class="ux" data-k="${esc(j.key)}"><td colspan="7"><div class="${j.key === justOpened ? 'drop' : ''}">
-          ${j.short >= 1 ? `<div class="dg dg-open"><label>업체<select data-f="sup" aria-label="업체">${opts}</select></label><label>수량(t)<input data-f="qty" type="number" min="0" step="10" value="${esc(qty)}" aria-label="수량"></label><label>상태<select data-f="status" aria-label="상태">${STATUS.map((x) => `<option ${x === (d.status || '판단대기') ? 'selected' : ''}>${x}</option>`).join('')}</select></label><label class="wide">메모<input class="memo" data-f="memo" type="text" value="${esc(d.memo || '')}" placeholder="예: 10/14 구매팀 발주 완료" aria-label="메모"></label></div>` : ''}<div class="use"><b>무엇을 만들려고</b> ${j.use.slice().sort((a, b) => b[3] - a[3]).slice(0, 12).map((r) => `<span><i>${esc(r[0])}</i> ${esc(r[1])} ${esc(r[2])} <b>${n0(r[3])}t</b></span>`).join('')}</div>
+          ${j.short >= 1 ? `<div class="dg dg-open">${j.split.map((x) => `<label>${esc(supName(x.s))}<small class="muted" style="display:block;white-space:normal;font-weight:400">배정 ${Math.round((x.s.share || 0) * 100)}% · ${x.s.lt}일${x.late ? ' · 늦음' : ''}</small><input data-f="q:${esc(x.s.sup)}" type="number" min="0" step="10" value="${Math.round(x.t)}" aria-label="${esc(supName(x.s))} 수량"></label>`).join('')}<label>상태<select data-f="status" aria-label="상태">${STATUS.map((x) => `<option ${x === (d.status || '판단대기') ? 'selected' : ''}>${x}</option>`).join('')}</select></label><label class="wide">메모<input class="memo" data-f="memo" type="text" value="${esc(d.memo || '')}" placeholder="예: 10/14 구매팀 발주 완료" aria-label="메모"></label></div>` : ''}<div class="use"><b>무엇을 만들려고</b> ${j.use.slice().sort((a, b) => b[3] - a[3]).slice(0, 12).map((r) => `<span><i>${esc(r[0])}</i> ${esc(r[1])} ${esc(r[2])} <b>${n0(r[3])}t</b></span>`).join('')}</div>
           <div class="use"><b>업체별</b> ${j.cand.map((s) => `<span class="${+s.lt <= j.left && j.specOk(s) ? '' : 'no'}">${esc(supName(s))} 배정 ${Math.round((s.share || 0) * 100)}% · LT ${s.lt}일 → 발주 마감 ${md(addD(j.needBy, -s.lt))}${j.specOk(s) ? '' : ' · 두께 범위 밖'}</span>`).join('') || '-'}</div></div></td></tr>` : ''}`;
     }).join('');
     return card('p-board', '판단 보드', `기준일 ${S.today} · 필요일 = 컬러 투입 ${S.safetyC}일 · 도금 투입 ${S.safetyG}일 전 입고`, kp + ctl + `
       <div class="scroll"><table class="t bd"><thead><tr><th class="l">첫 필요일</th><th class="l">소재</th><th>필요(t)</th><th>충당</th><th>발주 필요</th><th class="l">판단 · 사유</th><th class="l">결정</th></tr></thead>
       <tbody>${rows || '<tr><td colspan="7" class="c muted">이 기간에 해당 없음</td></tr>'}</tbody></table></div>
-      <p class="small">판단 단위 = 필요 주차 × 소재. 충당 = 현재 재고 + 필요일까지의 입고예정(이른 주부터). 남은 일수 = 첫 필요일 − 여유일(컬러 ${S.safetyC}일·도금 ${S.safetyG}일, 팀 소재 리드타임 표) − 기준일. 업체는 리드타임 ≤ 남은 일수 · 두께 범위 안에서 27년 배정이 가장 큰 곳을 기본으로 보여 줌 — 선택을 바꾸면 이 브라우저에 저장.</p>`);
+      <p class="small">판단 단위 = 필요 주차 × 소재. 충당 = 현재 재고 + 필요일까지의 입고예정(이른 주부터). 남은 일수 = 첫 필요일 − 여유일(컬러 ${S.safetyC}일·도금 ${S.safetyG}일, 팀 소재 리드타임 표) − 기준일. 부족량은 두께 범위에 맞는 업체에 27년 배정 비중대로 나눔(배정 없으면 균등) → 리드타임 안에 못 맞추는 업체 몫은 맞추는 배정 업체로 넘김. 업체별 수량을 고치면 이 브라우저에 저장.</p>`);
   }
 
   function arrivals() {
@@ -217,12 +223,13 @@
   function calTab() {
     const J = judge().filter((j) => UI.inScope(j.plant));
     const short = J.filter((j) => j.short >= 1 && j.kind !== 'pos');
-    const past = short.filter((j) => (j.rec ? addD(j.needBy, -j.rec.lt) : j.deadline || j.needBy) < S.today);
-    const soon = short.filter((j) => { const d = j.rec ? addD(j.needBy, -j.rec.lt) : j.deadline || j.needBy; return d >= S.today && diff(d, S.today) <= 14; });
+    const P_ = short.flatMap((j) => (j.parts.length ? j.parts.map((p) => ({ ...j, short: p.t, deadline: p.dl, p })) : [{ ...j, deadline: j.deadline || j.needBy, p: null }]));
+    const past = P_.filter((j) => j.deadline < S.today);
+    const soon = P_.filter((j) => j.deadline >= S.today && diff(j.deadline, S.today) <= 14).sort((a, b) => (a.deadline < b.deadline ? -1 : 1));
     const k = (tone, l, v, unit, b) => `<div class="kpi tone-${tone}"><div class="l">${l}</div><div class="v"><b data-count="${Math.round(v)}">0</b><small>${unit}</small></div><div class="b">${b}</div></div>`;
     return `<section class="card"><h2>발주 캘린더 <small>기준일 ${S.today} · 소요 시점 기준 업체 리드타임 역산 발주 마감 · 날짜 선택 시 상세</small><span class="unit">단위: 톤</span></h2>
       <div class="kpis">${k(past.length ? 'bad' : 'good', '발주 마감 지남(미발주)', Math.round(past.reduce((a, j) => a + j.short, 0)), 't', `${past.length}건 — MES 미입고 발주 반영 후에도 부족(발주 필요 여부 확인)`)}
-      ${k(soon.length ? 'warn' : 'good', '2주 내 발주 마감', Math.round(soon.reduce((a, j) => a + j.short, 0)), 't', `${soon.length}건 · 최우선 ${soon[0] ? `${esc(codeNm(soon[0].code))} ${md(soon[0].rec ? addD(soon[0].needBy, -soon[0].rec.lt) : soon[0].deadline || soon[0].needBy)}` : '-'}`)}
+      ${k(soon.length ? 'warn' : 'good', '2주 내 발주 마감', Math.round(soon.reduce((a, j) => a + j.short, 0)), 't', `${soon.length}건 · 최우선 ${soon[0] ? `${esc(codeNm(soon[0].code))}${soon[0].p ? ' ' + esc(supName(soon[0].p.s)) : ''} ${md(soon[0].deadline)}` : '-'}`)}
       ${k('brand', '부족(발주 필요) 합계', Math.round(short.reduce((a, j) => a + j.short, 0)), 't', `${short.length}건 · 재고·입고예정 차감 후`)}
       ${k(S.arr.length + autoArr().length ? 'good' : 'warn', '입고 예정(기발주)', S.arr.length + autoArr().length, '건', `MES 자동 ${n0(autoArr().reduce((s, a) => s + a.t, 0))}t${S.arr.length ? ` + 직접 ${S.arr.length}건` : ''} · 충당에 반영`)}</div>
       <div id="p-cal" style="margin-top:14px"></div></section>`;
@@ -232,20 +239,21 @@
     const ev = [];
     for (const j of J) {
       if (j.short < 1 || j.kind === 'pos') continue;
-      const dl = j.rec ? addD(j.needBy, -j.rec.lt) : (j.deadline || j.needBy);
-      const tone = dl < S.today ? 'bad' : diff(dl, S.today) <= 14 ? 'warn' : '';
-      ev.push({ d: dl, kind: 'order', chip: `${codeNm(j.code)} ${n0(j.short)}t`, tone, j, dl });
-      ev.push({ d: j.needBy, kind: 'need', chip: `${codeNm(j.code)} ${n0(j.short)}t`, j, dl });
+      for (const p of (j.parts.length ? j.parts : [null])) {                // 업체 몫마다 발주 마감
+        const dl = p ? p.dl : (j.deadline || j.needBy), tone = dl < S.today ? 'bad' : diff(dl, S.today) <= 14 ? 'warn' : '';
+        ev.push({ d: dl, kind: 'order', chip: `${codeNm(j.code)}${p ? ' ' + supName(p.s).replace(/POSCO\((.+)\)/, '$1') : ''} ${n0(p ? p.t : j.short)}t`, tone, j, dl, p });
+      }
+      ev.push({ d: j.needBy, kind: 'need', chip: `${codeNm(j.code)} ${n0(j.short)}t`, j, dl: j.deadline });
     }
     for (const a of S.arr) if (a.date) ev.push({ d: a.date, kind: 'arr', chip: `${codeNm(a.code)} ${n0(a.t)}t`, a });
     for (const a of autoArr()) if (UI.inScope(a.plant)) ev.push({ d: a.date, kind: 'arr', chip: `${codeNm(a.code)} ${n0(a.t)}t`, a: { sup: (D.supNames || {})[a.sup] || a.sup, code: a.code, t: a.t, po: a.po, memo: a.note } });
     const months = [...new Set(ev.map((e) => e.d.slice(0, 7)))].filter((m) => m >= S.today.slice(0, 7) || ev.some((e) => e.d.slice(0, 7) === m && e.tone === 'bad')).sort();
     if (!months.includes(S.today.slice(0, 7))) months.unshift(S.today.slice(0, 7));
-    const jRow = (e) => { const j = e.j; const s = j.rec || j.cand[0];
-      return `<tr><td>${PL[j.plant]}</td><td><b>${esc(codeNm(j.code))}</b></td><td>${n0(j.t)}</td><td>${n0(j.cover)}</td><td class="${e.tone === 'bad' ? 'bad' : ''}"><b>${n0(j.short)}</b></td><td>${s ? esc(supName(s)) : '<span class="tag bad">업체 없음</span>'}</td><td>${s ? s.lt + '일' : '-'}</td><td class="${e.tone === 'bad' ? 'bad' : e.tone === 'warn' ? 'warn' : ''}"><b>${md(e.dl)}</b></td><td>${md(j.needBy)}</td><td><span class="tag ${KIND[j.kind][1]}">${KIND[j.kind][0]}</span></td></tr>`; };
-    const HEAD = '<thead><tr><th>공장</th><th>소재</th><th>필요</th><th>재고·입고 충당</th><th>부족</th><th>업체(추천)</th><th>리드타임</th><th>발주 마감</th><th>입고 필요일</th><th>판정</th></tr></thead>';
+    const jRow = (e) => { const j = e.j; const s = e.p ? e.p.s : (j.rec || j.cand[0]);
+      return `<tr><td>${PL[j.plant]}</td><td><b>${esc(codeNm(j.code))}</b></td><td>${n0(j.t)}</td><td>${n0(j.cover)}</td><td class="${e.tone === 'bad' ? 'bad' : ''}"><b>${n0(e.p ? e.p.t : j.short)}</b></td><td>${s ? esc(supName(s)) : '<span class="tag bad">업체 없음</span>'}</td><td>${s ? s.lt + '일' : '-'}</td><td class="${e.tone === 'bad' ? 'bad' : e.tone === 'warn' ? 'warn' : ''}"><b>${md(e.dl)}</b></td><td>${md(j.needBy)}</td><td><span class="tag ${KIND[j.kind][1]}">${KIND[j.kind][0]}</span></td></tr>`; };
+    const HEAD = '<thead><tr><th>공장</th><th>소재</th><th>필요</th><th>재고·입고 충당</th><th>부족</th><th>업체</th><th>리드타임</th><th>발주 마감</th><th>입고 필요일</th><th>판정</th></tr></thead>';
     UI.cal($('p-cal'), { months, kinds: CK, events: ev, today: S.today, maxChips: 5,
-      note: '입고 필요일 = 그 주 첫 사용일 − 투입 여유(컬러 7일 · 도금 5일). 발주 마감 = 입고 필요일 − 추천 업체 리드타임. 빨간 칩 = 마감 지남, 진한 주황 = 2주 내 마감.',
+      note: '입고 필요일 = 그 주 첫 사용일 − 투입 여유(컬러 7일 · 도금 5일). 발주 마감 = 입고 필요일 − 업체별 리드타임(부족량을 27년 배정 비중대로 업체별로 나눔). 빨간 칩 = 마감 지남, 진한 주황 = 2주 내 마감.',
       detail: (d, evs) => {
         let h = '';
         const o = evs.filter((e) => e.kind === 'order'), n = evs.filter((e) => e.kind === 'need'), a = evs.filter((e) => e.kind === 'arr');
@@ -311,12 +319,12 @@
     const H = ['요청번호', '업체', '업체코드', '공장', '소재', '두께(mm)', '수량(t)', '입고 요청일', '첫 투입일', '리드타임(일)', '선정 사유', '용도(상위)', '메모', '발주번호(회신)', '약속 납기(회신)', '회신 메모'];
     const hr = ws.addRow(H); hr.font = { bold: true, color: { argb: 'FFFFFFFF' } }; hr.eachCell((c) => { c.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF1F3864' } }; c.alignment = { horizontal: 'center', vertical: 'middle', wrapText: true }; });
     const bySup = {};
-    L.forEach((j) => { const sup = j.dec.sup || (j.rec && j.rec.sup) || '미정'; (bySup[sup] = bySup[sup] || []).push(j); });
+    L.forEach((j) => (j.parts.length ? j.parts : [{ s: null, t: j.short }]).forEach((p) => { const sup = p.s ? p.s.sup : '미정'; (bySup[sup] = bySup[sup] || []).push([j, p]); }));
     let n = 0;
-    Object.keys(bySup).sort().forEach((sup) => bySup[sup].forEach((j) => {
-      const s = S.sup.find((x) => x.sup === sup && x.code === j.code && x.plant === j.plant);
-      const reason = !s ? '업체 미정' : (+s.lt > j.left ? `리드타임 ${s.lt}일 > 남은 ${j.left}일 — 확인 필요` : j.kind === 'alt' ? `기본 ${supName(j.cand[0])} 리드타임 초과 → 대체` : '기본 업체(배정 최대) · 리드타임 충족');
-      ws.addRow([`R${S.today.replace(/-/g, '').slice(2)}-${String(++n).padStart(3, '0')}`, s ? supName(s) : sup, sup, PL[j.plant], codeNm(j.code), j.thk ? `${j.thk[0]}~${j.thk[1]}` : '', Math.round(+(j.dec.qty || Math.ceil(j.short))), j.needBy, j.first, s ? +s.lt : '', reason,
+    Object.keys(bySup).sort().forEach((sup) => bySup[sup].forEach(([j, p]) => {
+      const s = p.s;
+      const reason = !s ? '업체 미정(리드타임 안 업체 없음)' : `27년 배정 ${Math.round((s.share || 0) * 100)}%대로 나눔${p.moved >= 1 ? ` + 늦는 업체 몫 ${Math.round(p.moved)}t 넘겨받음` : ''} · 리드타임 ${s.lt}일 ≤ 남은 ${j.left}일`;
+      ws.addRow([`R${S.today.replace(/-/g, '').slice(2)}-${String(++n).padStart(3, '0')}`, s ? supName(s) : sup, sup, PL[j.plant], codeNm(j.code), j.thk ? `${j.thk[0]}~${j.thk[1]}` : '', Math.round(p.t), j.needBy, j.first, s ? +s.lt : '', reason,
         j.use.slice().sort((a, b) => b[3] - a[3]).slice(0, 3).map((r) => `${r[1]} ${r[2]} ${Math.round(r[3])}t`).join(', '), j.dec.memo || '', '', '', '']);
     }));
     [10, 16, 8, 8, 16, 10, 9, 11, 11, 9, 30, 40, 16, 14, 13, 16].forEach((w, i) => { ws.getColumn(i + 1).width = w; });

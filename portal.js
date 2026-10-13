@@ -61,7 +61,7 @@
       ['C', K('C', tone(c.a / c.s), '컬러 생산 누계', c.a, 't', `일정 ${n0(c.s)} 대비 ${sg(c.a - c.s)} · 월차 ${n0(c.m)}`, pc(c.a, c.m), 'color_actual.html', 'kc')],
       ['GC', K('M', tone((sh.actual || 0) / (sh.sched || 1)), '출하 누계(전체)', sh.actual || 0, 't', `일정 ${n0(sh.sched || 0)} 대비 ${sg((sh.actual || 0) - (sh.sched || 0))}`, pc(sh.actual || 0, sh.month || 1), 'report.html', 'ks')],
       ['G', K('G', now.short ? 'bad' : now.late ? 'warn' : 'good', '도금 결품 예상', now.short || 0, 't', `지연 ${n0(now.late || 0)}톤·일 · 납기 임박 ${pl.tightN || 0}건`, null, 'status.html', 'kx')],
-      ['GC', K('M', q.near ? 'warn' : 'good', '2주 내 발주 마감', q.near || 0, '건', q.nearTop && q.nearTop[0] ? `최우선 ${esc(q.nearTop[0].mat)} ${md(q.nearTop[0].deadline)}` : '-', null, 'procure.html', 'kq')],
+      ['GC', K('M', q.near ? 'warn' : 'good', '2주 내 발주 마감', q.near || 0, '건', q.nearTop && q.nearTop[0] ? `최우선 ${esc(q.nearTop[0].mat)} ${esc(q.nearTop[0].sup || "")} ${md(q.nearTop[0].deadline)}` : '-', null, 'procure.html', 'kq')],
       ['GC', (() => { const hi = (cs || 0) >= (gs || 0) ? ['컬러 제품', cs] : ['도금 제품', gs]; return K('M', (hi[1] || 0) > 1.3 || (hi[1] || 0) < 0.7 ? 'bad' : (hi[1] || 0) > 1.15 ? 'warn' : 'good', `재고 / 목표 (${hi[0]})`, Math.round((hi[1] || 0) * 100), '%', `컬러 제품 ${cs ? Math.round(cs * 100) + '%' : '-'} · 도금 제품 ${gs ? Math.round(gs * 100) + '%' : '-'}`, null, 'report.html', 'kr'); })()],
     ];
     const has = [L.some((x) => x.pl === 'G'), L.some((x) => x.pl === 'C'), !!sh.month, !!pl.now, true, !!(sr.stock || []).length];   // 예전 형식 자료(라인·속보 요약 없음)면 그 칸은 숨김
