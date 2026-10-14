@@ -62,8 +62,6 @@
 .wo-l em { font-style: normal; font-weight: 800; font-size: 12.5px; } .wo-l em.ok { color: var(--good); } .wo-l em.no { color: var(--warn); }
 table.wo-c th small { display: block; font-weight: 500; }
 @media (max-width: 980px) { .wo-g { grid-template-columns: 1fr; } }
-#h-ex .exl { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 2px 18px; }
-@media (max-width: 980px) { #h-ex .exl { grid-template-columns: 1fr; } }
 /* 그룹 표 */
 table.gt { width: 100%; border-collapse: collapse; font-size: 13px; font-variant-numeric: tabular-nums; }
 table.gt th { font-size: 12.5px; font-weight: 700; color: var(--ink-3); text-align: right; padding: 4px 6px 6px; border-bottom: 1px solid var(--line); white-space: nowrap; }
@@ -79,14 +77,6 @@ table.gt td.gbar { width: 26%; min-width: 120px; }
 .hb u { position: absolute; top: 0; bottom: 0; background: repeating-linear-gradient(135deg, color-mix(in srgb, var(--gc) 45%, transparent) 0 3px, transparent 3px 6px); }
 .hb em { position: absolute; top: -3px; bottom: -3px; width: 2px; background: var(--ink); }
 table.gt .neg { color: var(--bad); font-weight: 700; } table.gt .pos { color: var(--good); font-weight: 700; } table.gt .mu { color: var(--ink-3); }
-/* 금일 확인 사항 */
-.exl { display: grid; gap: 4px; }
-.ex { display: grid; grid-template-columns: 10px 44px minmax(0, 1fr); gap: 8px; align-items: center; padding: 7px 8px; border-radius: 6px; text-decoration: none; color: var(--ink); font-size: 13px; transition: background .2s; }
-.ex:hover { background: var(--hover); }
-.ex i { width: 8px; height: 8px; border-radius: 50%; background: var(--warn); }
-.ex.bad i { background: var(--bad); }
-.ex .ar { font-size: 12.5px; font-weight: 800; text-align: center; border-radius: 4px; padding: 1px 0; background: var(--tint-2); color: var(--brand); }
-.ex span.t { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .more { font-size: 12.5px; margin-top: 6px; display: inline-block; }
 /* 작은 차트 */
 .lrow { display: grid; grid-template-columns: 34px 1fr 58px; gap: 8px; align-items: center; font-size: 13px; margin: 6px 0; }
@@ -135,7 +125,7 @@ table.mini td.r { text-align: right; font-variant-numeric: tabular-nums; }
   <div class="dash" id="h-dash">
     <div class="kstrip" id="h-k"><div class="skel" style="grid-column:1/-1"><i style="width:30%"></i><i></i></div></div>
     <div class="lines" id="h-lines"></div>
-    <div class="row2"><section class="card" id="h-week" hidden></section><section class="card" id="h-ex" hidden></section><section class="card" id="h-grp" hidden></section><section class="card" id="h-wo" hidden></section></div>
+    <div class="row2"><section class="card" id="h-week" hidden></section><section class="card" id="h-grp" hidden></section><section class="card" id="h-wo" hidden></section></div>
     <div class="row3"><section class="card" id="h-load" data-pl="G" hidden></section><section class="card" id="h-stock" hidden></section></div>
     <details class="basis" id="h-basis" hidden></details>
     <section class="card" id="h-menu"><h2>메뉴</h2><div class="menu" id="h-groups"></div></section>

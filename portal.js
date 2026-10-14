@@ -35,7 +35,6 @@
   const dim = (m) => new Date(+m.slice(0, 4), +m.slice(5, 7), 0).getDate();
   const DOM = (pl) => (pl === 'G' ? 'G' : pl === 'C' ? 'C' : 'M');
   let lastO = null;
-  const exPl = (e) => (e.area === '도금' ? 'G' : e.area === '컬러' ? 'C' : e.area === '재고' ? (/컬러/.test(e.text) ? 'C' : /도금/.test(e.text) ? 'G' : 'GC') : 'GC');
 
   // KPI 한 칸: 이름 · 큰 숫자 · 한 줄 보조 · 막대(진도) · 상태 점
   function K(dom, tone, l, v, unit, sub, bar, href, ck) {
@@ -106,13 +105,6 @@
     return `<h2>마케팅 그룹별 이번 달 <small>${g0 ? `도금 ~${md(g0.prod.asOf)}` : ''}${c0 ? ` · 컬러 ~${md(c0.prod.asOf)}` : ''}${s0 ? ` · 출하 ${esc(String(s0.asOf).slice(5, 10).replace('-', '/'))} 속보` : ''}</small><span class="unit">톤</span></h2>
       <div class="scroll"><table class="gt"><thead><tr><th class="l">그룹</th><th class="l">생산 진도 <span style="font-weight:400">(줄무늬 = 남은 계획, 선 = 월 계획)</span></th><th>실적 / 계획</th><th class="hide-m">남은</th><th class="hide-m">하루 필요</th><th>월말 예상</th><th>출하 / 월차</th><th class="hide-m">일정 대비</th></tr></thead>
       <tbody>${sec('G', '도금')}${sec('C', '컬러')}</tbody></table></div>`;
-  }
-  function exCard(O) {
-    let E = (O.exceptions || []).filter((e) => UI.inScope(exPl(e)));
-    const nb = E.filter((e) => e.lvl === 'bad').length, N = 8;
-    return `<h2>금일 확인 사항 <small>${E.length}건${nb ? `(긴급 ${nb})` : ''}</small></h2>
-      <div class="exl">${E.slice(0, N).map((e) => `<a class="ex ${e.lvl}" href="${e.link}" title="${esc(e.text)} — ${esc(e.who)}"><i></i><span class="ar">${esc(e.area)}</span><span class="t">${esc(e.text)}</span></a>`).join('') || '<p class="small">기준을 넘은 항목 없음</p>'}</div>
-      ${E.length > N ? `<details class="more"><summary>외 ${E.length - N}건</summary><div class="exl">${E.slice(N).map((e) => `<a class="ex ${e.lvl}" href="${e.link}"><i></i><span class="ar">${esc(e.area)}</span><span class="t">${esc(e.text)}</span></a>`).join('')}</div></details>` : ''}`;
   }
   function loadCard(O) {
     const p = O.planMonth || O.plating, mx = Math.max(...O.months.map((m, i) => p.g1[i] + p.g2[i])) * 1.04;
@@ -187,7 +179,6 @@
     const gh = grp(O); $('h-grp').innerHTML = gh; $('h-grp').hidden = !gh;
     const wh = woCard(O); $('h-wo').innerHTML = wh; $('h-wo').hidden = !wh;
     const wk = weekCard(O); $('h-week').innerHTML = wk; $('h-week').hidden = !wk;
-    $('h-ex').innerHTML = exCard(O); $('h-ex').hidden = false;
     $('h-load').innerHTML = loadCard(O); $('h-load').hidden = false;
     const sk = stockCard(O); $('h-stock').innerHTML = sk; $('h-stock').hidden = !sk;
     $('h-basis').innerHTML = basis(O); $('h-basis').hidden = false;
