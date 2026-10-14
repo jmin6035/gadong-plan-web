@@ -79,7 +79,7 @@
   // ---------- 소재 유형 캘린더(2026-10-14 회의): 줄 = 팀 리드타임 표 소재 유형, 칸 = 그날 발주할 양 · 들어올 양 ----------
   // 발주 = 소재 발주 화면과 같은 계산(ui/proccalc.js: 재고·기발주 충당 후 부족분을 27년 배정 비중대로 업체별로 나눔) — 업체별 발주 마감일에 놓음, 마감이 지난 몫은 오늘 칸(빨강)
   // 입고 = MES 기발주 입고 예정 + 새 발주분이 들어와야 할 날(입고 필요일 = 첫 사용일 − 투입 여유)
-  const TYPES = { G: ['P-FH', '수입-FH', 'P-FH(STS)'], C: ['P-GI', '서림GI', '수입GI', 'P-EG', '외부EG', 'P-CR', '동종AZ', 'P-MAC', '외부SUS', '외부Alu'] };
+  const TYPES = { G: ['P-FH', '수입-FH', '동종-FH', 'P-FH(STS)', '외부FH(STS)'], C: ['P-GI', '서림GI', '외부GI', '수입GI', '동종GI', 'P-EG', '외부EG', 'P-CR', '동종AZ', '수입AZ', 'P-MAC', 'P-SUS', '외부SUS', '외부Alu'] };
   const TPL = { G: '도금 소재', C: '컬러 소재' };
   function matPlan(P) {
     let S = null;
@@ -87,7 +87,7 @@
     S = C.load();
     const J = C.judge(), cls = {}, top = {}, T = {};
     for (const s_ of P.suppliers) { cls[`${s_.plant}:${s_.code}:${s_.sup}`] = s_.cls; const k = `${s_.plant}:${s_.code}`; if (!top[k] || (s_.share || 0) > (top[k].share || 0)) top[k] = s_; }
-    const clsOf = (plant, code, sup) => cls[`${plant}:${code}:${sup}`] || (top[`${plant}:${code}`] || {}).cls || '기타(업체 미등록 소재)';
+    const clsOf = (plant, code, sup) => ((P.supTypes || {})[sup] || {})[code] || cls[`${plant}:${code}:${sup}`] || (top[`${plant}:${code}`] || {}).cls || '기타(코드표에 없는 업체)';   // 제조사 코드(발주번호 앞 2자리) × 소재그룹 → 코드조회 소재제조업체의 소재유형
     const get = (plant, c) => (T[c] = T[c] || { plant, ord: {}, inb: {}, use: {} });
     const push = (o, d, e) => (o[d] = o[d] || []).push(e);
     for (const j of J) {                                                 // 생산 투입 = 그 주 소요(첫 사용일~주말에 고르게) × 업체 배정 비중 → 유형별
@@ -140,15 +140,44 @@
           return `<td data-c="${esc(c)}" data-k="${k}" data-d="${d}" class="v${mon_}${late ? ' late' : ''}${k === 'inb' && nw ? ' nw' : ''}" style="--ci:${i}" title="${esc(tip)}">${n0(t)}</td>`;
         }).join('')}<td class="tot">${s_ >= 0.5 ? n0(s_) : ''}</td></tr>`;
       });
+      if (supOpen) h += supRows(pl, c, R, ds);
     }
     $('s-cal3').innerHTML = head.replace(/<th data-d="([^"]+)" class="/g, (m, d) => `<th data-d="${d}" class="${wd(d) === 1 ? 'wk ' : ''}`) + '<tbody>' + h + '</tbody>';
-    $('s-cal3').querySelectorAll('td[data-c]').forEach((el) => el.onclick = () => typeDetail(el.dataset.c, el.dataset.d, el.dataset.k));
+    $('s-cal3').querySelectorAll('td[data-c]').forEach((el) => el.onclick = () => typeDetail(el.dataset.c, el.dataset.d, el.dataset.k, el.dataset.s || null));
+    const tg = $('s-suptg'); if (tg) { tg.textContent = supOpen ? '업체별 접기 ▴' : '업체별 펼치기 ▾'; tg.onclick = () => { supOpen = !supOpen; try { localStorage.setItem('cgl-supply-sup', supOpen ? '1' : '0'); } catch (e) { /* 무시 */ } cal(); }; }
+  }
+  // 유형 아래 업체별 줄(발주 · 입고): 27년 배정 업체(배정 큰 순) + 배정은 없지만 기발주가 들어오는 업체('배정 외')
+  const supOf = (e) => (e.x ? e.x.s.sup : e.a ? e.a.sup : e.s ? e.s.sup : null);
+  let supOpen = (() => { try { return localStorage.getItem('cgl-supply-sup') !== '0'; } catch (e) { return true; } })();
+  function supRows(pl, c, R, ds) {
+    const base = MP.P.suppliers.filter((x) => x.plant === pl && x.cls === c && (x.share || 0) > 0);
+    const sh = {}, nc = {}; for (const x of base) { sh[x.sup] = (sh[x.sup] || 0) + (x.share || 0); nc[x.sup] = (nc[x.sup] || 0) + 1; }   // 배정 비중은 소재코드마다 따로 — 한 업체가 여러 코드(F·H·T)를 받으면 % 대신 '배정'
+    const seen = new Set(Object.keys(sh));
+    for (const k of ['ord', 'inb']) for (const L of Object.values(R[k])) for (const e of L) { const s_ = supOf(e); if (s_) seen.add(s_); }
+    const list = [...seen].sort((a, b) => (sh[b] ? 1 : 0) - (sh[a] ? 1 : 0) || (sh[b] || 0) / (nc[b] || 1) - (sh[a] || 0) / (nc[a] || 1) || String(a).localeCompare(String(b)));
+    const nm = (sup) => (MP.P.supNames || {})[sup] || (base.find((x) => x.sup === sup) || {}).name || sup;
+    let h = '';
+    list.forEach((sup, si) => {
+      const any = ds.some((d) => ['ord', 'inb'].some((k) => sumT((R[k][d] || []).filter((e) => supOf(e) === sup)) >= 0.5));
+      if (!any) return;
+      [['ord', '발주', 'm-ord'], ['inb', '입고', 'm-inb']].forEach(([k, kn, cl], ri) => {
+        let s_ = 0;
+        h += `<tr class="sp ${cl} ${ri === 0 ? 'sp1' : ''}"><td class="lb"><span class="sn">${ri === 0 ? `${esc(nm(sup))}${sh[sup] ? ` <small>${nc[sup] > 1 ? '배정' : Math.round(sh[sup] * 100) + '%'}</small>` : ' <small class="ex">배정 외</small>'}` : ''}</span><span class="kd ${cl}">${kn}</span></td>${ds.map((d, i) => {
+          const L = (R[k][d] || []).filter((e) => supOf(e) === sup), t = sumT(L); s_ += t;
+          const mon_ = wd(d) === 1 ? ' wk' : '';
+          if (t < 0.5) return `<td class="e${mon_}"></td>`;
+          const late = L.some((e) => e.late), nw = L.some((e) => e.kind === 'new');
+          return `<td data-c="${esc(c)}" data-k="${k}" data-d="${d}" data-s="${esc(sup)}" class="v${mon_}${late ? ' late' : ''}${k === 'inb' && nw ? ' nw' : ''}" title="${esc(`${md(d)} ${nm(sup)} ${kn} ${n0(t)}t`)}">${n0(t)}</td>`;
+        }).join('')}<td class="tot">${s_ >= 0.5 ? n0(s_) : ''}</td></tr>`;
+      });
+    });
+    return h;
   }
   // 소재 유형 칸 상세: 어떤 소재(코드)를 어느 업체에 얼마 — 언제 들어와 언제 쓰고, 무엇을 만드는지(역으로 생산·용도)
-  function typeDetail(c, d, k) {
+  function typeDetail(c, d, k, sup) {
     const R = MP.T[c]; if (!R) return;
     const w0 = mondayOf(today), inRange = (x) => (d ? x === d : x >= w0 && x <= add(w0, 6));
-    const L = Object.entries(R[k]).filter(([x]) => inRange(x)).flatMap(([x, es]) => es.map((e) => ({ d: x, ...e })));
+    const L = Object.entries(R[k]).filter(([x]) => inRange(x)).flatMap(([x, es]) => es.filter((e) => !sup || supOf(e) === sup).map((e) => ({ d: x, ...e })));
     const when = d ? `${md(d)}(${WD[wd(d)]})` : `이번 주(${md(w0)}~${md(add(w0, 6))})`;
     const useTxt = (j) => j.use.slice().sort((a, b) => b[3] - a[3]).slice(0, 4).map((r) => `${esc(r[0])} ${esc(r[1])} ${esc(r[2])} ${n0(r[3])}t`).join(' · ');
     const rows = L.sort((a, b) => b.t - a.t).map((e) => {
