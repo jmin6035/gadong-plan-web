@@ -168,7 +168,7 @@
       g += `<path class="li" d="M${plan.map(([d, v]) => `${X(d).toFixed(1)},${Y(v).toFixed(1)}`).join('L')}" fill="none" stroke="var(--brand)" stroke-width="2.4" stroke-linejoin="round"/>`;
       g += plan.slice(1).map(([d, v]) => `<circle cx="${X(d).toFixed(1)}" cy="${Y(v).toFixed(1)}" r="2.6" fill="var(--brand)"><title>${md(d)} 주말 계획 ${n0(v)}t</title></circle>`).join('');
       g += `<polyline points="${ad.map(([d, v]) => `${X(d).toFixed(1)},${Y(v).toFixed(1)}`).join(' ')}" fill="none" stroke="var(--s3)" stroke-width="2.4" stroke-linejoin="round"/>`;
-      g += ad.map(([d, v, parts]) => `<circle cx="${X(d).toFixed(1)}" cy="${Y(v).toFixed(1)}" r="2.4" fill="var(--s3)"><title>실제 ${md(d)} 말 ${n0(v)}t (${K.act.map((k, i) => `${GN[k.replace('g:', '')] || k.replace('g:', '').replace('도금 제품(자가재)', '자가재')} ${n0(parts[i])}`).join(' · ')})</title></circle>`).join('');
+      g += ad.map(([d, v, parts]) => `<circle cx="${X(d).toFixed(1)}" cy="${Y(v).toFixed(1)}" r="2.4" fill="var(--s3)"><title>실제 ${md(d)} 말 ${n0(v)}t (${K.act.map((k, i) => `${k === '도금 제품(자가재)' ? '자가재' : GN[k.replace('g:', '')] || k.replace('g:', '')} ${n0(parts[i])}`).join(' · ')})</title></circle>`).join('');
       const a = ad[ad.length - 1], pw = pv.find(([d]) => d >= a[0]);
       return `<div class="st-chart"><h3>${K.nm} <small style="font-weight:500;color:var(--ink-3)">${K.sub}</small></h3>
         <div class="st-s" style="margin:2px 0 4px">실제 ${md(a[0])} 말 <b>${n0(a[1])}t</b> (${md(d0)} ${n0(ad[0][1])}t → ${a[1] >= ad[0][1] ? '+' : ''}${n0(a[1] - ad[0][1])}t)${pw ? ` · 계획 ${md(pw[0])} 주말 ${n0(pw[1])}t` : ''} · 12월 말 계획 ${n0(pv[last][1])}t</div>
@@ -192,6 +192,30 @@
       <div class="dc-grid st-charts">${rows.map(mini).join('')}</div>
       <details class="tv"><summary>주별 표로 보기 (단위 천t)</summary><div class="scroll"><table class="t heat"><thead>${head}</thead><tbody>${body}</tbody></table></div></details>
       <p class="small">구매 소재(F/H · 컬러 소재)의 재고·입고·발주는 <a href="procure.html">소재 발주</a>에서. 계산: 제품 = 9월말 재고 + 생산(컬러 실적·계획, 도금 계획) − 판매(컬러 = 월 판매 ÷ 일수, 도금 = 판매계획 품목이 납기일에 출고). 자가재 = 9월말 재고 + 도금 입고 − 컬러 출고(생산일 8일 전). 실제 재고(초록 선) = 판매생산속보 원천 표(MES 속보 8·9번 표)의 부서별 날짜별 합계 — 속보와 같은 값. 자가재는 속보에 강종별 값이 없어 실제 선 없음.</p>`) };
+  }
+
+  // 재고 그래프 마우스 올리면 수치(2026-10-14): 커서와 가장 가까운 날짜의 점들(계획·실제)을 한 상자에 — 점의 <title> 문구 그대로
+  function hoverTips(root) {
+    let tip = document.getElementById('st-tip');
+    if (!tip) { tip = document.createElement('div'); tip.id = 'st-tip'; tip.hidden = true; document.body.appendChild(tip); }
+    root.querySelectorAll('.st-chart svg').forEach((svg) => {
+      const pts = [...svg.querySelectorAll('circle')].filter((c) => c.querySelector('title'));
+      if (!pts.length) return;
+      const ring = document.createElementNS('http://www.w3.org/2000/svg', 'g'); svg.appendChild(ring);
+      svg.addEventListener('mousemove', (ev) => {
+        const r = svg.getBoundingClientRect(), vb = svg.viewBox.baseVal, x = (ev.clientX - r.left) * vb.width / r.width;
+        let best = Infinity; pts.forEach((c) => { const d = Math.abs(+c.getAttribute('cx') - x); if (d < best) best = d; });
+        if (best > vb.width * 0.04) { tip.hidden = true; ring.innerHTML = ''; return; }
+        const by = {}; pts.forEach((c) => { const k = c.getAttribute('fill'), d = Math.abs(+c.getAttribute('cx') - x); if (d <= vb.width * 0.04 && (!by[k] || d < by[k][0])) by[k] = [d, c]; });   // 선(색)마다 가장 가까운 점 하나
+        const near = Object.values(by).map((v) => v[1]);
+        tip.innerHTML = near.map((c) => `<div><i style="background:${c.getAttribute('fill')}"></i>${esc(c.querySelector('title').textContent)}</div>`).join('');
+        ring.innerHTML = near.map((c) => `<circle cx="${c.getAttribute('cx')}" cy="${c.getAttribute('cy')}" r="5.5" fill="none" stroke="${c.getAttribute('fill')}" stroke-width="2"/>`).join('');
+        tip.hidden = false;
+        const w = tip.offsetWidth, h = tip.offsetHeight;
+        tip.style.left = Math.min(window.innerWidth - w - 8, ev.clientX + 14) + 'px'; tip.style.top = Math.max(8, ev.clientY - h - 12) + 'px';
+      });
+      svg.addEventListener('mouseleave', () => { tip.hidden = true; ring.innerHTML = ''; });
+    });
   }
 
   // ---------- ③ 일별 가동(달력 표) ----------
@@ -347,6 +371,7 @@
     const secs = [secStock(), refs];   // 일별 가동 = 가동 캘린더·가동 현황, 매일 감시 = 자료 상태·가동 현황(겹쳐서 뺌)
     $('g-main').innerHTML = secs.map((s) => s.html).join('');
     secs.forEach((s) => s.after && s.after());
+    hoverTips($('g-main'));
     UI.sub(`${{ all: '제품·자가재', G: '도금 제품·자가재', C: '컬러 제품' }[UI.scope()]} 주말 재고 — 목표 대비 · 2026년 10~12월 · 계산 ${O.built.replace('T', ' ')}`);
     UI.reveal($('g-main'));
     const seg = document.querySelector('.seg');

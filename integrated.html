@@ -71,6 +71,9 @@ table.rules td.wrap, table.sum td.wrap { white-space: normal; }
 .st-v { font-size: 28px; font-weight: 800; letter-spacing: -.02em; margin: 6px 0 2px; font-variant-numeric: tabular-nums; } .st-v small { font-size: 14px; color: var(--ink-3); margin-left: 2px; }
 .st-s { font-size: 13px; color: var(--ink-2); } .st-s small { color: var(--ink-3); }
 .st-w { margin-top: 6px; font-size: 12.5px; font-weight: 700; color: var(--warn); } .st-w.st-bad { color: var(--bad); } .st-w.ok { color: var(--good); font-weight: 600; }
+#st-tip { position: fixed; z-index: 50; pointer-events: none; background: var(--surface); border: 1px solid var(--line); border-radius: 8px; box-shadow: 0 6px 18px rgba(0,0,0,.14); padding: 6px 10px; font-size: 12.5px; line-height: 1.55; white-space: nowrap; font-variant-numeric: tabular-nums; }
+#st-tip i { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 6px; vertical-align: 0; }
+.st-chart svg { cursor: crosshair; }
 .st-chart { border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px 4px; } .st-chart h3 { margin: 0 0 4px; font-size: 15px; }
 .st-chart svg { width: 100%; height: auto; display: block; } .st-chart path.li { animation: draw 1.2s var(--ease) backwards .2s; transform-origin: bottom; }
 .st-charts { margin-bottom: 8px; }
