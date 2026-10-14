@@ -20,7 +20,7 @@
     mail: svg('<rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 6 9-6"/>'),
   };
   const GROUPS = [
-    ['종합', [['supply.html', 'plan', '가동·재고 캘린더', '일별 가동·자가재·구매 소재(발주·입고·재고)·제품 재고', true], ['integrated.html', 'plan', '재고 추이', '확정 계획 기준 주별 제품·자가재 재고와 배치 기준'], ['report.html', 'report', '주간 보고', '도금·컬러 주간 계획 대비 실적 보고 양식']]],
+    ['종합', [['supply.html', 'plan', '가동 캘린더', '일별 도금·컬러 생산·제품 재고, 날짜별 품목과 소재 일정', true], ['matcal.html', 'plan', '소재 캘린더', '소재 유형별 발주·입고·생산 투입, 주별 발주량, 자가재 재고', true], ['integrated.html', 'plan', '재고 추이', '확정 계획 기준 주별 제품·자가재 재고와 배치 기준'], ['report.html', 'report', '주간 보고', '도금·컬러 주간 계획 대비 실적 보고 양식']]],
     ['도금', [['status.html', 'gantt', '가동 현황', '1·2CGL 월별 간트, 강종 전환, 부서별 물량', 0, 'G'], ['analysis.html', 'chart', '조건 분석', 'MES 실적으로 속도·M/C 손실·정지를 재산출해 계획 조건과 비교', 0, 'G'], ['plating_actual.html', 'chart', '도금 실적', '진도·일별·주별 생산·속도·강종·휴지·강종 전환', 0, 'G']]],
     ['컬러', [['color_status.html', 'gantt', '가동 현황', '1~4CCL 월별 간트, 라인 한도·편성, 그룹별 물량, 미편성', true, 'C'], ['color_analysis.html', 'chart', '조건 분석', 'MES 실적으로 라인·품명 t/hr 를 재산출해 계획 조건과 비교', true, 'C'], ['color_actual.html', 'chart', '컬러 실적', '진도·일별·주별 생산·속도·품명·휴지', 0, 'C'], ['planstock.html', 'box', '계획재', '계획재 운영안 187개 사양 재고·생산·판매 진도와 월말 재고 예측', true, 'C']]],
     ['소재', [['procure.html', 'truck', '소재 발주', '날짜별 발주 마감·입고 필요 캘린더, 업체 판단, 구매 요청서', true]]],

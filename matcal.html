@@ -1,0 +1,152 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>소재 캘린더</title>
+<meta name="description" content="일별 가동 · 자가재 · 구매 소재(발주·입고·재고) · 제품 재고를 한 달력에서">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 40'><defs><clipPath id='c'><rect width='40' height='40' rx='11'/></clipPath></defs><g clip-path='url(%23c)'><rect width='40' height='40' fill='%231b3f5f'/><path d='M-6 30 30-6h9L3 30z' fill='%233774a1'/><path d='M4 40 40 4v9L13 40z' fill='%236cb1d8'/><path d='M17 40 40 17v8L25 40z' fill='%23fff'/></g></svg>">
+<link rel="stylesheet" href="ui/theme.css">
+<style>
+.sbar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px; margin: 12px 0 10px; font-size: 13px; color: var(--ink-2); }
+.sbar b { color: var(--ink); }
+.order { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 10px; }
+.ob { border: 1px solid var(--line); border-left: 5px solid var(--gc-m); border-radius: 0 8px 8px 0; background: var(--gt-m); padding: 10px 12px; }
+.ob .t { font-size: 12.5px; font-weight: 800; color: var(--gc-m); }
+.ob .v { font-size: 24px; font-weight: 800; letter-spacing: -.6px; font-variant-numeric: tabular-nums; }
+.ob .v small { font-size: 13px; font-weight: 600; color: var(--ink-2); }
+.ob .s { font-size: 12.5px; color: var(--ink-2); }
+.alerts { display: grid; gap: 4px; margin-top: 10px; }
+.al { display: grid; grid-template-columns: 10px 64px 1fr; gap: 8px; align-items: center; font-size: 13.5px; padding: 6px 8px; border-radius: 6px; cursor: pointer; }
+.al:hover { background: var(--hover); }
+.al i { width: 8px; height: 8px; border-radius: 50%; background: var(--warn); } .al.bad i { background: var(--bad); }
+.al b { font-size: 12px; color: var(--ink-2); }
+/* 캘린더 */
+.calw { overflow: auto; max-height: calc(100vh - 110px); border: 1px solid var(--line); border-radius: 8px; background: var(--surface); }   /* 표 안 세로 스크롤 → 날짜 머리줄 고정 */
+table.sc { border-collapse: separate; border-spacing: 0; font-size: 12.5px; font-variant-numeric: tabular-nums; min-width: 1500px; width: 100%; }
+table.sc th, table.sc td { border-right: 1px solid var(--grid); border-bottom: 1px solid var(--grid); padding: 5px 3px; text-align: center; white-space: nowrap; min-width: 40px; }
+table.sc thead th { position: sticky; top: 0; z-index: 3; background: var(--tint-2); font-weight: 700; cursor: pointer; }
+table.sc thead th.we { color: var(--down); }
+table.sc thead th.today { background: var(--brand-2); color: #fff; }
+table.sc .lb { position: sticky; left: 0; z-index: 2; background: var(--surface); text-align: left; padding-left: 8px; font-weight: 700; min-width: 132px; border-right: 2px solid var(--line); }
+table.sc thead .lb { z-index: 4; background: var(--tint-2); }
+table.sc tr.sec td { background: var(--surface-2); font-size: 12px; font-weight: 800; letter-spacing: .04em; text-align: left; padding: 6px 8px; color: var(--gc); border-top: 2px solid var(--line); }
+table.sc tr.sec td.lb { color: var(--gc); background: var(--surface-2); }
+table.sc tr.sub .lb { font-weight: 500; color: var(--ink-2); padding-left: 18px; }
+table.sc td { cursor: pointer; animation: cellin .5s var(--ease) both; animation-delay: calc(var(--ci, 0) * 15ms); }
+table.sc td.z { color: var(--ink-3); }
+table.sc td.fAL { background: color-mix(in srgb, #1660c9 13%, var(--surface)); } table.sc td.fAZ { background: color-mix(in srgb, #e8590c 14%, var(--surface)); } table.sc td.fMAC { background: color-mix(in srgb, #0a9e8f 15%, var(--surface)); }
+table.sc td.mc { box-shadow: inset 0 -3px 0 #c98b00; font-weight: 800; }
+table.sc td.act { color: var(--ink-2); font-style: italic; }
+table.sc td.lo { background: var(--warn-bg); color: var(--warn); font-weight: 800; }
+table.sc td.neg { background: var(--bad-bg); color: var(--bad); font-weight: 800; }
+table.sc td.hi { background: var(--bad-bg); color: var(--bad); font-weight: 700; }
+table.sc td.ord { color: var(--gc-m); font-weight: 800; }
+table.sc td.inb { color: var(--good); font-weight: 700; }
+table.sc .sel { outline: 2px solid var(--ink); outline-offset: -2px; }
+table.sc td.tot, table.sc th.tot { font-weight: 800; background: var(--surface-2); min-width: 60px; }
+.lg { display: flex; flex-wrap: wrap; gap: 6px 14px; font-size: 12px; color: var(--ink-2); margin: 8px 2px 0; }
+.lg i { display: inline-block; width: 12px; height: 10px; border-radius: 2px; margin-right: 5px; vertical-align: -1px; }
+/* 상세 */
+.det .card table { width: 100%; }
+.det .card { padding: 14px 16px; }
+.det h3 { margin: 0 0 8px; font-size: 15px; }
+table.dt { width: 100%; border-collapse: collapse; font-size: 13px; font-variant-numeric: tabular-nums; }
+table.dt th { white-space: nowrap; font-size: 11.5px; color: var(--ink-3); text-align: left; padding: 3px 4px; border-bottom: 1px solid var(--line); font-weight: 700; }
+table.dt td { padding: 4px; border-bottom: 1px solid var(--grid); vertical-align: top; }
+table.dt td.r, table.dt th.r { text-align: right; }
+.why { font-size: 12px; color: var(--ink-3); line-height: 1.5; margin-top: 6px; }
+svg.tr { width: 100%; height: 190px; display: block; }
+svg.tr text { font-size: 13px; fill: var(--ink-3); }
+table.sc td.est { font-style: italic; opacity: .75; }
+table.sc td.fm { box-shadow: inset 0 0 0 3px #5b4bb7; font-weight: 800; }
+table.sc td.fu { box-shadow: inset 0 0 0 3px #0a9e8f; font-weight: 800; }
+table.fl tbody tr { cursor: pointer; } table.fl tbody tr:hover { background: var(--hover); } table.fl tr.on td { background: var(--tint-2); font-weight: 700; }
+.pre { display: inline-block; font-size: 12px; font-weight: 700; color: #8a5a00; background: color-mix(in srgb, #f2b705 22%, var(--surface)); border-radius: 4px; padding: 0 5px; margin-left: 4px; }
+table.dt.mt td { font-size: 12.5px; } table.dt.mt tr.cont td { border-top: 0; }
+table.dt.mt td.st { font-weight: 700; } table.dt.mt td.st.ok { color: var(--good); } table.dt.mt td.st.warn { color: var(--warn); } table.dt.mt td.st.info { color: var(--ink-3); font-weight: 500; } table.dt.mt td.st[data-f] { cursor: pointer; text-decoration: underline dotted; }
+.det .card.wide { grid-column: 1 / -1; }
+.flw { display: flex; flex-wrap: nowrap; align-items: center; gap: 3px; white-space: nowrap; } .flw i { font-style: normal; color: var(--ink-3); font-weight: 800; }
+.flw .fs { display: inline-flex; align-items: baseline; gap: 5px; line-height: 1.2; padding: 3px 8px; border-radius: 7px; background: var(--surface-2); border: 1px solid var(--line); }
+.flw .fs small { font-size: 10.5px; color: var(--ink-3); font-weight: 700; } .flw .fs b { font-size: 12.5px; font-weight: 800; white-space: nowrap; }
+.flw .fs.done { opacity: .6; } .flw .fs.done small::after { content: ' ✓'; }
+.flw .fs.now { background: var(--brand-2); border-color: var(--brand-2); } .flw .fs.now small, .flw .fs.now b { color: #fff; }
+table.dt.fl td { vertical-align: middle; padding: 5px 6px; } table.dt.fl td.st { white-space: normal !important; min-width: 150px; max-width: 220px; font-size: 12px; line-height: 1.35; } .det table.dt.fl td.wst { min-width: 0; } table.dt.fl tr:not(.cont) td { border-top: 1px solid var(--line); }
+.kd2 { display: inline-block; font-size: 11px; font-weight: 800; padding: 0 6px; border-radius: 999px; } .kd2.self { background: color-mix(in srgb, #5b4bb7 14%, var(--surface)); color: #5b4bb7; } .kd2.buy { background: color-mix(in srgb, #c46f00 14%, var(--surface)); color: #a35a00; }
+.srcl { font-size: 11.5px; color: var(--ink-3); margin-top: 2px; white-space: normal; max-width: 320px; }
+.fto { font-size: 12px; color: #0a7d71; font-weight: 700; margin-top: 2px; }
+.fin { display: flex; flex-direction: column; gap: 2px; margin: 0 0 6px; font-size: 12.5px; color: #5b4bb7; font-weight: 700; }
+.fl-r { cursor: pointer; } .fin .fl-r:hover, tr.fl-r:hover td { text-decoration: underline; }
+.band { display: flex; align-items: center; gap: 12px; margin: 26px 0 10px; font-size: 15px; color: var(--ink-2); }
+.band b { font-size: 20px; color: #fff; padding: 4px 14px; border-radius: 8px; letter-spacing: .02em; }
+.band-g b { background: var(--brand-2); } .band-m b { background: #b25e00; }
+.matcal table.sc thead th, .matcal table.sc thead .lb { background: color-mix(in srgb, #b25e00 14%, var(--surface)); }
+.matcal table.sc tr.sec td, .matcal table.sc tr.sec td.lb { color: #8a4a00; }
+table.sc td.inb2 { font-weight: 800; color: var(--good); } table.sc td.inb2::before { content: '▲'; font-size: 10px; margin-right: 2px; }
+table.sc td.dl { outline: 2px solid var(--bad); outline-offset: -2px; }
+table.sc td.nd { color: var(--ink-3); }
+.det > .card { overflow-x: auto; }
+.dethd { grid-column: 1 / -1; font-size: 18px; font-weight: 800; margin: 10px 0 2px; padding-left: 12px; border-left: 5px solid var(--brand-2); }
+.dethd.m { border-left-color: #b25e00; }
+.dethd { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; } .dethd > span { flex: 1; min-width: 0; }
+.dethd .fold { flex: none; font: inherit; font-size: 13.5px; font-weight: 700; color: var(--ink-2); background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 5px 12px; cursor: pointer; }
+.dethd .fold:hover { color: var(--brand-2); border-color: var(--brand-2); }
+.det.folded > :not(.dethd) { display: none; }
+.det table.dt td.wsrc { min-width: 170px; } .det table.dt td.wst { min-width: 210px; line-height: 1.45; } .dethd small { display: block; font-size: 13px; font-weight: 500; color: var(--ink-3); margin-top: 2px; }
+.det .card.wide { grid-column: 1 / -1; } .det table.dt td.neg, .det b.neg { color: var(--bad); }
+#s-cal3 td { cursor: default; } #s-cal3 td.v { cursor: pointer; font-weight: 700; } #s-cal3 td.e { background: transparent; }
+#s-cal3 tr.first td { border-top: 2px solid var(--line); } #s-cal3 td.wk, #s-cal3 th.wk { border-left: 2px solid var(--line); }
+#s-cal3 .lb { display: table-cell; min-width: 170px; } #s-cal3 .lb .tn { display: inline-block; min-width: 92px; font-weight: 800; color: var(--ink); }
+#s-cal3 .kd { display: inline-block; font-size: 11.5px; font-weight: 700; padding: 1px 7px; border-radius: 999px; }
+#s-cal3 .kd.m-ord { background: color-mix(in srgb, #c46f00 16%, var(--surface)); color: #a35a00; } #s-cal3 tr.m-ord td.v { color: #a35a00; background: color-mix(in srgb, #c46f00 9%, var(--surface)); }
+#s-cal3 .kd.m-inb { background: var(--good-bg); color: var(--good); } #s-cal3 tr.m-inb td.v { color: var(--good); background: color-mix(in srgb, var(--good) 8%, var(--surface)); } #s-cal3 tr.m-inb td.v.nw { background: transparent; box-shadow: inset 0 0 0 2px color-mix(in srgb, var(--good) 55%, transparent); }
+#s-cal3 .kd.m-use { background: var(--surface-2); color: var(--ink-2); } #s-cal3 tr.m-use td.v { color: var(--ink-2); font-weight: 500; }
+#s-cal3 td.v.late { background: var(--bad-bg) !important; color: var(--bad) !important; font-weight: 800; }
+#s-cal3 tr.m-use td { border-bottom: 1px solid var(--line); } #s-cal3 td.tot { font-weight: 800; background: var(--surface-2); }
+.wkbox { margin: 0 0 12px; } .wkh { font-size: 15px; font-weight: 800; margin-bottom: 8px; } .wkh small { font-weight: 500; color: var(--ink-3); margin: 0 6px; }
+.wkl { display: flex; flex-wrap: wrap; gap: 8px; } .wkc { all: unset; cursor: pointer; display: flex; flex-direction: column; gap: 2px; min-width: 110px; padding: 8px 12px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); }
+.wkc span { font-size: 12.5px; color: var(--ink-3); font-weight: 700; } .wkc b { font-size: 18px; } .wkc .neg { color: var(--bad); font-weight: 700; } .wkc:hover { border-color: var(--brand-2); }
+.det .neg { color: var(--bad); font-weight: 800; } .det .pos { color: var(--good); font-weight: 800; }
+</style>
+</head>
+<body>
+<header id="shell" data-page="matcal" data-crumb="종합" data-title="소재 캘린더" data-sub="소재 유형별 발주 · 입고 · 생산 투입 · 주별 발주량 · 자가재 재고"></header>
+<main class="wrap">
+  <section class="card lock" id="lock" style="margin-top:16px" hidden>
+    <h2>분석 암호를 입력하세요</h2>
+    <form class="unlock" id="f"><input type="password" id="pw" placeholder="분석 암호" aria-label="분석 암호"> <button>열기</button></form>
+    <p class="hint" id="msg"></p>
+  </section>
+  <div id="main" hidden>
+    <div class="sbar"><span id="s-meta"></span><div class="tabs" id="s-mon" role="group" aria-label="월"></div></div>
+        <section class="card matcal"><h2>소재 캘린더 <small>소재 유형별 발주 → 입고 → 생산 투입 — 칸을 누르면 업체·양·용도</small><span class="unit">톤</span></h2>
+      <div id="s-mcal"></div>
+      <div class="calw" id="s-calw3"><table class="sc tc" id="s-cal3"></table></div>
+      <div class="lg"><span><i style="background:color-mix(in srgb,#c46f00 16%,#fff)"></i>발주 — 업체별 발주 마감일</span><span><i style="background:var(--bad-bg)"></i>마감 지난 발주(오늘 칸에 모음)</span><span><i style="background:var(--good-bg)"></i>입고 — 기발주 입고 예정</span><span><i style="background:#fff;box-shadow:inset 0 0 0 2px var(--good)"></i>입고 — 새로 발주할 분이 들어와야 할 날</span><span><i style="background:var(--surface-2)"></i>생산 투입 — 그날 생산에 쓰는 양</span><span>굵은 세로선 = 주 시작(월)</span></div>
+      <details class="tv"><summary>자가재·구매 소재 일별 재고 표 보기 <small class="muted">기말 재고(톤) — 자가재는 계획 기준, 구매 소재는 추가 발주 없음 가정. ▲ = 입고(기발주), 붉은 테 = 발주 마감</small></summary>
+      <div class="calw" id="s-calw2"><table class="sc" id="s-cal2"></table></div>
+      <div class="lg"><span><i style="background:color-mix(in srgb,#1660c9 25%,#fff)"></i>AL</span><span><i style="background:color-mix(in srgb,#e8590c 25%,#fff)"></i>AZ</span><span><i style="background:color-mix(in srgb,#0a9e8f 25%,#fff)"></i>MAC</span><span><i style="background:#fff;box-shadow:inset 0 -3px 0 #c98b00"></i>M/C</span><span><i style="background:var(--warn-bg)"></i>재고 부족 주의(자가재 3일분 · 구매 소재 7일분 미만)</span><span><i style="background:var(--bad-bg)"></i>재고 소진·목표 130% 초과</span></div>
+      </details>
+    </section>
+    <div class="det" id="s-det2"></div>
+    <div class="chartrow"><section class="card" id="s-ch1"></section><section class="card" id="s-ch2"></section></div>
+    <details class="basis" style="margin-top:10px;font-size:12.5px;color:var(--ink-3)"><summary style="cursor:pointer;font-weight:700;color:var(--ink-2)">산출 기준</summary>
+      <ul style="line-height:1.7">
+        <li>가동·자가재·구매 소재·제품 재고 = 확정 통합 계획 기준. 매일 재계획 연동은 추후 반영.</li>
+        <li>자가재 = 도금이 만든 컬러 소재(AZ·MAC·AL). 기말 재고 = 전일 재고 + 도금 입고 − 컬러 출고(컬러 생산일 5일 전 출고로 계산).</li>
+        <li>구매 소재(F/H · 컬러 소재)의 발주·입고는 소재 발주 캘린더에서(업체별 리드타임·재고·기발주 반영).</li>
+        <li>제품 재고 = 그룹별 기말 재고 추정. 컬러(건재·수출) 출하 = 월 판매계획을 MES 출하 실적의 월중 분포로 나눔(월말 6일에 건재 48%·수출 33%). 도금 = 판매계획 품목이 납기일에 출고(계획과 같은 기준), 목표 = 통합 속보 기준.</li>
+        <li>12월 말 기울임 숫자 = 계획 기간 밖(1월)을 추정한 값. 구매 소재 발주는 1월 이후 소요를 4분기 일평균으로, 자가재 12/27~31 출고는 12월 일평균으로 가정.</li>
+        <li>날짜 상세의 품목 줄 = 요청 납기(수출 벌크는 선적 완료기한, 그 외는 선적 반순) → 생산일 → 소재. 자가재는 그 반순 품목의 도금 생산일과 컬러 입고(+1일), 팀 기준(도금 생산 → 컬러 투입 8일)으로 판정. 구매 소재는 품명 → 소재 코드 비중(13주 실적)으로 소재를 정하고, 팀 소재 리드타임 표(10/12)로 입고 예정일·발주일 계산(입고 필요일 = 컬러 생산 − 7일; P-GI·EG 매주 발주 +5주, P-CR +4.5주, 동종-AZ 10~15일 발주 → 차차월 20일, MAC(P) 매월 초 → 차차월 30일, 외부SUS +4주·엘지향 +2일, 외부Alu +45일).</li>
+      </ul></details>
+  </div>
+</main>
+<footer class="foot"><div class="wrap"><span>자료는 암호화되어 게시되며 이 브라우저 안에서만 풉니다</span><span>POSCO STEELEON 도금·컬러 가동계획</span></div></footer>
+<div class="tipbox" id="s-tip" role="tooltip"></div>
+<script src="ui/shell.js"></script>
+<script src="engine/crypto.js"></script>
+<script src="ui/cal.js"></script>
+<script src="ui/proccalc.js"></script>
+<script src="supply.js"></script>
+</body>
+</html>

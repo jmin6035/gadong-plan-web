@@ -3,7 +3,7 @@
 (function () {
   'use strict';
   const NAV = [
-    ['home', 'index.html', '홈'], ['supply', 'supply.html', '가동·재고 캘린더'], ['integrated', 'integrated.html', '재고 추이'], ['report', 'report.html', '주간 보고'],
+    ['home', 'index.html', '홈'], ['supply', 'supply.html', '가동 캘린더'], ['matcal', 'matcal.html', '소재 캘린더'], ['integrated', 'integrated.html', '재고 추이'], ['report', 'report.html', '주간 보고'],
     '|도금', ['status', 'status.html', '가동 현황'], ['analysis', 'analysis.html', '조건 분석'], ['platact', 'plating_actual.html', '실적'],
     '|컬러', ['colorstat', 'color_status.html', '가동 현황'], ['coloranal', 'color_analysis.html', '조건 분석'], ['coloract', 'color_actual.html', '실적'], ['planstock', 'planstock.html', '계획재'],
     '|소재', ['procure', 'procure.html', '소재 발주'],
@@ -47,6 +47,7 @@
   const IC = {
     home: 'M3 10.5 12 3l9 7.5V20a1 1 0 0 1-1 1h-5v-6h-6v6H4a1 1 0 0 1-1-1z',
     supply: 'M4 5h16v15H4zM4 9h16M8 3v4M16 3v4M8 13h3M13 13h3M8 16.5h3',
+    matcal: 'M4 5h16v15H4zM4 9h16M8 3v4M16 3v4M7 13h10M7 16.5h6',
     integrated: 'M4 19V5M4 19h16M7 15l4-4 3 3 5-6',
     report: 'M6 3h9l4 4v14H6zM14 3v5h5M9 12h7M9 16h7',
     status: 'M4 5h16M4 5v14M8 9h7M10 13h8M6 17h6',
@@ -135,7 +136,7 @@
   /* 화면 한 줄 도움말 */
   const HELP = {
     home: '매일 아침: 금일 확인 사항 → 주요 지표 → 필요한 화면으로 이동. 역할과 보기(도금/컬러)를 선택하면 해당 항목만 표시',
-    integrated: '확정 계획 기준 주별 제품·자가재 재고 추이와 일별 배치 기준. 날짜별 가동은 가동·재고 캘린더, 라인별 일정은 가동 현황에서',
+    integrated: '확정 계획 기준 주별 제품·자가재 재고 추이와 일별 배치 기준. 날짜별 가동은 가동 캘린더, 라인별 일정은 가동 현황에서',
     status: '도금 1·2CGL 게시 계획(매일 재계획)의 월별 간트·강종 전환·부서별 물량',
     rolling: '판매계획·자가재계획 엑셀로 도금 계획을 새로 계산하거나 실적으로 재계획하고 게시(담당자용). 정기수리를 추가하면 정지 시나리오도 볼 수 있음',
     analysis: '(계획 담당자용) MES 도금 실적으로 속도·M/C 손실·정지를 재산출해 계획 조건과 비교 — 반영권장 값은 계획 계산에 넣을 후보',
