@@ -140,44 +140,15 @@
           return `<td data-c="${esc(c)}" data-k="${k}" data-d="${d}" class="v${mon_}${late ? ' late' : ''}${k === 'inb' && nw ? ' nw' : ''}" style="--ci:${i}" title="${esc(tip)}">${n0(t)}</td>`;
         }).join('')}<td class="tot">${s_ >= 0.5 ? n0(s_) : ''}</td></tr>`;
       });
-      if (supOpen) h += supRows(pl, c, R, ds);
     }
     $('s-cal3').innerHTML = head.replace(/<th data-d="([^"]+)" class="/g, (m, d) => `<th data-d="${d}" class="${wd(d) === 1 ? 'wk ' : ''}`) + '<tbody>' + h + '</tbody>';
-    $('s-cal3').querySelectorAll('td[data-c]').forEach((el) => el.onclick = () => typeDetail(el.dataset.c, el.dataset.d, el.dataset.k, el.dataset.s || null));
-    const tg = $('s-suptg'); if (tg) { tg.textContent = supOpen ? '업체별 접기 ▴' : '업체별 펼치기 ▾'; tg.onclick = () => { supOpen = !supOpen; try { localStorage.setItem('cgl-supply-sup', supOpen ? '1' : '0'); } catch (e) { /* 무시 */ } cal(); }; }
-  }
-  // 유형 아래 업체별 줄(발주 · 입고): 27년 배정 업체(배정 큰 순) + 배정은 없지만 기발주가 들어오는 업체('배정 외')
-  const supOf = (e) => (e.x ? e.x.s.sup : e.a ? e.a.sup : e.s ? e.s.sup : null);
-  let supOpen = (() => { try { return localStorage.getItem('cgl-supply-sup') !== '0'; } catch (e) { return true; } })();
-  function supRows(pl, c, R, ds) {
-    const base = MP.P.suppliers.filter((x) => x.plant === pl && x.cls === c && (x.share || 0) > 0);
-    const sh = {}, nc = {}; for (const x of base) { sh[x.sup] = (sh[x.sup] || 0) + (x.share || 0); nc[x.sup] = (nc[x.sup] || 0) + 1; }   // 배정 비중은 소재코드마다 따로 — 한 업체가 여러 코드(F·H·T)를 받으면 % 대신 '배정'
-    const seen = new Set(Object.keys(sh));
-    for (const k of ['ord', 'inb']) for (const L of Object.values(R[k])) for (const e of L) { const s_ = supOf(e); if (s_) seen.add(s_); }
-    const list = [...seen].sort((a, b) => (sh[b] ? 1 : 0) - (sh[a] ? 1 : 0) || (sh[b] || 0) / (nc[b] || 1) - (sh[a] || 0) / (nc[a] || 1) || String(a).localeCompare(String(b)));
-    const nm = (sup) => (MP.P.supNames || {})[sup] || (base.find((x) => x.sup === sup) || {}).name || sup;
-    let h = '';
-    list.forEach((sup, si) => {
-      const any = ds.some((d) => ['ord', 'inb'].some((k) => sumT((R[k][d] || []).filter((e) => supOf(e) === sup)) >= 0.5));
-      if (!any) return;
-      [['ord', '발주', 'm-ord'], ['inb', '입고', 'm-inb']].forEach(([k, kn, cl], ri) => {
-        let s_ = 0;
-        h += `<tr class="sp ${cl} ${ri === 0 ? 'sp1' : ''}"><td class="lb"><span class="sn">${ri === 0 ? `${esc(nm(sup))}${sh[sup] ? ` <small>${nc[sup] > 1 ? '배정' : Math.round(sh[sup] * 100) + '%'}</small>` : ' <small class="ex">배정 외</small>'}` : ''}</span><span class="kd ${cl}">${kn}</span></td>${ds.map((d, i) => {
-          const L = (R[k][d] || []).filter((e) => supOf(e) === sup), t = sumT(L); s_ += t;
-          const mon_ = wd(d) === 1 ? ' wk' : '';
-          if (t < 0.5) return `<td class="e${mon_}"></td>`;
-          const late = L.some((e) => e.late), nw = L.some((e) => e.kind === 'new');
-          return `<td data-c="${esc(c)}" data-k="${k}" data-d="${d}" data-s="${esc(sup)}" class="v${mon_}${late ? ' late' : ''}${k === 'inb' && nw ? ' nw' : ''}" title="${esc(`${md(d)} ${nm(sup)} ${kn} ${n0(t)}t`)}">${n0(t)}</td>`;
-        }).join('')}<td class="tot">${s_ >= 0.5 ? n0(s_) : ''}</td></tr>`;
-      });
-    });
-    return h;
+    $('s-cal3').querySelectorAll('td[data-c]').forEach((el) => el.onclick = () => typeDetail(el.dataset.c, el.dataset.d, el.dataset.k));
   }
   // 소재 유형 칸 상세: 어떤 소재(코드)를 어느 업체에 얼마 — 언제 들어와 언제 쓰고, 무엇을 만드는지(역으로 생산·용도)
-  function typeDetail(c, d, k, sup) {
+  function typeDetail(c, d, k) {
     const R = MP.T[c]; if (!R) return;
     const w0 = mondayOf(today), inRange = (x) => (d ? x === d : x >= w0 && x <= add(w0, 6));
-    const L = Object.entries(R[k]).filter(([x]) => inRange(x)).flatMap(([x, es]) => es.filter((e) => !sup || supOf(e) === sup).map((e) => ({ d: x, ...e })));
+    const L = Object.entries(R[k]).filter(([x]) => inRange(x)).flatMap(([x, es]) => es.map((e) => ({ d: x, ...e })));
     const when = d ? `${md(d)}(${WD[wd(d)]})` : `이번 주(${md(w0)}~${md(add(w0, 6))})`;
     const useTxt = (j) => j.use.slice().sort((a, b) => b[3] - a[3]).slice(0, 4).map((r) => `${esc(r[0])} ${esc(r[1])} ${esc(r[2])} ${n0(r[3])}t`).join(' · ');
     const rows = L.sort((a, b) => b.t - a.t).map((e) => {

@@ -103,9 +103,6 @@ table.sc td.nd { color: var(--ink-3); }
 #s-cal3 .kd.m-use { background: var(--surface-2); color: var(--ink-2); } #s-cal3 tr.m-use td.v { color: var(--ink-2); font-weight: 500; }
 #s-cal3 td.v.late { background: var(--bad-bg) !important; color: var(--bad) !important; font-weight: 800; }
 #s-cal3 tr.m-use td { border-bottom: 1px solid var(--line); } #s-cal3 td.tot { font-weight: 800; background: var(--surface-2); }
-#s-cal3 tr.sp td.lb { padding-left: 22px; font-weight: 500; } #s-cal3 tr.sp .sn { display: inline-block; min-width: 112px; font-size: 12px; color: var(--ink-2); } #s-cal3 tr.sp .sn small { color: var(--ink-3); } #s-cal3 tr.sp .sn small.ex { color: var(--warn); font-weight: 700; }
-#s-cal3 tr.sp td.v { font-weight: 500; font-size: 11.5px; } #s-cal3 tr.sp1 td { border-top: 1px dashed var(--grid); } #s-cal3 tr.sp td.tot { font-weight: 600; }
-#s-cal3 tr.mt-r.m-use td { border-bottom: 1px solid var(--grid); } .tgl { all: unset; cursor: pointer; font-size: 12.5px; font-weight: 700; color: var(--brand-2); margin-left: 10px; } .tgl:hover { text-decoration: underline; }
 .wkbox { margin: 0 0 12px; } .wkh { font-size: 15px; font-weight: 800; margin-bottom: 8px; } .wkh small { font-weight: 500; color: var(--ink-3); margin: 0 6px; }
 .wkl { display: flex; flex-wrap: wrap; gap: 8px; } .wkc { all: unset; cursor: pointer; display: flex; flex-direction: column; gap: 2px; min-width: 110px; padding: 8px 12px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); }
 .wkc span { font-size: 12.5px; color: var(--ink-3); font-weight: 700; } .wkc b { font-size: 18px; } .wkc .neg { color: var(--bad); font-weight: 700; } .wkc:hover { border-color: var(--brand-2); }
@@ -128,7 +125,7 @@ table.sc td.nd { color: var(--ink-3); }
     </section>
     <div class="det" id="s-det"></div>
     <div class="band band-m"><b>소재</b> 자가재(도금 → 컬러)·구매 소재 — 재고 소진 시점과 발주 마감 기한</div>
-    <section class="card matcal"><h2>소재 캘린더 <small>소재 유형 → 업체별 발주 · 입고 · 생산 투입 — 칸을 누르면 업체·양·용도</small><button type="button" class="tgl" id="s-suptg">업체별 접기 ▴</button><span class="unit">톤</span></h2>
+    <section class="card matcal"><h2>소재 캘린더 <small>소재 유형별 발주 → 입고 → 생산 투입 — 칸을 누르면 업체·양·용도</small><span class="unit">톤</span></h2>
       <div id="s-mcal"></div>
       <div class="calw" id="s-calw3"><table class="sc tc" id="s-cal3"></table></div>
       <div class="lg"><span><i style="background:color-mix(in srgb,#c46f00 16%,#fff)"></i>발주 — 업체별 발주 마감일</span><span><i style="background:var(--bad-bg)"></i>마감 지난 발주(오늘 칸에 모음)</span><span><i style="background:var(--good-bg)"></i>입고 — 기발주 입고 예정</span><span><i style="background:#fff;box-shadow:inset 0 0 0 2px var(--good)"></i>입고 — 새로 발주할 분이 들어와야 할 날</span><span><i style="background:var(--surface-2)"></i>생산 투입 — 그날 생산에 쓰는 양</span><span>굵은 세로선 = 주 시작(월)</span></div>
