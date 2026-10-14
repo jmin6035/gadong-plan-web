@@ -263,11 +263,20 @@
       const need = add(d, -IN);
       if (!codes.length) out.push({ kind: '구매', what: `${Math.round((1 - sh) * 100)}% (소재 미확인)`, src: '-', inb: `${md(need)}까지`, ord: '-', st: ['warn', '품명 → 소재 연결 없음'], steps: [[need <= today ? '입고 완료' : '입고 필요', md(need), need]] });
       for (const [code, w] of codes.slice(0, 2)) {
-        const nm = (M.matCode || {})[code] || code, tr = teamRule(code, r[13], need);
-        const ordTxt = tr ? (tr.ordTo ? `${md(tr.ord)}~${md(tr.ordTo)}` : md(tr.ord)) : '-';
-        const st = !tr ? ['warn', '팀 리드타임 표에 없는 소재'] : (tr.ordTo || tr.ord) >= today ? ['ok', `발주 예정 ${ordTxt}`] : ['info', '발주 시점 지남(기발주 확인)'];
-        const arr = tr ? tr.arrive : need;
-        out.push({ kind: '구매', what: `${esc(nm)} ${Math.round((1 - sh) * w * 100)}%`, src: tr ? `${esc(tr.type)} · ${esc(tr.rule)}` : '-', inb: tr ? `${md(tr.arrive)} 입고 예정` : `${md(need)}까지`, ord: ordTxt, st, steps: [[(tr ? (tr.ordTo || tr.ord) : null) < today ? '발주(지난 시점)' : '발주', ordTxt, tr ? tr.ord : null], [arr <= today ? '입고 완료' : '입고 예정', md(arr), arr]] });
+        const nm = (M.matCode || {})[code] || code;
+        // 업체 유형별(27년 배정 업체 — P-GI·서림GI·수입GI 등) 발주일: 달력형(동종AZ·P-MAC)은 팀 규칙, 나머지는 입고 필요 − 리드타임
+        const sups = MP ? MP.P.suppliers.filter((x) => x.plant === 'C' && x.code === code && (x.share || 0) > 0) : [];
+        const byT = {}; for (const x of sups) { const t = (byT[x.cls] = byT[x.cls] || { lt: x.lt, sh: 0, n: [] }); t.sh += x.share || 0; t.n.push(MP.supNm(x)); }
+        const tr0 = teamRule(code, r[13], need);
+        let TT = Object.entries(byT).sort((x, y) => y[1].sh - x[1].sh).map(([c, t]) => { const cal = /동종|MAC/.test(c) && tr0 ? tr0 : null; return { c, sh: t.sh, n: t.n, ord: cal ? cal.ord : add(need, -t.lt), ordTo: cal ? cal.ordTo : null, arrive: cal ? cal.arrive : need }; });
+        if (!TT.length && tr0) TT = [{ c: tr0.type, sh: 1, n: [], ord: tr0.ord, ordTo: tr0.ordTo, arrive: tr0.arrive }];
+        const oTxt = (t) => (t.ordTo ? `${md(t.ord)}~${md(t.ordTo)}` : md(t.ord));
+        const ordTxt = TT.length ? TT.map((t) => (TT.length > 1 ? `${esc(t.c)} ${oTxt(t)}` : oTxt(t))).join(' · ') : '-';
+        const first = TT.length ? TT.map((t) => t.ordTo || t.ord).sort()[0] : null, last = TT.length ? TT.map((t) => t.ordTo || t.ord).sort().pop() : null;
+        const st = !TT.length ? ['warn', '팀 리드타임 표에 없는 소재'] : first >= today ? ['ok', `발주 예정 ${md(first)}~`] : last >= today ? ['warn', '일부 업체 발주 시점 지남(기발주 확인)'] : ['info', '발주 시점 지남(기발주 확인)'];
+        const arr = TT.length ? TT.map((t) => t.arrive).sort()[0] : need;
+        const src = TT.length ? TT.map((t) => `${esc(t.c)} ${Math.round(t.sh * 100)}%${t.n.length ? ` (${esc(t.n.slice(0, 3).join('·'))}${t.n.length > 3 ? ` 외 ${t.n.length - 3}` : ''})` : ''}`).join(' · ') : '-';
+        out.push({ kind: '구매', what: `${esc(nm)} ${Math.round((1 - sh) * w * 100)}%`, src, inb: `${md(arr)} 입고 예정`, ord: ordTxt, st, steps: [[last && last < today ? '발주(지난 시점)' : '발주', ordTxt, first], [arr <= today ? '입고 완료' : '입고 예정', md(arr), arr]] });
       }
     }
     return out;
@@ -361,10 +370,27 @@
     for (const s of series) { const pts = s.v.map((v, i) => (v == null ? null : `${X(i).toFixed(1)},${Y(v).toFixed(1)}`)).filter(Boolean); if (pts.length) g += `<path class="ln" d="M${pts.join(' L')}" fill="none" stroke="${s.c}" stroke-width="2.2" stroke-linejoin="round"/>`; }
     return `<h2>${title}</h2><div class="legend" style="display:flex;gap:12px;font-size:12px;color:var(--ink-2)">${series.map((s) => `<span><i style="display:inline-block;width:10px;height:3px;background:${s.c};margin-right:5px;vertical-align:3px"></i>${s.n}</span>`).join('')}${tgt ? (tgt.length === 1 && tgt[0].v === 0 ? '<span>빨간 점선 = 재고 0</span>' : '<span>점선 = 목표</span>') : ''}</div><svg class="tr cv" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none">${g}</svg>`;
   }
+  // 주별 발주량(소재 유형별 누적 막대): 이번 주부터 13주 — 구매팀이 주마다 낼 양. 이번 주 막대에는 마감 지난 몫(빗금)이 포함
+  function weekOrdChart() {
+    const w0 = mondayOf(today), WK = Array.from({ length: 13 }, (_, i) => add(w0, i * 7)), TL = typeList().map((x) => x[1]);
+    const COL = ['#1660c9', '#e8590c', '#0a9e8f', '#5b4bb7', '#c46f00', '#c2255c', '#2f9e44', '#7a6a00', '#495057', '#0b7285', '#862e9c', '#a61e4d'];
+    const V = WK.map((w) => TL.map((c) => { let t = 0, late = 0; for (const [d, L] of Object.entries(MP.T[c].ord)) if (d >= w && d < add(w, 7)) { t += sumT(L); late += sumT(L.filter((e) => e.late)); } return { c, t, late }; }));
+    const used = TL.filter((c, k) => V.some((r) => r[k].t >= 1)), tot = V.map((r) => r.reduce((x, e) => x + e.t, 0));
+    const W = 600, H = 210, L = 44, R = 10, T = 14, B = 22, sc = UI.scale(Math.max(...tot, 1), 0), bw = (W - L - R) / WK.length;
+    const Y = (v) => T + (H - T - B) * (1 - v / sc.hi);
+    let g = '<defs><pattern id="hz" width="5" height="5" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="2" height="5" fill="#fff" opacity=".55"/></pattern></defs>';
+    for (const v of sc.ticks) g += `<line x1="${L}" x2="${W - R}" y1="${Y(v)}" y2="${Y(v)}" stroke="var(--grid)"/><text x="${L - 4}" y="${Y(v) + 4}" text-anchor="end">${+(v / 1000).toFixed(sc.step < 1000 ? 1 : 0)}k</text>`;
+    WK.forEach((w, i) => {
+      let y0 = 0; const x = L + i * bw + bw * 0.15, ww = bw * 0.7;
+      V[i].forEach((e) => { if (e.t < 1) return; const k = TL.indexOf(e.c), y1 = y0 + e.t; g += `<rect x="${x.toFixed(1)}" y="${Y(y1).toFixed(1)}" width="${ww.toFixed(1)}" height="${(Y(y0) - Y(y1)).toFixed(1)}" fill="${COL[k % COL.length]}"><title>${md(w)} 주 ${e.c} ${n0(e.t)}t${e.late >= 1 ? ` (마감 지난 몫 ${n0(e.late)}t)` : ''}</title></rect>`; if (e.late >= 1) g += `<rect x="${x.toFixed(1)}" y="${Y(y0 + e.late).toFixed(1)}" width="${ww.toFixed(1)}" height="${(Y(y0) - Y(y0 + e.late)).toFixed(1)}" fill="url(#hz)"/>`; y0 = y1; });
+      if (tot[i] >= 1) g += `<text x="${(x + ww / 2).toFixed(1)}" y="${(Y(tot[i]) - 3).toFixed(1)}" text-anchor="middle" style="font-weight:700">${tot[i] >= 1000 ? (tot[i] / 1000).toFixed(1) + 'k' : n0(tot[i])}</text>`;
+      g += `<text x="${(x + ww / 2).toFixed(1)}" y="${H - 6}" text-anchor="middle">${md(w)}</text>`;
+    });
+    return `<h2>주별 발주량 <small>소재 유형별 · 이번 주부터 13주 · 빗금 = 마감 지난 몫(이번 주에 모음)</small><span class="unit">톤</span></h2><div class="legend" style="display:flex;flex-wrap:wrap;gap:10px;font-size:12px;color:var(--ink-2)">${used.map((c) => `<span><i style="display:inline-block;width:10px;height:10px;border-radius:2px;background:${COL[TL.indexOf(c) % COL.length]};margin-right:5px;vertical-align:-1px"></i>${esc(c)}</span>`).join('')}</div><svg class="tr cv" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none">${g}</svg>`;
+  }
   function charts(ds) {
-    $('s-ch1').innerHTML = lineChart('자가재 재고 추이', [['AZ', '#e8590c'], ['MAC', '#0a9e8f'], ['AL', '#1660c9']].map(([a, c]) => ({ n: a, c, v: ds.map((d) => (D.self[`${a}|${d}`] || {}).stock) })), ds);
-    const top = (PM || []).filter((m) => UI.inScope(m.plant)).sort((a, b) => b.tot - a.tot).slice(0, 4), cols = ['#5b4bb7', '#c46f00', '#0a9e8f', '#c2255c'];
-    $('s-ch2').innerHTML = top.length ? lineChart('구매 소재 예상 재고 (추가 발주 없음 가정)', top.map((m, i) => ({ n: m.nm, c: cols[i], v: ds.map((d) => (d < today ? null : m.stock[d])) })), ds, [{ v: 0, c: 'var(--bad)' }]) : '';
+    $('s-ch1').innerHTML = lineChart('자가재 재고 추이 <small>도금 → 컬러 소재, 계획 기준 기말 재고</small>', [['AZ', '#e8590c'], ['MAC', '#0a9e8f'], ['AL', '#1660c9']].map(([a, c]) => ({ n: a, c, v: ds.map((d) => (D.self[`${a}|${d}`] || {}).stock) })), ds);
+    $('s-ch2').innerHTML = MP ? weekOrdChart() : '';
   }
 
   async function render(W, pw) {
