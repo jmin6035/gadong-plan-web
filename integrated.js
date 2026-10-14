@@ -147,6 +147,34 @@
       g += W.map((d, i) => (i % 2 === 0 && i <= last - 1 ? `<text x="${X(i)}" y="${H - 7}" text-anchor="middle" font-size="11.5" fill="var(--ink-3)">${md(d)}</text>` : '')).join('');
       return `<div class="st-chart"><h3>${esc(GN[r.k] || r.k)}</h3><svg viewBox="0 0 ${Wd} ${H}" class="cv" role="img" aria-label="${esc(GN[r.k] || r.k)} 주말 재고 추이">${g}</svg></div>`;
     };
+    // ② 공장별 전체 재고(2026-10-14 사용자): 도금 = 판매재(국내·수출·자동차) + 자가재, 컬러 = 건재 + 수출 — 실제(속보 원천 표, 전월 말부터 일별) vs 계획(주말 예측)
+    const AD = {}; ((PT && PT.stockTrend) || []).forEach(([d, k, t]) => { (AD[d] = AD[d] || {})[k] = t; });
+    const PLK = { G: { plan: ['G국내', 'G수출', 'G자동차', '자가재 AZ', '자가재 MAC', '자가재 AL'], act: ['g:G국내', 'g:G수출', 'g:G자동차', '도금 제품(자가재)'], nm: '도금 공장', sub: '판매재(국내·수출·자동차) + 자가재' },
+      C: { plan: ['C건재', 'C수출'], act: ['g:C건재', 'g:C수출'], nm: '컬러 공장', sub: '건재 + 수출(가전·건재)' } };
+    const plant = (pl) => {
+      const K = PLK[pl], SW = {}; P.stockWeek.forEach((r) => { SW[r.k] = r.v; });
+      const ad = Object.keys(AD).sort().filter((d) => K.act.every((k) => AD[d][k] != null)).map((d) => [d, K.act.reduce((a, k) => a + AD[d][k], 0), K.act.map((k) => AD[d][k])]);
+      if (!ad.length) return '';
+      const d0 = ad[0][0], dEnd = W[last], span = dd(dEnd, d0) || 1;
+      const pv = W.map((d, i) => [d, K.plan.reduce((a, k) => a + ((SW[k] || [])[i] || 0), 0)]);
+      const plan = [[d0, ad[0][1]], ...pv];                                 // 계획 선은 출발점(전월 말 실제)에서 시작
+      const Wd = 620, H = 220, L = 56, R = 14, T = 16, B = 28;
+      const all = [...plan.map((x) => x[1]), ...ad.map((x) => x[1])], sc = UI.scale(Math.max(...all), Math.min(0, ...all), 4);
+      const X = (d) => L + (dd(d, d0) / span) * (Wd - L - R), Y = (v) => T + (H - T - B) * (1 - (v - sc.lo) / (sc.hi - sc.lo || 1));
+      let g = sc.ticks.map((v) => `<line x1="${L}" x2="${Wd - R}" y1="${Y(v)}" y2="${Y(v)}" stroke="var(--grid)"/><text x="${L - 6}" y="${Y(v) + 4}" text-anchor="end" font-size="12" fill="var(--ink-3)">${UI.tick(v, sc.step)}</text>`).join('');
+      for (const m of ['10', '11', '12']) { const d = `${d0.slice(0, 4)}-${m}-01`; if (d > d0 && d <= dEnd && dd(d, d0) > 4) g += `<line x1="${X(d)}" x2="${X(d)}" y1="${T}" y2="${H - B}" stroke="var(--line)" stroke-dasharray="3 3"/><text x="${X(d) + 3}" y="${H - 9}" font-size="11.5" fill="var(--ink-3)">${+m}월</text>`; }
+      g += `<text x="${L}" y="${H - 9}" font-size="11.5" fill="var(--ink-3)">${md(d0)}</text>`;
+      if (today > d0 && today < dEnd) g += `<line x1="${X(today)}" x2="${X(today)}" y1="${T}" y2="${H - B}" stroke="var(--brand-2)" opacity=".6"/><text x="${X(today) + 4}" y="${T + 10}" font-size="11" fill="var(--brand-2)">오늘</text>`;
+      g += `<path class="li" d="M${plan.map(([d, v]) => `${X(d).toFixed(1)},${Y(v).toFixed(1)}`).join('L')}" fill="none" stroke="var(--brand)" stroke-width="2.4" stroke-linejoin="round"/>`;
+      g += plan.slice(1).map(([d, v]) => `<circle cx="${X(d).toFixed(1)}" cy="${Y(v).toFixed(1)}" r="2.6" fill="var(--brand)"><title>${md(d)} 주말 계획 ${n0(v)}t</title></circle>`).join('');
+      g += `<polyline points="${ad.map(([d, v]) => `${X(d).toFixed(1)},${Y(v).toFixed(1)}`).join(' ')}" fill="none" stroke="var(--s3)" stroke-width="2.4" stroke-linejoin="round"/>`;
+      g += ad.map(([d, v, parts]) => `<circle cx="${X(d).toFixed(1)}" cy="${Y(v).toFixed(1)}" r="2.4" fill="var(--s3)"><title>실제 ${md(d)} 말 ${n0(v)}t (${K.act.map((k, i) => `${GN[k.replace('g:', '')] || k.replace('g:', '').replace('도금 제품(자가재)', '자가재')} ${n0(parts[i])}`).join(' · ')})</title></circle>`).join('');
+      const a = ad[ad.length - 1], pw = pv.find(([d]) => d >= a[0]);
+      return `<div class="st-chart"><h3>${K.nm} <small style="font-weight:500;color:var(--ink-3)">${K.sub}</small></h3>
+        <div class="st-s" style="margin:2px 0 4px">실제 ${md(a[0])} 말 <b>${n0(a[1])}t</b> (${md(d0)} ${n0(ad[0][1])}t → ${a[1] >= ad[0][1] ? '+' : ''}${n0(a[1] - ad[0][1])}t)${pw ? ` · 계획 ${md(pw[0])} 주말 ${n0(pw[1])}t` : ''} · 12월 말 계획 ${n0(pv[last][1])}t</div>
+        <svg viewBox="0 0 ${Wd} ${H}" class="cv" role="img" aria-label="${K.nm} 전체 재고 추이">${g}</svg></div>`;
+    };
+    const plants = ['G', 'C'].filter((pl) => inS(pl)).map(plant).join('');
     // ③ 주별 표(접어 둠)
     const head = `<tr><th class="l">주 끝</th>${W.map((d) => `<th>${md(d)}</th>`).join('')}<th>목표</th></tr>`;
     let prevGrp = null;
@@ -158,7 +186,8 @@
     return { html: card('s-stock', '①', '제품·자가재 재고 추이', `${VN[V]} 기준 · 주말 재고 · ${md(W[wi])} 주부터 12월 말까지`, `
       ${prod.length ? `<h3 class="st-sec">제품 재고 <small>판매 그룹별 · 목표 = 생산주기/2 + 안전재고</small></h3><div class="st-tiles">${prod.map(tile).join('')}</div>` : ''}
       ${self.length ? `<h3 class="st-sec">자가재 재고 <small>도금 → 컬러 소재 · 목표 없음(바닥나지 않게)</small></h3><div class="st-tiles">${self.map(tile).join('')}</div>` : ''}
-      <h3 class="st-sec">주별 추이</h3>
+      ${plants ? `<h3 class="st-sec">공장별 전체 재고 <small>${(PT && PT.stockTrend || []).length ? md(PT.stockTrend[0][0]) : ''}부터 · 초록 = 실제(판매생산속보, 일별) · 파랑 = 계획(주말 예측)</small></h3><div class="dc-grid st-charts st-plant">${plants}</div>` : ''}
+      <h3 class="st-sec">그룹별 주별 추이</h3>
       <div class="legend"><span><i style="background:var(--brand)"></i>주말 재고(계획 기준 예측)</span><span><i style="background:var(--s3)"></i>실제 재고(판매생산속보, 일별)</span><span><i class="dash" style="background:var(--ink-2)"></i>목표</span><span><i class="box" style="background:color-mix(in srgb, var(--good) 18%, transparent)"></i>정상 범위(목표의 90~130%)</span><span><i class="dash" style="background:var(--bad)"></i>안전재고</span><span><i class="box" style="background:var(--warn)"></i>목표 미만</span><span><i class="box" style="background:var(--bad)"></i>부족 위험</span></div>
       <div class="dc-grid st-charts">${rows.map(mini).join('')}</div>
       <details class="tv"><summary>주별 표로 보기 (단위 천t)</summary><div class="scroll"><table class="t heat"><thead>${head}</thead><tbody>${body}</tbody></table></div></details>
