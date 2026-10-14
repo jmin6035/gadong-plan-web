@@ -104,14 +104,15 @@
   // ---------- ② 재고·소재 추이 표 ----------
   // ---------- 실제 재고(판매생산속보 + MES 일별 재고) — 아래 주별 추이는 계획 기준 예측 ----------
   let PT = null;                                                     // portal.enc.json(사내 PC 매일 게시): sr.stock · stockHist · stockTrend
-  function trendSvg(pts) {                                           // pts = [[날짜, t]] — 점마다 날짜·값(마우스를 올리면 보임), 양 끝 날짜·값 글자
+  function trendSvg(pts, tgt) {                                      // 이번 달 일별 재고 작은 선 그래프: 글자는 그래프 밖(HTML, 표 글자와 같은 크기), 점선 = 목표, 점에 마우스 → 날짜·값
     if (!pts.length) return '';
-    const W = 260, H = 70, v = pts.map((p) => p[1]), mx = Math.max(...v), mn = Math.min(...v), sp = mx - mn || 1, n = pts.length;
-    const xy = pts.map(([d, t], i) => [8 + i * (W - 16) / Math.max(1, n - 1), 12 + (1 - (t - mn) / sp) * (H - 30)]);
-    const md = (d) => `${+d.slice(5, 7)}/${+d.slice(8, 10)}`;
-    return `<svg viewBox="0 0 ${W} ${H}" class="st-tr" role="img" aria-label="일별 재고"><polyline fill="none" stroke="var(--brand)" stroke-width="1.6" points="${xy.map(([x, y]) => `${x.toFixed(1)},${y.toFixed(1)}`).join(' ')}"/>
-      ${xy.map(([x, y], i) => `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="2.4" fill="var(--brand)"><title>${md(pts[i][0])} ${n0(pts[i][1])}t</title></circle>`).join('')}
-      <text x="4" y="${H - 3}" font-size="9" fill="var(--ink-2)">${md(pts[0][0])} ${n0(pts[0][1])}</text><text x="${W - 4}" y="${H - 3}" font-size="9" fill="var(--ink-2)" text-anchor="end">${md(pts[n - 1][0])} ${n0(pts[n - 1][1])}</text></svg>`;
+    const W = 300, H = 44, v = pts.map((p) => p[1]).concat(tgt ? [tgt] : []), mx = Math.max(...v), mn = Math.min(...v), sp = mx - mn || 1, n = pts.length;
+    const X = (i) => 4 + i * (W - 8) / Math.max(1, n - 1), Y = (t) => 4 + (1 - (t - mn) / sp) * (H - 8);
+    const md = (d) => `${+d.slice(5, 7)}/${+d.slice(8, 10)}`, last = pts[n - 1][1], prev = n > 1 ? pts[n - 2][1] : null;
+    const tg = tgt ? `<line x1="0" x2="${W}" y1="${Y(tgt).toFixed(1)}" y2="${Y(tgt).toFixed(1)}" stroke="var(--ink-3)" stroke-dasharray="4 3" stroke-width="1" vector-effect="non-scaling-stroke"/>` : '';
+    return `<div class="st-trend"><svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" role="img" aria-label="이번 달 일별 재고">${tg}<polyline fill="none" stroke="var(--brand)" stroke-width="2" vector-effect="non-scaling-stroke" points="${pts.map((p, i) => `${X(i).toFixed(1)},${Y(p[1]).toFixed(1)}`).join(' ')}"/>
+      ${pts.map((p, i) => `<rect x="${(X(i) - W / n / 2).toFixed(1)}" y="0" width="${(W / n).toFixed(1)}" height="${H}" fill="transparent"><title>${md(p[0])} 말 ${n0(p[1])}t</title></rect>`).join('')}</svg>
+      <div class="st-ax"><span>${md(pts[0][0])} ${n0(pts[0][1])}</span><span>${prev != null ? `전일 대비 <b class="${last - prev > 0 ? 'up' : 'dn'}">${last - prev > 0 ? '+' : ''}${n0(last - prev)}</b>` : ''}</span><span>${md(pts[n - 1][0])} <b>${n0(last)}</b></span></div></div>`;
   }
   function secActual() {
     if (!PT || !PT.sr || !(PT.sr.stock || []).length) return { html: '' };
@@ -121,12 +122,12 @@
       const r = x.target ? x.current / x.target : null, tone = r == null ? '' : r > 1.3 || r < 0.7 ? 'bad' : r > 1.15 || r < 0.9 ? 'warn' : 'good';
       const tr = T.filter((t) => t[1] === x.name).map((t) => [t[0], t[2]]);
       return `<tr><td class="l"><b>${esc(x.name)}</b></td><td>${x.target ? n0(x.target) : '-'}</td><td><b>${n0(x.current)}</b></td><td class="${tone}">${r == null ? '-' : Math.round(r * 100) + '%'}</td>
-        <td>${tr.length ? trendSvg(tr) : '-'}</td></tr>`;
+        <td class="st-cell">${tr.length ? trendSvg(tr, x.target) : '-'}</td></tr>`;
     }).join('');
     const d0 = T.length ? T[0][0] : null, d1 = T.length ? T[T.length - 1][0] : null, md = (d) => `${+d.slice(5, 7)}/${+d.slice(8, 10)}`;
     return { html: `<section class="card" id="s-actual"><h2>실제 재고 <small>판매생산속보 ${esc(PT.sr.asOf || '')} — 예측 아님</small></h2>
-      <div class="scroll"><table class="t"><thead><tr><th class="l">항목</th><th>목표(t)</th><th>현재(t)</th><th>목표 대비</th><th>이번 달 일별${d0 ? ` (${md(d0)}~${md(d1)} 말)` : ''}</th></tr></thead><tbody>${rows}</tbody></table></div>
-      <p class="small">현재·목표 = 판매생산속보(매일 07:16)의 재고 현황. 이번 달 일별 = 속보 원천 표(MES 판매생산속보 7·8·9번 표)의 날짜별 합계 — 속보와 같은 값(전날 말 재고). 점에 마우스를 올리면 날짜별 값이 보입니다.<br>아래 '주별 추이'는 계획(생산 계획·판매 계획)으로 계산한 <b>예측</b>입니다.</p></section>` };
+      <div class="scroll"><table class="t"><thead><tr><th class="l">항목</th><th>목표(t)</th><th>현재(t)</th><th>목표 대비</th><th>이번 달 일별${d0 ? ` (${md(d0)}~${md(d1)} 말)` : ''} <span class="muted" style="font-weight:400">— 점선 = 목표</span></th></tr></thead><tbody>${rows}</tbody></table></div>
+      <p class="small">현재·목표 = 판매생산속보(매일 07:16)의 재고 현황. 이번 달 일별 = 속보 원천 표(MES 판매생산속보 7·8·9번 표)의 날짜별 합계 — 속보와 같은 값(전날 말 재고). 그래프에 마우스를 올리면 날짜별 값이 보입니다.<br>아래 '주별 추이'는 계획(생산 계획·판매 계획)으로 계산한 <b>예측</b>입니다.</p></section>` };
   }
   function secStock() {
     const P = O.variants[V], W = O.weeks, today = new Date(Date.now() + 9 * 3600e3).toISOString().slice(0, 10);
