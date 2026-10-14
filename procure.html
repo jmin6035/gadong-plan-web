@@ -52,6 +52,13 @@ button.dsum .go { color: var(--brand-2); font-size: 12.5px; } button.dsum:hover 
 table.arrsum th.late, table.arrsum td.late, .arrg .late, table td.late { color: var(--bad); font-weight: 800; }
 table.arrsum tr.sum td { border-top: 2px solid var(--line); font-weight: 800; background: var(--surface-2); }
 details.arrg { border: 1px solid var(--line); border-radius: 8px; padding: 8px 12px; margin: 6px 0; } details.arrg > summary { cursor: pointer; font-size: 14px; } details.arrg[open] > summary { margin-bottom: 8px; }
+tr.ux > td > div { text-align: left; } table.t.sp td.l, table.t.sp th.l { text-align: left !important; } .ux .use b:first-child { text-align: left; }
+.ux .xh { font-size: 14px; margin: 2px 0 10px; } .ux .neg { color: var(--bad); font-weight: 800; } .ux .pos { color: var(--good); font-weight: 800; }
+table.t.sp { width: auto; min-width: 640px; margin: 0 0 8px; background: var(--surface); } table.t.sp td, table.t.sp th { padding: 6px 12px; }
+table.t.sp tr.on td { background: var(--good-bg); } table.t.sp tr.tot td { border-top: 2px solid var(--line); font-weight: 800; }
+table.t.sp input { width: 96px; text-align: right; }
+.dg2 { display: grid; grid-template-columns: 180px minmax(240px, 520px); gap: 8px 12px; margin: 6px 0 12px; } .dg2 label { display: flex; flex-direction: column; gap: 4px; font-size: 12.5px; color: var(--ink-3); font-weight: 700; } .dg2 select, .dg2 input { width: 100%; max-width: none !important; }
+@media (max-width: 640px) { .dg2 { grid-template-columns: 1fr; } table.t.sp { min-width: 0; } }
 </style>
 </head>
 <body>
