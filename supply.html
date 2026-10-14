@@ -77,7 +77,6 @@ table.dt.mt td.st { font-weight: 700; } table.dt.mt td.st.ok { color: var(--good
 table.sc td.inb2 { font-weight: 800; color: var(--good); } table.sc td.inb2::before { content: '▲'; font-size: 10px; margin-right: 2px; }
 table.sc td.dl { outline: 2px solid var(--bad); outline-offset: -2px; }
 table.sc td.nd { color: var(--ink-3); }
-#s-mat td.bad { color: var(--bad); font-weight: 800; } #s-mat td.warn { color: var(--warn); font-weight: 800; }
 .det > .card { overflow-x: auto; }
 .dethd { grid-column: 1 / -1; font-size: 18px; font-weight: 800; margin: 10px 0 2px; padding-left: 12px; border-left: 5px solid var(--brand-2); }
 .dethd.m { border-left-color: #b25e00; }
@@ -106,7 +105,6 @@ table.sc td.nd { color: var(--ink-3); }
   </section>
   <div id="main" hidden>
     <div class="sbar"><span id="s-meta"></span><div class="tabs" id="s-mon" role="group" aria-label="월"></div></div>
-    <section class="card" id="s-top"></section>
     <div class="band band-g"><b>가동</b> 도금·컬러 생산과 제품 재고</div>
     <section class="card"><h2>가동 캘린더 <small>도금·컬러 생산 · 제품 재고 — 날짜 선택 시 하단에 일자별 품목·납기·소재 표시</small><span class="unit">톤</span></h2>
       <div class="calw" id="s-calw"><table class="sc" id="s-cal"></table></div>
@@ -123,7 +121,6 @@ table.sc td.nd { color: var(--ink-3); }
       </details>
     </section>
     <div class="det" id="s-det2"></div>
-    <section class="card" id="s-mat"></section>
     <div class="chartrow"><section class="card" id="s-ch1"></section><section class="card" id="s-ch2"></section></div>
     <details class="basis" style="margin-top:10px;font-size:12.5px;color:var(--ink-3)"><summary style="cursor:pointer;font-weight:700;color:var(--ink-2)">산출 기준</summary>
       <ul style="line-height:1.7">
