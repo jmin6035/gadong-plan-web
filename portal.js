@@ -57,9 +57,9 @@
     const stk = (n) => { const x = st[n]; return x && x.target ? x.current / x.target : null; };
     const cs = stk('컬러 제품'), gs = stk('도금 제품(판매재)');
     const it = [
-      ['G', K('G', tone(g.a / g.s), '도금 생산 누계', g.a, 't', `일정 ${n0(g.s)} 대비 ${sg(g.a - g.s)} · 월차 ${n0(g.m)}`, pc(g.a, g.m), 'status.html', 'kg')],
-      ['C', K('C', tone(c.a / c.s), '컬러 생산 누계', c.a, 't', `일정 ${n0(c.s)} 대비 ${sg(c.a - c.s)} · 월차 ${n0(c.m)}`, pc(c.a, c.m), 'color_actual.html', 'kc')],
-      ['GC', K('M', tone((sh.actual || 0) / (sh.sched || 1)), '출하 누계(전체)', sh.actual || 0, 't', `일정 ${n0(sh.sched || 0)} 대비 ${sg((sh.actual || 0) - (sh.sched || 0))}`, pc(sh.actual || 0, sh.month || 1), 'report.html', 'ks')],
+      ['G', K('G', tone(g.a / g.s), '도금 생산 누계', g.a, 't', `일정 ${n0(g.s)} 대비 ${sg(g.a - g.s)}(${pc(g.a, g.s)}%) · 월차 ${n0(g.m)}, 진도 ${pc(g.a, g.m)}%`, pc(g.a, g.m), 'status.html', 'kg')],
+      ['C', K('C', tone(c.a / c.s), '컬러 생산 누계', c.a, 't', `일정 ${n0(c.s)} 대비 ${sg(c.a - c.s)}(${pc(c.a, c.s)}%) · 월차 ${n0(c.m)}, 진도 ${pc(c.a, c.m)}%`, pc(c.a, c.m), 'color_actual.html', 'kc')],
+      ['GC', K('M', tone((sh.actual || 0) / (sh.sched || 1)), '출하 누계(전체)', sh.actual || 0, 't', `일정 ${n0(sh.sched || 0)} 대비 ${sg((sh.actual || 0) - (sh.sched || 0))}(${pc(sh.actual || 0, sh.sched || 1)}%) · 월차 ${n0(sh.month || 0)}, 진도 ${pc(sh.actual || 0, sh.month || 1)}%`, pc(sh.actual || 0, sh.month || 1), 'report.html', 'ks')],
       ['G', K('G', now.short ? 'bad' : now.late ? 'warn' : 'good', '도금 결품 예상', now.short || 0, 't', `지연 ${n0(now.late || 0)}톤·일 · 납기 임박 ${pl.tightN || 0}건`, null, 'status.html', 'kx')],
       ['GC', K('M', q.near ? 'warn' : 'good', '2주 내 발주 마감', q.near || 0, '건', q.nearTop && q.nearTop[0] ? `최우선 ${esc(q.nearTop[0].mat)} ${esc(q.nearTop[0].sup || "")} ${md(q.nearTop[0].deadline)}` : '-', null, 'procure.html', 'kq')],
       ['GC', (() => { const hi = (cs || 0) >= (gs || 0) ? ['컬러 제품', cs] : ['도금 제품', gs]; return K('M', (hi[1] || 0) > 1.3 || (hi[1] || 0) < 0.7 ? 'bad' : (hi[1] || 0) > 1.15 ? 'warn' : 'good', `재고 / 목표 (${hi[0]})`, Math.round((hi[1] || 0) * 100), '%', `컬러 제품 ${cs ? Math.round(cs * 100) + '%' : '-'} · 도금 제품 ${gs ? Math.round(gs * 100) + '%' : '-'}`, null, 'report.html', 'kr'); })()],
@@ -142,7 +142,7 @@
   function basis(O) {
     const now = (O.plating || {}).now || {};
     return `<summary>산출 기준 · 알림</summary><ul>
-      <li>생산·출하 누계, 월차, 일정 = 판매생산속보(공식). 라인 이번 달 일별 추이 = MES 코일(도금 더미 제외, 1일부터).</li>
+      <li>생산·출하 누계, 월차, 일정 = 판매생산속보(공식). 월차 = 이번 달 전체 계획, 일정 = 1일~어제 계획 누계. 원형 % = 진도(누계 ÷ 월차), 점 색·라인 타일 % = 일정 대비(누계 ÷ 일정, 98%↑ 초록 · 90%↑ 노랑). 라인 이번 달 일별 추이 = MES 코일(도금 더미 제외, 1일부터).</li>
       <li>그룹 실적 = MES 판매그룹. 계획 = 도금 확정 계획 일별 합 · 컬러 편성. 월말 예상 = 실적 + 남은 계획(도금 매일 재계획).</li>
       <li>그룹별 날짜 계획 누계는 비교하지 않음(부서 배정일은 계획 모델상 정해지지 않음). 컬러 그룹 합은 MES 코일 합이라 속보 누계와 다를 수 있음.</li>
       ${(now.lockNotes || []).map((n) => `<li>재계획: ${esc(n)}</li>`).join('')}${(now.shortBy || []).length ? `<li>결품 예상: ${now.shortBy.map(esc).join(', ')}</li>` : ''}</ul>`;
