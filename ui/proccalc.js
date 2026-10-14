@@ -23,7 +23,15 @@
       const cut = S.orders.length ? S.orders.map((o) => o.need).sort().pop() : null;
       const M = new Map();
       const get = (wk, plant, code) => { const k = `${wk}|${plant}|${code}`; if (!M.has(k)) M.set(k, { key: k, wk, plant, code, first: null, t: 0, use: [], thk: null, est: 0, ord: 0 }); return M.get(k); };
-      D.units.forEach((u) => {
+      D.units.forEach((u0) => {
+        // 날짜별 소요(days)가 있으면 오늘 이전 몫은 뺌 — 재고는 이미 어제까지 실적 사용을 뺀 값이라 지난 날 수요를 남기면 이중 계산(2026-10-15)
+        let u = u0;
+        if (u0.days) {
+          const keep = Object.entries(u0.days).filter(([d]) => d >= S.today), kt = keep.reduce((a, [, t]) => a + t, 0);
+          if (kt < 0.5) return;
+          const r = kt / u0.t, src = {}; Object.entries(u0.src).forEach(([k, v]) => { src[k] = v * r; });
+          u = { ...u0, t: kt, first: keep.map(([d]) => d).sort()[0], src, use: u0.use.map((x) => [x[0], x[1], x[2], x[3] * r]) };
+        }
         const est = u.src['주문재(추정)'] || 0;
         const drop = cut && u.wk <= cut ? est : 0;
         const x = get(u.wk, u.plant, u.code);
