@@ -11,7 +11,7 @@
   const today = new Date().toLocaleDateString('sv-SE');
   const FAM = (a) => (/^AZ/.test(a) ? 'AZ' : /^MAC/.test(a) ? 'MAC' : 'AL');
   const KEY = 'cgl-analysis-pw';
-  let D = null, PM = null, mon = null, sel = null;
+  let D = null, PM = null, MP = null, mon = null, sel = null;
 
   // ---------- 자료 정리: 날짜(YYYY-MM-DD) 기준 표 ----------
   function prep(W) {
@@ -110,58 +110,85 @@
       <div class="scroll"><table class="t"><thead><tr><th>소재</th><th>현재 재고</th><th>일평균 소요(최근 4주)</th><th>재고 일수</th><th>소진 예정일</th><th>기발주 입고</th><th>발주 마감 (기본 업체 · 리드타임)</th><th>판정</th></tr></thead><tbody>${self}${buy}</tbody></table></div>
       <p class="small">발주 마감 = 소진 예정일 − 투입 여유(컬러 7일·도금 5일) − 기본 업체(27년 배정 최대) 리드타임. '마감 지남' = 기발주 자료가 없어 이미 냈어야 할 발주로 보이는 것 — 실제 기발주 여부 확인. * = 이미 들어온 수입 FH 기발주(현재 재고에 포함). 구매 소재 재고: 컬러 = 소재재고List, 도금 FH = 월말 재고 − 이후 사용 + 수입 FH 기발주(국내 FH 입고 자료 없음 → 실제보다 적게 보일 수 있음). 기발주 입력·업체 변경은 <a href="procure.html">소재 발주</a>에서.</p>`;
   }
-  // ---------- 소재 월 캘린더(계획재 소재 발주 캘린더와 같은 모양): 그날 할 일만 칩으로 ----------
-  const MK = { order: { name: '발주 마감', color: 'var(--bad)' }, arrive: { name: '입고(기발주)', color: 'var(--good)' }, low: { name: '부족 주의 시작', color: 'var(--warn)' }, out: { name: '소진', color: '#7a1f1f' } };
-  function matCal() {
-    if (!window.UI || !UI.cal || !$('s-mcal')) return;
-    const ev = [], fut = D.days.filter((d) => d >= today);
-    const supNm = (c) => SUPN[c] || c || '-';
-    for (const a of ['AZ', 'MAC', 'AL']) {                               // 자가재(도금이 만들어 컬러에 넣는 소재): 3일분 미만 시작일 · 바닥(음수) 시작일
-      const lo = fut.find((d) => { const x = D.self[`${a}|${d}`]; const nx = useNext(a, d, 3); return x && nx > 0 && x.stock < nx && x.stock >= 0; });
-      const ng = fut.find((d) => (D.self[`${a}|${d}`] || {}).stock < 0);
-      if (lo) ev.push({ d: lo, kind: 'low', chip: `자가재 ${a} 3일분 미만`, tone: 'warn', self: a });
-      if (ng) ev.push({ d: ng, kind: 'out', chip: `자가재 ${a} 부족`, tone: 'bad', self: a });
-    }
-    for (const m of PM || []) {
-      if (!UI.inScope(m.plant)) continue;
-      const byDay = {}; for (const r of m.rows) (byDay[r.date] = byDay[r.date] || []).push(r);
-      for (const [d, rs] of Object.entries(byDay)) ev.push({ d, kind: 'arrive', chip: `${m.nm} 입고 ${n0(rs.reduce((x, r) => x + r.t, 0))}t`, m, rs });
-      if (m.dl) ev.push({ d: m.dl < today ? today : m.dl, kind: 'order', chip: `${m.nm} 발주 마감${m.dl < today ? ' 지남' : ''}`, tone: m.dl < today ? 'bad' : (new Date(m.dl) - new Date(today)) / 864e5 <= 14 ? 'warn' : '', m });
-      const lo = fut.find((d) => m.stock[d] >= 0 && m.stock[d] < (m.use[d] || 0) * 7);
-      if (lo && lo !== m.run) ev.push({ d: lo, kind: 'low', chip: `${m.nm} 7일분 미만`, tone: 'warn', m });
-      if (m.run) ev.push({ d: m.run, kind: 'out', chip: `${m.nm} 재고 소진`, tone: 'bad', m });
-    }
-    const PLN2 = { G: '도금 소재(F/H 등)', C: '컬러 구매 소재' };
-    const box = (k, title, body) => `<div class="grp" style="--kc:${MK[k].color}"><i></i>${title}</div>${body}`;
-    const detail = (d, evs) => {
-      let h = '';
-      const arr = evs.filter((e) => e.kind === 'arrive');
-      if (arr.length) {                                                  // 소재·업체별 합계 → 발주번호별은 펼쳐서
-        const od = (r) => (String(r.note || '').match(/(\d{2})\/(\d{2}) 발주/) || []), lt = (r) => (String(r.note || '').match(/리드타임 (\d+)일/) || [])[1], late = (r) => /지남/.test(r.note || '');
-        const G = {}; for (const e of arr) for (const r of e.rs) { const k = `${e.m.nm}|${r.sup}`; const g = G[k] = G[k] || { m: e.m, sup: r.sup, rs: [] }; g.rs.push(r); }
-        const gl = Object.values(G).sort((a, b) => b.rs.reduce((x, r) => x + r.t, 0) - a.rs.reduce((x, r) => x + r.t, 0));
-        const nLate = arr.reduce((x, e) => x + e.rs.filter(late).length, 0);
-        h += box('arrive', `입고 예정 — 이미 발주한 소재가 이날 들어옴 (구매할 것 아님)`, `<div class="scroll"><table class="t"><thead><tr><th class="l">소재</th><th>업체</th><th>수량(t)</th><th>발주 건수</th><th>발주일</th><th>리드타임</th><th class="l">비고</th></tr></thead><tbody>${gl.map((g) => {
-          const ds = g.rs.map((r) => od(r)).filter((x) => x[1]).map((x) => `${x[1]}${x[2]}`).sort(), L = [...new Set(g.rs.map(lt).filter(Boolean))], nl = g.rs.filter(late).length;
-          const f = (x) => `${+x.slice(0, 2)}/${+x.slice(2)}`;
-          return `<tr><td class="l"><b>${esc(g.m.nm)}</b> <small class="muted">${PLN2[g.m.plant]}</small></td><td>${esc(supNm(g.sup))}</td><td><b>${n0(g.rs.reduce((x, r) => x + r.t, 0))}</b></td><td>${g.rs.length}건</td><td>${ds.length ? (ds[0] === ds[ds.length - 1] ? f(ds[0]) : `${f(ds[0])}~${f(ds[ds.length - 1])}`) : '-'}</td><td>${L.length ? L.join('·') + '일' : '-'}</td><td class="l">${nl ? `<b class="neg">${nl}건 예정일 지남</b>(아직 미입고)` : '예정대로'}</td></tr>`;
-        }).join('')}</tbody></table></div>
-        <details class="tv"><summary>발주번호별 보기 (${arr.reduce((x, e) => x + e.rs.length, 0)}건)</summary><div class="scroll"><table class="t"><thead><tr><th class="l">소재</th><th>업체</th><th>수량(t)</th><th>발주번호</th><th>발주일</th><th>리드타임</th><th>상태</th></tr></thead><tbody>${gl.flatMap((g) => g.rs.map((r) => `<tr><td class="l">${esc(g.m.nm)}</td><td>${esc(supNm(r.sup))}</td><td>${n0(r.t)}</td><td>${esc(r.po || '-')}</td><td>${od(r)[1] ? `${+od(r)[1]}/${+od(r)[2]}` : '-'}</td><td>${lt(r) ? lt(r) + '일' : '-'}</td><td class="${late(r) ? 'neg' : ''}">${late(r) ? '예정일 지남' : '예정'}</td></tr>`)).join('')}</tbody></table></div></details>
-        <p class="small">MES 발주 중 아직 입고되지 않은 잔량. 입고일 = 발주일 + 업체 리드타임으로 추정한 날(실제 약속일 아님).${nLate ? ` <b>예정일 지남</b> = 리드타임이 지났는데 아직 안 들어온 발주 — 내일 들어온다고 보고 계산하므로 이날에 모여 보입니다. 실제 입고일은 구매팀 확인.` : ''}</p>`);
+  // ---------- 소재 유형 캘린더(2026-10-14 회의): 줄 = 팀 리드타임 표 소재 유형, 칸 = 그날 발주할 양 · 들어올 양 ----------
+  // 발주 = 소재 발주 화면과 같은 계산(ui/proccalc.js: 재고·기발주 충당 후 부족분을 27년 배정 비중대로 업체별로 나눔) — 업체별 발주 마감일에 놓음, 마감이 지난 몫은 오늘 칸(빨강)
+  // 입고 = MES 기발주 입고 예정 + 새 발주분이 들어와야 할 날(입고 필요일 = 첫 사용일 − 투입 여유)
+  const TYPES = { G: ['P-FH', '수입-FH', 'P-FH(STS)'], C: ['P-GI', '서림GI', '수입GI', 'P-EG', '외부EG', 'P-CR', '동종AZ', 'P-MAC', '외부SUS', '외부Alu'] };
+  const TPL = { G: '도금 소재', C: '컬러 소재' };
+  function matPlan(P) {
+    let S = null;
+    const C = ProcCalc.make(() => ({ D: P, S }));
+    S = C.load();
+    const J = C.judge(), cls = {}, top = {}, T = {};
+    for (const s_ of P.suppliers) { cls[`${s_.plant}:${s_.code}:${s_.sup}`] = s_.cls; const k = `${s_.plant}:${s_.code}`; if (!top[k] || (s_.share || 0) > (top[k].share || 0)) top[k] = s_; }
+    const clsOf = (plant, code, sup) => cls[`${plant}:${code}:${sup}`] || (top[`${plant}:${code}`] || {}).cls || '기타(업체 미등록 소재)';
+    const get = (plant, c) => (T[c] = T[c] || { plant, ord: {}, inb: {} });
+    const push = (o, d, e) => (o[d] = o[d] || []).push(e);
+    for (const j of J) {
+      if (j.kind === 'pos' || j.short < 1) continue;
+      for (const x of j.split) {
+        if (x.t < 1) continue;
+        const R = get(j.plant, x.s.cls || clsOf(j.plant, j.code, x.s.sup)), late = x.dl < today;
+        push(R.ord, late ? today : x.dl, { j, x, t: x.t, late });
+        push(R.inb, j.needBy < today ? today : j.needBy, { j, x, t: x.t, kind: 'new' });
       }
-      const ord = evs.filter((e) => e.kind === 'order');
-      if (ord.length) h += box('order', `발주 마감 — 이날까지 새로 발주해야 소진 전에 들어옴 (구매할 것)`, `<div class="scroll"><table class="t"><thead><tr><th class="l">소재</th><th>발주할 업체(기본)</th><th>리드타임</th><th>발주 마감</th><th>입고 필요일</th><th>소진 예정일</th><th>하루 소요</th></tr></thead><tbody>${ord.map((e) => `<tr><td class="l"><b>${esc(e.m.nm)}</b> <small class="muted">${PLN2[e.m.plant]}</small></td><td>${esc(e.m.sup ? (e.m.sup.name || supNm(e.m.sup.sup)) : '등록 업체 없음')}</td><td>${e.m.sup ? e.m.sup.lt + '일' : '-'}</td><td class="${e.m.dl < today ? 'neg' : ''}"><b>${md(e.m.dl)}</b>${e.m.dl < today ? ' (지남)' : ''}</td><td>${md(e.m.needBy)}</td><td>${md(e.m.run)}</td><td>${n0(e.m.u28)}t</td></tr>`).join('')}</tbody></table></div><p class="small">지금 재고 + 이미 발주한 입고 예정으로 버티다가 <b>소진 예정일</b>에 바닥남(새 발주 없다고 가정). 투입 여유(컬러 ${SAFE.C}일 · 도금 ${SAFE.G}일) 전인 <b>입고 필요일</b>까지 들어오려면, 리드타임만큼 앞선 <b>발주 마감</b>일까지 발주해야 합니다. 수량·업체 결정은 <a href="procure.html">소재 발주</a> 판단 보드에서.${ord.some((e) => e.m.dl < today) ? ' <b>마감 지남</b> = 계산상 이미 발주했어야 하는데 그만큼의 발주가 집계되지 않은 것 — 실제로 발주했는지 구매팀 확인(8/13 이전 발주는 입고 기록이 아직 없어 집계에서 빠져 있을 수 있음).' : ''}</p>`);
-      const lw = evs.filter((e) => e.kind === 'low' || e.kind === 'out');
-      if (lw.length) h += box('low', `재고 경고 — 새 발주가 없으면 이날부터 재고가 모자람`, `<div class="scroll"><table class="t"><thead><tr><th class="l">소재</th><th>구분</th><th>이날 예상 재고</th><th>하루 소요</th><th class="l">뜻</th></tr></thead><tbody>${lw.map((e) => {
-        if (e.self) { const x = D.self[`${e.self}|${d}`] || {}, nx = useNext(e.self, d, 3); return `<tr><td class="l"><b>자가재 ${e.self}</b> <small class="muted">도금 → 컬러</small></td><td>${e.kind === 'out' ? '<b class="neg">부족</b>' : '3일분 미만'}</td><td>${n0(x.stock)}t</td><td>${n0(nx / 3)}t</td><td class="l">${e.kind === 'out' ? '도금 계획대로 만들어도 컬러 투입량을 못 채움 — 도금 일정 앞당김 검토' : '앞으로 3일 컬러 투입량보다 재고가 적음 — 도금 생산 일정 확인'}</td></tr>`; }
-        const v = e.m.stock[d], u = e.m.use[d] || e.m.u28;
-        return `<tr><td class="l"><b>${esc(e.m.nm)}</b> <small class="muted">${PLN2[e.m.plant]}</small></td><td>${e.kind === 'out' ? '<b class="neg">소진</b>' : '7일분 미만'}</td><td>${n0(v)}t</td><td>${n0(u)}t</td><td class="l">${e.kind === 'out' ? '이날 재고가 0 아래로 — 그 전에 발주분이 들어와야 함(발주 마감 칩 참고)' : `재고가 약 ${u > 0 ? Math.max(0, Math.floor(v / u)) : '-'}일분만 남음`}</td></tr>`;
-      }).join('')}</tbody></table></div>`);
-      return h;
-    };
-    UI.cal($('s-mcal'), { months: D.months, month: mon, kinds: MK, events: ev, today, maxChips: 4,
-      note: '칩 뜻: <b>입고</b> = 이미 발주한 소재가 들어오는 날(업체·발주번호는 날짜를 누르면) · <b>발주 마감</b> = 이날까지 새로 발주해야 함 · <b>7일분 미만·소진</b> = 새 발주가 없을 때 재고가 모자라는 날. 구매 소재는 추가 발주 없음 가정, 자가재는 도금 계획대로 보충.',
-      detail });
+    }
+    for (const a of [...C.autoArr(), ...S.arr.map((a) => ({ ...a, plant: ProcCalc.plantOf(a.code), t: +a.t || 0 }))]) {
+      if (a.plant === 'G' && a.code === 'N') continue;                     // 임가공(포스코 지급)
+      push(get(a.plant, clsOf(a.plant, a.code, a.sup)).inb, a.date, { a, t: a.t, kind: 'arr' });
+    }
+    return { T, J, P, codeNm: (c) => (P.matCode || {})[c] || c, supNm: (s_) => (s_ ? ((P.supNames || {})[s_.sup] || s_.name || s_.sup) : '-') };
+  }
+  const sumT = (L) => (L || []).reduce((x, e) => x + e.t, 0);
+  const typeList = () => ['G', 'C'].filter((pl) => UI.inScope(pl)).flatMap((pl) => [...TYPES[pl], ...Object.keys(MP.T).filter((c) => MP.T[c].plant === pl && !TYPES[pl].includes(c))].filter((c) => MP.T[c] && MP.T[c].plant === pl).map((c) => [pl, c]));
+  function weekBox() {
+    if (!MP) { $('s-mcal').innerHTML = '<p class="small">소재 발주 자료가 없습니다.</p>'; return; }
+    const w0 = mondayOf(today), w1 = add(w0, 6);
+    const rows = typeList().map(([pl, c]) => { const R = MP.T[c]; let t = 0, late = 0; for (const [d, L] of Object.entries(R.ord)) if (d >= w0 && d <= w1) { t += sumT(L); late += sumT(L.filter((e) => e.late)); } return { pl, c, t, late }; }).filter((r) => r.t >= 1);
+    const tot = rows.reduce((x, r) => x + r.t, 0);
+    $('s-mcal').innerHTML = `<div class="wk"><div class="wkh">이번 주 발주 <small>${md(w0)}~${md(w1)} · 소재 유형별 합계(마감 지난 몫 포함)</small> <b>${n0(tot)}t</b></div>
+      <div class="wkl">${rows.map((r) => `<button type="button" class="wkc" data-c="${esc(r.c)}" data-d="${today}"><span>${esc(r.c)}</span><b>${n0(r.t)}t</b>${r.late >= 1 ? `<small class="neg">마감 지남 ${n0(r.late)}t</small>` : ''}</button>`).join('') || '<span class="muted">이번 주 발주할 소재 없음</span>'}</div></div>`;
+    $('s-mcal').querySelectorAll('.wkc').forEach((b) => b.onclick = () => typeDetail(b.dataset.c, null, 'ord'));
+  }
+  function typeCal(ds, head) {
+    if (!MP) { $('s-cal3').innerHTML = ''; return; }
+    let h = '', last = '';
+    for (const [pl, c] of typeList()) {
+      const R = MP.T[c];
+      if (!ds.some((d) => sumT(R.ord[d]) >= 0.5 || sumT(R.inb[d]) >= 0.5)) continue;   // 이 달에 발주·입고가 없는 유형은 숨김
+      if (pl !== last) { h += `<tr class="sec" data-dom="${pl === 'G' ? 'G' : 'C'}"><td class="lb">${TPL[pl]}</td><td colspan="${ds.length + 1}"></td></tr>`; last = pl; }
+      for (const [k, nm] of [['ord', '발주'], ['inb', '입고']]) {
+        let s_ = 0;
+        h += `<tr class="${k === 'inb' ? 'sub ti' : 'to'}"><td class="lb">${k === 'ord' ? `<b>${esc(c)}</b> ` : ''}<small>${nm}</small></td>${ds.map((d, i) => {
+          const L = R[k][d] || [], t = sumT(L); s_ += t;
+          if (t < 0.5) return `<td class="z" style="--ci:${i}">${d < today ? '' : '·'}</td>`;
+          const late = L.some((e) => e.late), arr = L.some((e) => e.kind === 'arr'), nw = L.some((e) => e.kind === 'new');
+          const tip = k === 'ord' ? `${md(d)} ${c} 발주 ${n0(t)}t${late ? ' (마감 지난 몫 포함)' : ''}` : `${md(d)} ${c} 입고 ${n0(t)}t — 기발주 ${n0(sumT(L.filter((e) => e.kind === 'arr')))}t · 새 발주분 ${n0(sumT(L.filter((e) => e.kind === 'new')))}t`;
+          return `<td data-c="${esc(c)}" data-k="${k}" data-d="${d}" class="${k === 'ord' ? (late ? 'neg ordc' : 'ordc') : (arr && !nw ? 'inb2' : 'inbn')}" style="--ci:${i}" title="${esc(tip)}">${n0(t)}</td>`;
+        }).join('')}<td class="tot">${n0(s_)}</td></tr>`;
+      }
+    }
+    $('s-cal3').innerHTML = head + '<tbody>' + h + '</tbody>';
+    $('s-cal3').querySelectorAll('td[data-c]').forEach((el) => el.onclick = () => typeDetail(el.dataset.c, el.dataset.d, el.dataset.k));
+  }
+  // 소재 유형 칸 상세: 어떤 소재(코드)를 어느 업체에 얼마 — 언제 들어와 언제 쓰고, 무엇을 만드는지(역으로 생산·용도)
+  function typeDetail(c, d, k) {
+    const R = MP.T[c]; if (!R) return;
+    const w0 = mondayOf(today), inRange = (x) => (d ? x === d : x >= w0 && x <= add(w0, 6));
+    const L = Object.entries(R[k]).filter(([x]) => inRange(x)).flatMap(([x, es]) => es.map((e) => ({ d: x, ...e })));
+    const when = d ? `${md(d)}(${WD[wd(d)]})` : `이번 주(${md(w0)}~${md(add(w0, 6))})`;
+    const useTxt = (j) => j.use.slice().sort((a, b) => b[3] - a[3]).slice(0, 4).map((r) => `${esc(r[0])} ${esc(r[1])} ${esc(r[2])} ${n0(r[3])}t`).join(' · ');
+    const rows = L.sort((a, b) => b.t - a.t).map((e) => {
+      if (e.kind === 'arr') { const a = e.a; return `<tr><td class="l"><b>${esc(MP.codeNm(a.code))}</b></td><td class="l">${esc((MP.P.supNames || {})[a.sup] || a.sup || '-')}</td><td>${n0(e.t)}</td><td>${a.po ? esc(a.po) : '-'}</td><td><span class="pos">입고 예정(기발주)</span></td><td>${md(e.d)}</td><td>-</td><td class="l small">${esc(a.note || '')}</td></tr>`; }
+      const j = e.j, x = e.x;
+      const st = k === 'ord' ? (e.late ? `<span class="neg">마감 ${md(x.dl)} 지남</span>` : `발주 마감 ${md(x.dl)}`) : (j.needBy < today ? `<span class="neg">입고 필요 ${md(j.needBy)} 지남</span>` : '입고 예정(새 발주분)');
+      return `<tr><td class="l"><b>${esc(MP.codeNm(j.code))}</b>${j.thk ? ` <small class="muted">${j.thk[0]}~${j.thk[1]}mm</small>` : ''}</td><td class="l">${esc(MP.supNm(x.s))} <small class="muted">LT ${x.s.lt}일</small></td><td>${n0(e.t)}</td><td>${md(x.dl)}</td><td>${st}</td><td>${md(j.needBy)}</td><td>${md(j.first)}</td><td class="l small">${useTxt(j)}</td></tr>`;
+    }).join('');
+    $('s-det2').innerHTML = `<div class="dethd m"><span>${esc(c)} ${k === 'ord' ? '발주' : '입고'} · ${when} <small>${TPL[R.plant]} — 업체·양·일정과 무엇을 만들려고 쓰는지. 업체·수량을 바꾸려면 <a href="procure.html">소재 발주</a></small></span></div>
+      <section class="card wide"><div class="scroll"><table class="t mt"><thead><tr><th class="l">소재</th><th class="l">업체</th><th>톤</th><th>발주 마감</th><th>상태</th><th>입고 필요일</th><th>첫 사용일</th><th class="l">무엇을 만들려고 <small>(그 주 이 소재 전체 용도: 생산 그룹 · 품명 · 톤)</small></th></tr></thead><tbody>${rows || '<tr><td colspan="8">없음</td></tr>'}</tbody>
+      <tfoot><tr><td class="l"><b>합계</b></td><td></td><td><b>${n0(sumT(L))}</b></td><td colspan="5"></td></tr></tfoot></table></div>
+      <p class="small">발주 마감 = 입고 필요일 − 업체 리드타임(팀 리드타임 표). 입고 필요일 = 첫 사용일 − 투입 여유(컬러 7일 · 도금 5일). 양은 재고·기발주를 먼저 쓰고 모자라는 만큼을 27년 배정 비중대로 나눈 것.</p></section>`;
+    $('s-det2').scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
 
   // ---------- 캘린더 ----------
@@ -197,11 +224,12 @@
     }
     $('s-cal').innerHTML = head + '<tbody>' + H.a + '</tbody>';
     $('s-cal2').innerHTML = head + '<tbody>' + H.b + '</tbody>';
+    typeCal(ds, head);
     document.querySelectorAll('#s-cal [data-d]').forEach((el) => el.onclick = () => pick(el.dataset.d, 'g'));      // 가동 캘린더 → 생산 상세
     document.querySelectorAll('#s-cal2 [data-d]').forEach((el) => el.onclick = () => pick(el.dataset.d, 'm'));     // 소재 캘린더 → 소재 상세
-    for (const [w, t] of [[$('s-calw'), $('s-cal')], [$('s-calw2'), $('s-cal2')]]) { const th = t.querySelector(`thead th[data-d="${add(today, -2)}"]`); if (th && w.scrollWidth > w.clientWidth) w.scrollLeft = th.getBoundingClientRect().left - t.getBoundingClientRect().left - 140; }
+    for (const [w, t] of [[$('s-calw'), $('s-cal')], [$('s-calw3'), $('s-cal3')], [$('s-calw2'), $('s-cal2')]]) { const th = t.querySelector(`thead th[data-d="${add(today, -2)}"]`); if (th && w.scrollWidth > w.clientWidth) w.scrollLeft = th.getBoundingClientRect().left - t.getBoundingClientRect().left - 140; }
     const sync = (a, b) => a.addEventListener('scroll', () => { if (Math.abs(b.scrollLeft - a.scrollLeft) > 1) b.scrollLeft = a.scrollLeft; });   // 두 달력 가로 스크롤 함께
-    if (!cal.synced) { sync($('s-calw'), $('s-calw2')); sync($('s-calw2'), $('s-calw')); cal.synced = true; }
+    if (!cal.synced) { const W3 = [$('s-calw'), $('s-calw3'), $('s-calw2')]; for (const x of W3) for (const y of W3) if (x !== y) sync(x, y); cal.synced = true; }
     charts(ds);
     if (sel && sel.slice(0, 7) === mon) pick(sel); else pick(ds.includes(today) ? today : ds[0]);
   }
@@ -349,11 +377,11 @@
 
   async function render(W, pw) {
     D = prep(W);
-    try { const pe = await GP.latest('procure.enc.json'); PM = pe ? prepMat(await GP.decryptJSON(pe, pw)) : null; } catch (e) { PM = null; }
+    try { const pe = await GP.latest('procure.enc.json'); const P = pe ? await GP.decryptJSON(pe, pw) : null; PM = P ? prepMat(P) : null; MP = P ? matPlan(P) : null; } catch (e) { PM = null; MP = null; }
     mon = D.months.includes(today.slice(0, 7)) ? today.slice(0, 7) : D.months[0];
     $('s-meta').innerHTML = `기준 <b>확정 계획</b> · 계산 ${esc(String(W.built).replace('T', ' '))} · 실적 ~${esc(W.asOf)}`;
     $('main').hidden = false; $('lock').hidden = true;
-    tabs(); top(); matCard(); cal(); matCal(); UI.reveal(document);
+    tabs(); top(); matCard(); weekBox(); cal(); UI.reveal(document);
   }
   let env = null;
   async function open(pw) {

@@ -87,6 +87,13 @@ table.sc td.nd { color: var(--ink-3); }
 .det.folded > :not(.dethd) { display: none; }
 .det table.dt td.wsrc { min-width: 170px; } .det table.dt td.wst { min-width: 210px; line-height: 1.45; } .dethd small { display: block; font-size: 13px; font-weight: 500; color: var(--ink-3); margin-top: 2px; }
 .det .card.wide { grid-column: 1 / -1; } .det table.dt td.neg, .det b.neg { color: var(--bad); }
+#s-cal3 td.ordc { background: var(--brand-bg, #e7f0fb); font-weight: 800; cursor: pointer; } #s-cal3 td.ordc.neg { background: var(--bad-bg); color: var(--bad); }
+#s-cal3 td.inb2 { background: var(--good-bg); cursor: pointer; } #s-cal3 td.inbn { box-shadow: inset 0 0 0 2px var(--good); cursor: pointer; }
+#s-cal3 tr.to td { border-top: 1px solid var(--line); } #s-cal3 tr.ti td.lb { padding-left: 18px; color: var(--ink-3); }
+.wk { margin: 0 0 12px; } .wkh { font-size: 15px; font-weight: 800; margin-bottom: 8px; } .wkh small { font-weight: 500; color: var(--ink-3); margin: 0 6px; }
+.wkl { display: flex; flex-wrap: wrap; gap: 8px; } .wkc { all: unset; cursor: pointer; display: flex; flex-direction: column; gap: 2px; min-width: 110px; padding: 8px 12px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); }
+.wkc span { font-size: 12.5px; color: var(--ink-3); font-weight: 700; } .wkc b { font-size: 18px; } .wkc .neg { color: var(--bad); font-weight: 700; } .wkc:hover { border-color: var(--brand-2); }
+.det .neg { color: var(--bad); font-weight: 800; } .det .pos { color: var(--good); font-weight: 800; }
 </style>
 </head>
 <body>
@@ -106,9 +113,11 @@ table.sc td.nd { color: var(--ink-3); }
     </section>
     <div class="det" id="s-det"></div>
     <div class="band band-m"><b>소재</b> 자가재(도금 → 컬러)·구매 소재 — 재고 소진 시점과 발주 마감 기한</div>
-    <section class="card matcal"><h2>소재 캘린더 <small>그날 할 일 — 입고(기발주) · 발주 마감 · 부족 주의 · 소진. 날짜를 누르면 아래에 그날 소재 상세</small></h2>
+    <section class="card matcal"><h2>소재 캘린더 <small>소재 유형별 그날 발주할 양 · 들어올 양 — 칸을 누르면 업체·양·무엇을 만들려고 쓰는지</small><span class="unit">톤</span></h2>
       <div id="s-mcal"></div>
-      <details class="tv"><summary>일별 재고 표 보기 <small class="muted">기말 재고(톤) — 자가재는 계획 기준, 구매 소재는 추가 발주 없음 가정. ▲ = 입고(기발주), 붉은 테 = 발주 마감</small></summary>
+      <div class="calw" id="s-calw3"><table class="sc tc" id="s-cal3"></table></div>
+      <div class="lg"><span><i style="background:var(--brand-bg,#e7f0fb)"></i>발주(마감일에 표시)</span><span><i style="background:var(--bad-bg)"></i>마감 지난 몫(오늘 칸에 모음)</span><span><i style="background:var(--good-bg)"></i>입고 예정 — 기발주</span><span><i style="background:#fff;box-shadow:inset 0 0 0 2px var(--good)"></i>입고 필요 — 새 발주분</span></div>
+      <details class="tv"><summary>자가재·구매 소재 일별 재고 표 보기 <small class="muted">기말 재고(톤) — 자가재는 계획 기준, 구매 소재는 추가 발주 없음 가정. ▲ = 입고(기발주), 붉은 테 = 발주 마감</small></summary>
       <div class="calw" id="s-calw2"><table class="sc" id="s-cal2"></table></div>
       <div class="lg"><span><i style="background:color-mix(in srgb,#1660c9 25%,#fff)"></i>AL</span><span><i style="background:color-mix(in srgb,#e8590c 25%,#fff)"></i>AZ</span><span><i style="background:color-mix(in srgb,#0a9e8f 25%,#fff)"></i>MAC</span><span><i style="background:#fff;box-shadow:inset 0 -3px 0 #c98b00"></i>M/C</span><span><i style="background:var(--warn-bg)"></i>재고 부족 주의(자가재 3일분 · 구매 소재 7일분 미만)</span><span><i style="background:var(--bad-bg)"></i>재고 소진·목표 130% 초과</span></div>
       </details>
@@ -132,6 +141,7 @@ table.sc td.nd { color: var(--ink-3); }
 <script src="ui/shell.js"></script>
 <script src="engine/crypto.js"></script>
 <script src="ui/cal.js"></script>
+<script src="ui/proccalc.js"></script>
 <script src="supply.js"></script>
 </body>
 </html>
