@@ -1,4 +1,5 @@
-/* 가동 캘린더(supply.html) · 소재 캘린더(matcal.html): published/integrated.enc.json(확정 통합 계획 V1) — 일별 가동·자가재·구매 소재(발주·입고·재고)·제품 재고 + 날짜 상세 */
+/* 가동 캘린더(supply.html) · 소재 캘린더(matcal.html): published/integrated.enc.json(확정 통합 계획 V1) — 일별 가동·자가재·구매 소재(발주·입고·재고)·제품 재고 + 날짜 상세
+   매일 바뀌는 부분(2026-10-15): 도금 = 사내 PC 아침 재계획(latest.plan — 지난 날 = MES 실적, 이후 = 재계획), 컬러 지난 날 = MES 실적(color_actual), 제품 재고 = 매일 롤링(portal.stockRoll). 자가재·구매 소재는 확정 계획 */
 (function () {
   'use strict';
   const NOEL = document.createElement('div');                      // 가동 캘린더(supply.html)·소재 캘린더(matcal.html)가 같은 코드 — 없는 칸은 빈 자리로
@@ -42,6 +43,64 @@
     for (const f of flow) { for (const [d, l, t] of f.made) (fMade[`${l}|${d}`] = fMade[`${l}|${d}`] || []).push([f, t]); for (const [d, l, t] of f.use) (fUse[`${l}|${d}`] = fUse[`${l}|${d}`] || []).push([f, t]); }
     const months = [...new Set(days.map((d) => d.slice(0, 7)))];
     return { W, V, days, months, pl, co, self, mat, ord, sw, est, flow, fMade, fUse, selfEst: V.selfEstFrom || '9999', matInfo: V.mat, groups: V.stockWeek.filter((s) => !/자가재|FH|구매소재/.test(s.k)).map((s) => s.k) };
+  }
+
+  // ---------- 매일 재계획 반영(2026-10-15 사용자: 가동 캘린더 매일 재계획) ----------
+  async function live(pw) {
+    const get = async (n) => { try { const e = await GP.latest(n); return e ? await GP.decryptJSON(e, pw) : null; } catch (x) { return null; } };
+    const [LP, CA, PO] = await Promise.all([get('latest.plan.enc.json'), get('color_actual.enc.json'), get('portal.enc.json')]);
+    const inQ = (d) => d >= D.days[0] && d <= D.days[D.days.length - 1], info = {};
+    const R = LP && (LP.result || LP);
+    if (R && R.rows && R.cal) {                                          // 도금: 확정 계획 화면과 같은 칸 구성(tools/integrated_web.plating_view)
+      const t0 = (R.replan || {}).t0 || '', cells = {}, ev = {}, runs = {};
+      const cell = (l, d) => (cells[`${l}|${d}`] = cells[`${l}|${d}`] || { cls: {}, alloy: {}, items: [] });
+      for (const [d, l, a, c, t] of R.rows) { const x = cell(l, d); x.cls[c] = (x.cls[c] || 0) + t; x.alloy[a] = (x.alloy[a] || 0) + t; }
+      for (const [d, l, a, c, dest, port, win, t, due] of R.dest || []) cell(l, d).items.push([a, c, dest, port || '', win || '', Math.round(t * 10) / 10, due]);
+      for (const c of R.cal.slice().sort((a, b) => (a.date < b.date ? -1 : 1))) {
+        ev[`${c.line}|${c.date}`] = c;
+        const L = (runs[c.line] = runs[c.line] || []), z = L[L.length - 1];
+        if (z && z[2] === c.fam) z[1] = c.date; else L.push([c.date, c.date, c.fam]);
+      }
+      const pl = {};
+      for (const k of new Set([...Object.keys(cells), ...Object.keys(ev)])) {
+        const [l, d] = k.split('|'); if (!inQ(d)) continue;
+        const x = cells[k] || { cls: {}, alloy: {}, items: [] }, e = ev[k] || {}, fa = {};
+        const t = Object.values(x.cls).reduce((a, v) => a + v, 0);
+        if (t < 0.5 && !e.event) continue;
+        for (const [a, v] of Object.entries(x.alloy)) fa[FAM(a)] = (fa[FAM(a)] || 0) + v;
+        const act = d <= t0, cp = (runs[l] || []).find((r) => r[0] <= d && d <= r[1]), why = [];
+        if (act) why.push('MES 생산 실적(사내 PC 재계획 파일에 반영된 값)');
+        else {
+          if (cp) why.push(`${l} ${cp[2]} 캠페인 ${cp[0].slice(5)}~${cp[1].slice(5)} — 오늘 아침 재계획의 강종 구간(M/C 횟수 최소화)`);
+          const early = x.items.filter((it) => diff(it[6], d) > 14);
+          why.push(early.length ? `납기보다 15일 이상 앞선 생산 ${n0(early.reduce((a, it) => a + it[5], 0))}t — 해당 강종의 이 라인 생산 가능 구간이 이 캠페인뿐이거나 후반 능력 부족` : '납기 근접 배치(선행 생산량 톤·일 최소화)');
+        }
+        pl[k] = { t, fam: Object.keys(fa).sort((a, b) => fa[b] - fa[a])[0] || FAM(e.fam || 'AL'), ev: e.event || '', cls: x.cls, items: x.items.sort((a, b) => (a[6] < b[6] ? -1 : 1)), why, act };
+      }
+      D.pl = pl;
+      const kst = LP.savedAt ? new Date(new Date(LP.savedAt).getTime() + 9 * 36e5).toISOString().slice(0, 16).replace('T', ' ') : '';   // 한국 시각
+      info.pl = { t0, at: kst, notes: (R.replan || {}).notes || [] };
+    }
+    const BD = CA && CA.byGroup && CA.byGroup.days;
+    if (BD) {                                                            // 컬러: 지난 날은 MES 실적으로 덮음(확정 계획 계산 뒤의 실적일)
+      const last = CA.byGroup.asOf;
+      for (const d of D.days) {
+        if (d > last) break;
+        for (const l of ['1CCL', '2CCL', '3CCL', '4CCL']) {
+          const v = (BD[d] || {})[l];
+          if (!v) { delete D.co[`${l}|${d}`]; continue; }
+          const t = Object.values(v[0]).reduce((a, x) => a + x, 0);
+          D.co[`${l}|${d}`] = { t, g: v[0], act: true, rows: (v[2] || []).map(([p, tt]) => ['실적', p, '', '', '실적', tt, 0, 0, 'MES 생산 실적', '', p, 0, [], '']) };
+        }
+      }
+      info.co = last;
+    }
+    const SR = PO && PO.stockRoll;
+    if (SR && SR.days && SR.d0) {                                        // 제품 재고: 어제 말 실제 → 재계획 생산 − 계획 출고(매일 롤링)
+      for (const [g, arr] of Object.entries(SR.days)) arr.forEach((v, i) => { const d = add(SR.d0, i), k = `${g}|${d}`; if (v == null || !D.sw[k]) return; D.sw[k] = { ...D.sw[k], v, act: d <= SR.asOf }; });
+      info.st = SR.asOf;
+    }
+    return info;
   }
 
   // ---------- 구매 소재: 오늘 재고(소재재고List·FH 추정) − 계획 필요량(주 단위를 7일에 고르게) + 알려진 입고(수입 FH 기발주) — 새 발주 없다고 보면 언제 바닥나나 ----------
@@ -178,11 +237,11 @@
     const H = { a: '', b: '' }; let tg = 'a', ci = 0;
     const sec = (t, dom) => { H[tg] += `<tr class="sec" data-dom="${dom}"><td class="lb">${t}</td><td colspan="${ds.length + 1}"></td></tr>`; };
     const row = (lb, cell, tot, cls = '') => { let s = 0, h = ''; h += `<tr class="${cls}"><td class="lb">${lb}</td>`; ds.forEach((d, i) => { const c = cell(d); s += c.n || 0; h += `<td data-d="${d}" data-l="${lb}" class="${c.c || ''}" style="--ci:${i}"${c.tip ? ` title="${esc(c.tip)}"` : ''}>${c.x == null ? '' : c.x}</td>`; }); h += `<td class="tot">${tot === false ? '' : n0(tot != null ? tot : s)}</td></tr>`; ci++;  H[tg] += h; };
-    sec('가동 (생산량)', 'G');
-    for (const l of ['1CGL', '2CGL']) row(l, (d) => { const x = D.pl[`${l}|${d}`]; if (!x) return { x: '·', c: 'z' }; const mc = /M\/C|재가동/.test(x.ev); return { x: x.t > 0.5 ? n0(x.t) : (mc ? 'M/C' : '·'), n: x.t, c: `f${x.fam} ${mc ? 'mc' : ''}`, tip: `${md(d)} ${l} ${x.t > 0.5 ? `${x.fam} ${n0(x.t)}t` : '생산 없음'} ${x.ev}` }; });
+    sec(D.live && D.live.pl ? `가동 (생산량 — 도금 ~${md(D.live.pl.t0)} 실적·이후 오늘 아침 재계획${D.live.co ? `, 컬러 ~${md(D.live.co)} 실적·이후 확정 계획` : ''})` : '가동 (생산량)', 'G');
+    for (const l of ['1CGL', '2CGL']) row(l, (d) => { const x = D.pl[`${l}|${d}`]; if (!x) return { x: '·', c: 'z' }; const mc = /M\/C|재가동/.test(x.ev); return { x: x.t > 0.5 ? n0(x.t) : (mc ? 'M/C' : '·'), n: x.t, c: `f${x.fam} ${mc ? 'mc' : ''}${x.act ? ' act' : ''}`, tip: `${md(d)} ${l} ${x.t > 0.5 ? `${x.fam} ${n0(x.t)}t` : '생산 없음'} ${x.ev}${x.act ? ' (실적)' : ''}` }; });
     for (const l of ['1CCL', '2CCL', '3CCL', '4CCL']) row(l, (d) => { const x = D.co[`${l}|${d}`]; if (!x || x.t < 0.5) return { x: '·', c: 'z' }; return { x: n0(x.t), n: x.t, c: x.act ? 'act' : '', tip: `${md(d)} ${l} ${n0(x.t)}t${x.act ? ' (실적)' : ''} · ${Object.entries(x.g).map(([k, v]) => k + ' ' + n0(v)).join(', ')}` }; }, null, 'sub');
-    sec('제품 재고 (기말 추정)', 'G');
-    for (const g of D.groups) row(UI.grp(g), (d) => { const x = D.sw[`${g}|${d}`]; if (!x) return { x: '' }; return { x: n0(x.v), c: x.tgt && x.v > x.tgt * 1.3 ? 'hi' : '', tip: `${md(d)} ${UI.grp(g)} 재고 ${n0(x.v)}t / 목표 ${n0(x.tgt)}t (${Math.round(x.v / x.tgt * 100)}%)` }; }, false, 'sub');
+    sec(D.live && D.live.st ? `제품 재고 (기말 — ~${md(D.live.st)} 실제, 이후 매일 롤링)` : '제품 재고 (기말 추정)', 'G');
+    for (const g of D.groups) row(UI.grp(g), (d) => { const x = D.sw[`${g}|${d}`]; if (!x) return { x: '' }; return { x: n0(x.v), c: (x.tgt && x.v > x.tgt * 1.3 ? 'hi' : '') + (x.act ? ' act' : ''), tip: `${md(d)} ${UI.grp(g)} 재고 ${n0(x.v)}t${x.act ? '(실제)' : ''} / 목표 ${n0(x.tgt)}t (${Math.round(x.v / x.tgt * 100)}%)` }; }, false, 'sub');
     tg = 'b';
     sec('자가재 재고 (도금 → 컬러 소재, 기말)', 'C');
     for (const a of ['AZ', 'MAC', 'AL']) row(`자가재 ${a}`, (d) => { const x = D.self[`${a}|${d}`]; if (!x) return {}; const nx = useNext(a, d, 3); return { x: n0(x.stock), c: (x.stock < 0 ? 'neg' : nx > 0 && x.stock < nx ? 'lo' : '') + (d >= D.selfEst ? ' est' : ''), tip: `${d >= D.selfEst ? '[추정: 1월 초 컬러 출고 = 12월 일평균] ' : ''}${md(d)} 자가재 ${a}: 도금 입고 +${n0(x.prod)} · 컬러 출고 −${n0(x.use)} → 기말 재고 ${n0(x.stock)}t (향후 3일 소요 ${n0(nx)}t)` }; }, false, 'sub');
@@ -307,7 +366,7 @@
     document.querySelectorAll(`${mode === 'm' ? '#s-cal2' : '#s-cal'} [data-d="${d}"]`).forEach((el) => el.classList.add('sel'));
     if (mode === 'm') { $('s-det').innerHTML = ''; matDetail(d); return; }
     $('s-det2').innerHTML = '';
-    const pcard = (l) => { const x = D.pl[`${l}|${d}`]; if (!x) return ''; return `<section class="card rv wide" data-noexport data-dom="G"><h3>${l} · ${x.t > 0.5 ? `${x.fam} ${n0(x.t)}t` : '생산 없음'} ${x.ev ? `<small style="color:#8a5a00">${esc(x.ev)}</small>` : ''}</h3>
+    const pcard = (l) => { const x = D.pl[`${l}|${d}`]; if (!x) return ''; return `<section class="card rv wide" data-noexport data-dom="G"><h3>${l} · ${x.t > 0.5 ? `${x.fam} ${n0(x.t)}t` : '생산 없음'} ${x.act ? '<small>(실적)</small>' : ''} ${x.ev ? `<small style="color:#8a5a00">${esc(x.ev)}</small>` : ''}</h3>
       <div class="scroll"><table class="dt mt fl"><thead><tr><th>강종 · 부서</th><th>목적지</th><th class="r">톤</th><th>소재</th><th>일정 (소재 → 생산 → 납기)</th><th>판정</th></tr></thead><tbody>${x.items.map((r) => { const f = r[1] === '자가재' ? flowOf(r[6], r[2], r[0]) : null, m = matG(r, d);
         const steps = [...m.steps, ['도금 생산', md(d), d, 'now'], ...(f ? [['컬러 투입', span(f.use), null]] : [['납기', md(r[6]), r[6]]])];
         return `<tr><td><b>${esc(r[0])}</b> <small>${esc(r[1])}</small></td><td>${esc([r[2], r[3]].filter(Boolean).join(' · '))}</td><td class="r">${n0(r[5])}</td><td>${esc(m.what)}</td><td>${flowHtml(steps)}</td><td class="st ${m.st[0]}">${esc(m.st[1])}</td></tr>`; }).join('') || '<tr><td colspan="6" class="small">생산 없음</td></tr>'}</tbody></table></div>
@@ -399,9 +458,11 @@
 
   async function render(W, pw) {
     D = prep(W);
+    D.live = await live(pw);
     try { const pe = await GP.latest('procure.enc.json'); const P = pe ? await GP.decryptJSON(pe, pw) : null; PM = P ? prepMat(P) : null; MP = P ? matPlan(P) : null; } catch (e) { PM = null; MP = null; }
     mon = D.months.includes(today.slice(0, 7)) ? today.slice(0, 7) : D.months[0];
-    $('s-meta').innerHTML = `기준 <b>확정 계획</b> · 계산 ${esc(String(W.built).replace('T', ' '))} · 실적 ~${esc(W.asOf)}`;
+    const LV = D.live || {};
+    $('s-meta').innerHTML = LV.pl ? `도금 <b>매일 재계획</b> ${esc(LV.pl.at)} · 실적 ~${esc(LV.pl.t0)} · 자가재·소재·컬러 이후 = 확정 계획(${esc(String(W.built).slice(0, 10))})` : `기준 <b>확정 계획</b> · 계산 ${esc(String(W.built).replace('T', ' '))} · 실적 ~${esc(W.asOf)}`;
     $('main').hidden = false; $('lock').hidden = true;
     tabs(); weekBox(); cal(); UI.reveal(document);
   }
