@@ -142,8 +142,8 @@
       g += `<line x1="${X(wi)}" x2="${X(wi)}" y1="${T}" y2="${H - B}" stroke="var(--brand-2)" stroke-width="1" opacity=".6"/><text x="${X(wi) + 4}" y="${T + 10}" font-size="11" fill="var(--brand-2)">이번 주</text>`;
       const ac = (ACT[r.k] || []).map(([d, t]) => [dd(d, W[0]) / 7, t, d]).filter(([i]) => i >= 0 && i <= last);   // 실제(일별) — 주 끝 날짜 사이에 날짜 비례로 놓음
       g += `<path class="li" d="M${r.v.map((v, i) => `${X(i)},${Y(v)}`).join('L')}" fill="none" stroke="var(--brand)" stroke-width="2.4" stroke-linejoin="round"/>`;
-      if (ac.length) g += `<polyline points="${ac.map(([i, t]) => `${X(i).toFixed(1)},${Y(t).toFixed(1)}`).join(' ')}" fill="none" stroke="var(--s3)" stroke-width="2.4" stroke-linejoin="round"/>` + ac.map(([i, t, d]) => `<circle cx="${X(i).toFixed(1)}" cy="${Y(t).toFixed(1)}" r="2.2" fill="var(--s3)"><title>실제 ${md(d)} 말 ${n0(t)}t</title></circle>`).join('');
-      g += r.v.map((v, i) => { const k = st(r, i); return `<circle cx="${X(i)}" cy="${Y(v)}" r="${k === 'ok' ? 2.6 : 3.6}" fill="${k === 'bad' ? 'var(--bad)' : k === 'warn' ? 'var(--warn)' : k === 'over' ? 'var(--ink-3)' : 'var(--brand)'}"><title>${md(W[i])} 주말 ${n0(v)}t${r.tgt ? ` / 목표 ${n0(r.tgt[i])}t` : ''} · ${SN[k]}</title></circle>`; }).join('');
+      if (ac.length) g += `<polyline points="${ac.map(([i, t]) => `${X(i).toFixed(1)},${Y(t).toFixed(1)}`).join(' ')}" fill="none" stroke="var(--s3)" stroke-width="2.4" stroke-linejoin="round"/>` + ac.map(([i, t, d]) => `<circle data-s="a" cx="${X(i).toFixed(1)}" cy="${Y(t).toFixed(1)}" r="2.2" fill="var(--s3)"><title>실제 ${md(d)} 말 ${n0(t)}t</title></circle>`).join('');
+      g += r.v.map((v, i) => { const k = st(r, i); return `<circle data-s="p" cx="${X(i)}" cy="${Y(v)}" r="${k === 'ok' ? 2.6 : 3.6}" fill="${k === 'bad' ? 'var(--bad)' : k === 'warn' ? 'var(--warn)' : k === 'over' ? 'var(--ink-3)' : 'var(--brand)'}"><title>${md(W[i])} 주말 ${n0(v)}t${r.tgt ? ` / 목표 ${n0(r.tgt[i])}t` : ''} · ${SN[k]}</title></circle>`; }).join('');
       g += W.map((d, i) => (i % 2 === 0 && i <= last - 1 ? `<text x="${X(i)}" y="${H - 7}" text-anchor="middle" font-size="11.5" fill="var(--ink-3)">${md(d)}</text>` : '')).join('');
       return `<div class="st-chart"><h3>${esc(GN[r.k] || r.k)}</h3><svg viewBox="0 0 ${Wd} ${H}" class="cv" role="img" aria-label="${esc(GN[r.k] || r.k)} 주말 재고 추이">${g}</svg></div>`;
     };
@@ -166,9 +166,9 @@
       g += `<text x="${L}" y="${H - 9}" font-size="11.5" fill="var(--ink-3)">${md(d0)}</text>`;
       if (today > d0 && today < dEnd) g += `<line x1="${X(today)}" x2="${X(today)}" y1="${T}" y2="${H - B}" stroke="var(--brand-2)" opacity=".6"/><text x="${X(today) + 4}" y="${T + 10}" font-size="11" fill="var(--brand-2)">오늘</text>`;
       g += `<path class="li" d="M${plan.map(([d, v]) => `${X(d).toFixed(1)},${Y(v).toFixed(1)}`).join('L')}" fill="none" stroke="var(--brand)" stroke-width="2.4" stroke-linejoin="round"/>`;
-      g += plan.slice(1).map(([d, v]) => `<circle cx="${X(d).toFixed(1)}" cy="${Y(v).toFixed(1)}" r="2.6" fill="var(--brand)"><title>${md(d)} 주말 계획 ${n0(v)}t</title></circle>`).join('');
+      g += plan.slice(1).map(([d, v]) => `<circle data-s="p" cx="${X(d).toFixed(1)}" cy="${Y(v).toFixed(1)}" r="2.6" fill="var(--brand)"><title>${md(d)} 주말 계획 ${n0(v)}t</title></circle>`).join('');
       g += `<polyline points="${ad.map(([d, v]) => `${X(d).toFixed(1)},${Y(v).toFixed(1)}`).join(' ')}" fill="none" stroke="var(--s3)" stroke-width="2.4" stroke-linejoin="round"/>`;
-      g += ad.map(([d, v, parts]) => `<circle cx="${X(d).toFixed(1)}" cy="${Y(v).toFixed(1)}" r="2.4" fill="var(--s3)"><title>실제 ${md(d)} 말 ${n0(v)}t (${K.act.map((k, i) => `${k === '도금 제품(자가재)' ? '자가재' : GN[k.replace('g:', '')] || k.replace('g:', '')} ${n0(parts[i])}`).join(' · ')})</title></circle>`).join('');
+      g += ad.map(([d, v, parts]) => `<circle data-s="a" cx="${X(d).toFixed(1)}" cy="${Y(v).toFixed(1)}" r="2.4" fill="var(--s3)"><title>실제 ${md(d)} 말 ${n0(v)}t (${K.act.map((k, i) => `${k === '도금 제품(자가재)' ? '자가재' : GN[k.replace('g:', '')] || k.replace('g:', '')} ${n0(parts[i])}`).join(' · ')})</title></circle>`).join('');
       const a = ad[ad.length - 1], pw = pv.find(([d]) => d >= a[0]);
       return `<div class="st-chart"><h3>${K.nm} <small style="font-weight:500;color:var(--ink-3)">${K.sub}</small></h3>
         <div class="st-s" style="margin:2px 0 4px">실제 ${md(a[0])} 말 <b>${n0(a[1])}t</b> (${md(d0)} ${n0(ad[0][1])}t → ${a[1] >= ad[0][1] ? '+' : ''}${n0(a[1] - ad[0][1])}t)${pw ? ` · 계획 ${md(pw[0])} 주말 ${n0(pw[1])}t` : ''} · 12월 말 계획 ${n0(pv[last][1])}t</div>
@@ -204,12 +204,17 @@
       const ring = document.createElementNS('http://www.w3.org/2000/svg', 'g'); svg.appendChild(ring);
       svg.addEventListener('mousemove', (ev) => {
         const r = svg.getBoundingClientRect(), vb = svg.viewBox.baseVal, x = (ev.clientX - r.left) * vb.width / r.width;
-        let best = Infinity; pts.forEach((c) => { const d = Math.abs(+c.getAttribute('cx') - x); if (d < best) best = d; });
-        if (best > vb.width * 0.04) { tip.hidden = true; ring.innerHTML = ''; return; }
-        const by = {}; pts.forEach((c) => { const k = c.getAttribute('fill'), d = Math.abs(+c.getAttribute('cx') - x); if (d <= vb.width * 0.04 && (!by[k] || d < by[k][0])) by[k] = [d, c]; });   // 선(색)마다 가장 가까운 점 하나
-        const near = Object.values(by).map((v) => v[1]);
+        // 선(색)마다: 커서가 그 선의 범위(처음~끝 점 ± 3%) 안이면 가장 가까운 점 — 거리 제한 없음(실제 선처럼 짧고 촘촘한 선도 대충 올려도 나옴)
+        const G = {}; pts.forEach((c) => { const k = c.getAttribute('data-s') || c.getAttribute('fill'); (G[k] = G[k] || []).push(c); });   // 선 단위(계획 p · 실제 a)
+        const tol = vb.width * 0.03, near = [];
+        for (const L of Object.values(G)) {
+          const xs = L.map((c) => +c.getAttribute('cx')); if (x < Math.min(...xs) - tol || x > Math.max(...xs) + tol) continue;
+          near.push(L.reduce((m, c) => (Math.abs(+c.getAttribute('cx') - x) < Math.abs(+m.getAttribute('cx') - x) ? c : m)));
+        }
+        if (!near.length) { tip.hidden = true; ring.innerHTML = ''; return; }
+        near.sort((p_, q_) => +p_.getAttribute('cy') - +q_.getAttribute('cy'));
         tip.innerHTML = near.map((c) => `<div><i style="background:${c.getAttribute('fill')}"></i>${esc(c.querySelector('title').textContent)}</div>`).join('');
-        ring.innerHTML = near.map((c) => `<circle cx="${c.getAttribute('cx')}" cy="${c.getAttribute('cy')}" r="5.5" fill="none" stroke="${c.getAttribute('fill')}" stroke-width="2"/>`).join('');
+        ring.innerHTML = `<line x1="${x}" x2="${x}" y1="0" y2="${vb.height}" stroke="var(--ink-3)" stroke-dasharray="3 3" opacity=".6"/>` + near.map((c) => `<circle cx="${c.getAttribute('cx')}" cy="${c.getAttribute('cy')}" r="5.5" fill="none" stroke="${c.getAttribute('fill')}" stroke-width="2"/>`).join('');
         tip.hidden = false;
         const w = tip.offsetWidth, h = tip.offsetHeight;
         tip.style.left = Math.min(window.innerWidth - w - 8, ev.clientX + 14) + 'px'; tip.style.top = Math.max(8, ev.clientY - h - 12) + 'px';
