@@ -237,10 +237,10 @@
     const H = { a: '', b: '' }; let tg = 'a', ci = 0;
     const sec = (t, dom) => { H[tg] += `<tr class="sec" data-dom="${dom}"><td class="lb">${t}</td><td colspan="${ds.length + 1}"></td></tr>`; };
     const row = (lb, cell, tot, cls = '') => { let s = 0, h = ''; h += `<tr class="${cls}"><td class="lb">${lb}</td>`; ds.forEach((d, i) => { const c = cell(d); s += c.n || 0; h += `<td data-d="${d}" data-l="${lb}" class="${c.c || ''}" style="--ci:${i}"${c.tip ? ` title="${esc(c.tip)}"` : ''}>${c.x == null ? '' : c.x}</td>`; }); h += `<td class="tot">${tot === false ? '' : n0(tot != null ? tot : s)}</td></tr>`; ci++;  H[tg] += h; };
-    sec(D.live && D.live.pl ? `가동 (생산량 — 도금 ~${md(D.live.pl.t0)} 실적·이후 오늘 아침 재계획${D.live.co ? `, 컬러 ~${md(D.live.co)} 실적·이후 확정 계획` : ''})` : '가동 (생산량)', 'G');
+    sec('가동 (생산량)', 'G');
     for (const l of ['1CGL', '2CGL']) row(l, (d) => { const x = D.pl[`${l}|${d}`]; if (!x) return { x: '·', c: 'z' }; const mc = /M\/C|재가동/.test(x.ev); return { x: x.t > 0.5 ? n0(x.t) : (mc ? 'M/C' : '·'), n: x.t, c: `f${x.fam} ${mc ? 'mc' : ''}${x.act ? ' act' : ''}`, tip: `${md(d)} ${l} ${x.t > 0.5 ? `${x.fam} ${n0(x.t)}t` : '생산 없음'} ${x.ev}${x.act ? ' (실적)' : ''}` }; });
     for (const l of ['1CCL', '2CCL', '3CCL', '4CCL']) row(l, (d) => { const x = D.co[`${l}|${d}`]; if (!x || x.t < 0.5) return { x: '·', c: 'z' }; return { x: n0(x.t), n: x.t, c: x.act ? 'act' : '', tip: `${md(d)} ${l} ${n0(x.t)}t${x.act ? ' (실적)' : ''} · ${Object.entries(x.g).map(([k, v]) => k + ' ' + n0(v)).join(', ')}` }; }, null, 'sub');
-    sec(D.live && D.live.st ? `제품 재고 (기말 — ~${md(D.live.st)} 실제, 이후 매일 롤링)` : '제품 재고 (기말 추정)', 'G');
+    sec('제품 재고 (기말)', 'G');
     for (const g of D.groups) row(UI.grp(g), (d) => { const x = D.sw[`${g}|${d}`]; if (!x) return { x: '' }; return { x: n0(x.v), c: (x.tgt && x.v > x.tgt * 1.3 ? 'hi' : '') + (x.act ? ' act' : ''), tip: `${md(d)} ${UI.grp(g)} 재고 ${n0(x.v)}t${x.act ? '(실제)' : ''} / 목표 ${n0(x.tgt)}t (${Math.round(x.v / x.tgt * 100)}%)` }; }, false, 'sub');
     tg = 'b';
     sec('자가재 재고 (도금 → 컬러 소재, 기말)', 'C');
@@ -462,7 +462,7 @@
     try { const pe = await GP.latest('procure.enc.json'); const P = pe ? await GP.decryptJSON(pe, pw) : null; PM = P ? prepMat(P) : null; MP = P ? matPlan(P) : null; } catch (e) { PM = null; MP = null; }
     mon = D.months.includes(today.slice(0, 7)) ? today.slice(0, 7) : D.months[0];
     const LV = D.live || {};
-    $('s-meta').innerHTML = LV.pl ? `도금 <b>매일 재계획</b> ${esc(LV.pl.at)} · 실적 ~${esc(LV.pl.t0)} · 자가재·소재·컬러 이후 = 확정 계획(${esc(String(W.built).slice(0, 10))})` : `기준 <b>확정 계획</b> · 계산 ${esc(String(W.built).replace('T', ' '))} · 실적 ~${esc(W.asOf)}`;
+    $('s-meta').innerHTML = LV.pl ? `실적 ~${md(LV.pl.t0)} · 재계획 ${esc(LV.pl.at.slice(5))}` : `기준 <b>확정 계획</b> · 계산 ${esc(String(W.built).replace('T', ' '))} · 실적 ~${esc(W.asOf)}`;
     $('main').hidden = false; $('lock').hidden = true;
     tabs(); weekBox(); cal(); UI.reveal(document);
   }
