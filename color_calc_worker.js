@@ -60,7 +60,7 @@ for k in [k for k in list(sys.modules) if k.split('.')[0] in ('cglplan', 'color_
 import color_calc as C
 up = dict(UP)
 step = lambda m: print('@@' + m)
-C.apply_uploads(up.get('sales'), up.get('r15'), up.get('down'), log=step)
+C.apply_uploads(up.get('sales'), up.get('r15'), up.get('down'), log=step, lines=up.get('lines'))
 D = json.load(open('/calc/mes.json', encoding='utf-8'))
 o, s = C.run(D['ex'], D['md'], log=step)
 P = json.load(open('/calc/gp/work/integ_prep.json', encoding='utf-8'))
