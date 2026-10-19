@@ -68,7 +68,8 @@
     t0 = Date.now(); clearInterval(tick); tick = setInterval(() => { $('c-msg').textContent = `계산 중… ${Math.round((Date.now() - t0) / 1000)}초`; }, 1000);
     const up = {}; const tr = [];
     for (const [k, b] of Object.entries(uploads)) { up[k] = b.slice(0); tr.push(up[k]); }
-    worker.postMessage({ type: 'run', files: D.files.files, mes: { ex: D.mes.ex, md: D.mes.md }, prev: D.prev, uploads: up, names }, tr);
+    const idle = ($('c-idle') && $('c-idle').value) || '';
+    worker.postMessage({ type: 'run', files: D.files.files, mes: { ex: D.mes.ex, md: D.mes.md }, prev: D.prev, uploads: up, names, idle }, tr);
   };
   function log(s, err) { const L = $('c-log'); L.textContent += (err ? '⚠ ' : '') + s + '\n'; L.scrollTop = L.scrollHeight; }
   function onMsg(ev) {

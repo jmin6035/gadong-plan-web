@@ -52,6 +52,7 @@ self.onmessage = async (ev) => {
     const up = {};
     for (const [k, f] of Object.entries(m.uploads || {})) { const nm = ((m.names || {})[k] || `${k}.xlsx`).replace(/[\\/]/g, '_'); py.FS.mkdirTree(`/calc/up/${k}`); const p = `/calc/up/${k}/${nm}`; py.FS.writeFile(p, new Uint8Array(f)); up[k] = p; }
     py.globals.set('UP', py.toPy(up));
+    py.globals.set('IDLE', m.idle || '');
     const out = await py.runPythonAsync(`
 import os, json
 os.environ['CGL_R15'] = '1'
@@ -60,7 +61,7 @@ for k in [k for k in list(sys.modules) if k.split('.')[0] in ('cglplan', 'color_
 import color_calc as C
 up = dict(UP)
 step = lambda m: print('@@' + m)
-C.apply_uploads(up.get('sales'), up.get('r15'), up.get('down'), log=step, lines=up.get('lines'))
+C.apply_uploads(up.get('sales'), up.get('r15'), up.get('down'), log=step, lines=up.get('lines'), idle=str(IDLE))
 D = json.load(open('/calc/mes.json', encoding='utf-8'))
 o, s = C.run(D['ex'], D['md'], log=step)
 P = json.load(open('/calc/gp/work/integ_prep.json', encoding='utf-8'))
