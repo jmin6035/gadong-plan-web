@@ -10,7 +10,7 @@
   const LINES = ['1CCL', '2CCL', '3CCL', '4CCL'], MONTHS = ['2026-10', '2026-11', '2026-12'];
   const GL = (g) => (g === '주문재' ? '건재 주문재' : g);
   const fmtT = (s) => (s ? String(s).replace('T', ' ').slice(0, 16) : '-');
-  let pw = '', E = {}, D = {}, worker = null, result = null, uploads = {}, names = {}, reading = 0;
+  let pw = '', E = {}, D = {}, worker = null, result = null, uploads = {}, names = {}, reading = 0, moves = [];
 
   const envs = Promise.all(['color_calc_files.enc.json', 'color_calc_mes.enc.json', 'integrated.enc.json', 'color_prev.enc.json'].map((n) => GP.latest(n)))
     .then(([files, mes, cur, prev]) => { E = { files, mes, cur, prev }; return E; });
@@ -26,6 +26,8 @@
     pw = p; try { localStorage.setItem(PW_KEY, p); } catch (x) { /* 무시 */ }
     $('c-lock').hidden = true; $('c-body').hidden = false;
     showSources();
+    moves = ((D.cur && D.cur.moves && D.cur.moves.items) || []).map((m) => Object.assign({}, m));
+    calRender();
     worker = new Worker('color_calc_worker.js');
     worker.onmessage = onMsg;
     worker.postMessage({ type: 'init' });                     // 엔진 미리 불러오기(화면을 보는 동안)
@@ -69,7 +71,7 @@
     const up = {}; const tr = [];
     for (const [k, b] of Object.entries(uploads)) { up[k] = b.slice(0); tr.push(up[k]); }
     const idle = ($('c-idle') && $('c-idle').value) || '';
-    worker.postMessage({ type: 'run', files: D.files.files, mes: { ex: D.mes.ex, md: D.mes.md }, prev: D.prev, uploads: up, names, idle }, tr);
+    worker.postMessage({ type: 'run', files: D.files.files, mes: { ex: D.mes.ex, md: D.mes.md }, prev: D.prev, uploads: up, names, idle, moves }, tr);
   };
   function log(s, err) { const L = $('c-log'); L.textContent += (err ? '⚠ ' : '') + s + '\n'; L.scrollTop = L.scrollHeight; }
   function onMsg(ev) {
@@ -105,6 +107,8 @@
     const G = [...new Set(Object.keys(N.un).concat(C ? Object.keys(C.un) : []).map((x) => x.split('|')[0]))];
     $('c-unpl').innerHTML = G.length ? `<thead><tr><th rowspan="2">그룹</th>${MONTHS.map((m) => `<th colspan="${C ? 3 : 1}">${+m.slice(5)}월</th>`).join('')}</tr><tr>${MONTHS.map(() => (C ? '<th>새 계산</th><th>현재</th><th>차이</th>' : '<th>새 계산</th>')).join('')}</tr></thead><tbody>`
       + G.map((g) => `<tr><td><b>${esc(GL(g))}</b></td>${MONTHS.map((m) => cell(N.un[`${g}|${m}`] || 0, C && C.un[`${g}|${m}`])).join('')}</tr>`).join('') + '</tbody>' : '<tbody><tr><td>미편성 없음</td></tr></tbody>';
+    renderMoves(r.s && r.s.moves);
+    calRender();
     $('c-res').hidden = false; $('c-pub').hidden = false;
     if (window.UI) { UI.reveal($('c-res')); }
     $('c-res').scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -141,6 +145,128 @@
     } catch (e) { $('p-msg').textContent = '⚠ ' + e.message; }
     $('p-go').disabled = false;
   };
+
+
+  /* 캘린더 끌어 옮기기 — 사양 칸(그 날 같은 그룹·품명·고객·목적지·선적 묶음)을 다른 날에 놓으면 그 사양·톤을 옮김.
+     계산은 서버와 같은 Python(tools/color_pack.apply_moves): 옮긴 몫 고정 → 그 뒤는 연속 공정대로 다시 채움 → 영향(밀린 사양·납기·소재·도금) */
+  const GC = { 수출벌크: 'var(--s2)', 건재수출: 'var(--s2)', 가전수출: 'var(--s5)', 가전내수: 'var(--s4)', 수요개발: 'var(--s3)', 주문재: 'var(--s6)', 계획재: 'var(--s1)' };
+  const WD = ['월', '화', '수', '목', '금', '토', '일'];
+  const md = (d) => `${+d.slice(5, 7)}/${+d.slice(8)}`;
+  const cv = { line: '1CCL', mon: null };
+  const plan = () => (result && result.o) || D.cur;
+  const lastAct = () => { const o = plan(); return (o && o.asOf) || ''; };
+  function chipsOf(c) {                                       // 같은 사양 묶음(그 날)
+    const m = new Map();
+    for (const r of c.rows || []) {
+      if (r[4] === '실적') continue;
+      const k = [r[0], r[1], r[2] || '', r[13] || '', r[3] || '', r[4] || ''].join('|');
+      const x = m.get(k) || { g: r[0], p: r[1], c: r[13] || '', dest: r[3] || '', ship: r[4] || '', spec: r[2] || '', t: 0, min: 0, moved: false, hit: false };
+      x.t += r[5]; x.min += r[6]; x.moved = x.moved || /수동 이동\(/.test(r[8] || ''); x.hit = x.hit || /수동 이동 영향/.test(r[8] || '');
+      m.set(k, x);
+    }
+    return [...m.values()].sort((a, b) => b.min - a.min);
+  }
+  function calRender() {
+    const o = plan(); if (!o || !o.color) { $('dv-grid').innerHTML = '<p class="hint">게시된 계획이 없습니다.</p>'; return; }
+    const months = [...new Set(o.color.map((c) => c.d.slice(0, 7)))].sort();
+    const act = lastAct();
+    if (!cv.mon) cv.mon = months.find((m) => m >= act.slice(0, 7)) || months[0];
+    $('dv-line').innerHTML = LINES.map((l) => `<button type="button" data-l="${l}" aria-pressed="${l === cv.line}">${l}</button>`).join('');
+    $('dv-mon').innerHTML = months.map((m) => `<button type="button" data-m="${m}" aria-pressed="${m === cv.mon}">${+m.slice(5)}월</button>`).join('');
+    $('dv-line').querySelectorAll('button').forEach((b) => b.onclick = () => { cv.line = b.dataset.l; calRender(); });
+    $('dv-mon').querySelectorAll('button').forEach((b) => b.onclick = () => { cv.mon = b.dataset.m; calRender(); });
+    $('dv-src').textContent = result ? '새 계산 결과(아직 게시 전)' : `현재 게시 계획 · 실적 ~${md(act || '2026-10-01')}`;
+    const by = {}; for (const c of o.color) if (c.l === cv.line && c.d.slice(0, 7) === cv.mon) by[c.d] = c;
+    const [y, m] = cv.mon.split('-').map(Number), nd = new Date(Date.UTC(y, m, 0)).getUTCDate(), lead = (new Date(Date.UTC(y, m - 1, 1)).getUTCDay() + 6) % 7;
+    const pend = moves.filter((v) => v.line === cv.line);
+    let h = WD.map((w, i) => `<div class="dv-wh ${i >= 5 ? 'we' : ''}">${w}</div>`).join('');
+    const ds0 = (d) => `${cv.mon}-${String(d).padStart(2, '0')}`;
+    let d1 = 1;                                                   // 실적만 있는 지난 주는 숨김(옮길 수 없음)
+    while (d1 + (7 - (lead + d1 - 1) % 7) - 1 < nd && ds0(d1 + (7 - (lead + d1 - 1) % 7) - 1) <= act) d1 += 7 - (lead + d1 - 1) % 7;
+    if (d1 > 1) h += `<p class="hint" style="grid-column:1/-1;margin:0">${+cv.mon.slice(5)}/1~${+cv.mon.slice(5)}/${d1 - 1} 실적 주는 숨김</p>`;
+    for (let i = 0; i < (lead + d1 - 1) % 7; i++) h += '<div class="dv-day empty"></div>';
+    for (let d = d1; d <= nd; d++) {
+      const ds = ds0(d), c = by[ds] || { rows: [], min: 0 }, past = ds <= act, wd = (lead + d - 1) % 7;
+      const chips = chipsOf(c).map((x, j) => {
+        const pv = pend.some((v) => (v.from === ds || v.to === ds) && v.p === x.p && (v.dest || '') === x.dest && (v.c || '') === x.c && (v.s == null || v.s === x.spec));
+        return `<button type="button" class="dv-c ${past ? 'fixed' : ''} ${x.moved ? 'moved' : ''} ${x.hit ? 'hit' : ''} ${pv ? 'pend' : ''}" style="--gc:${GC[x.g] || 'var(--s1)'}" data-d="${ds}" data-j="${j}" title="${esc(`${GL(x.g)} ${x.p} ${x.c} ${x.dest} ${x.ship} — ${Math.round(x.t)}t · ${(x.min / 60).toFixed(1)}시간${x.moved ? ' · 옮긴 몫' : ''}${x.hit ? ' · 옮기기 영향으로 날짜 바뀜' : ''}`)}"><b>${esc(x.p)}</b> ${n0(x.t)}t<small>${esc([GL(x.g), x.dest || x.c].filter(Boolean).join(' · '))}</small></button>`;
+      }).join('');
+      const hh = Math.min(24, (c.min || 0) / 60);
+      const ad = pend.filter((v) => v.to === ds).reduce((a, v) => a + (+v.t || 0), 0), rm = pend.filter((v) => v.from === ds).reduce((a, v) => a + (+v.t || 0), 0);
+      h += `<div class="dv-day ${past ? 'act' : ''}" data-d="${ds}"><div class="dv-dh"><b class="${wd >= 5 ? 'we' : ''}">${d}</b><span>${past ? '실적' : hh.toFixed(1) + 'h'}${ad ? ` · +${n0(ad)}t` : ''}${rm ? ` · −${n0(rm)}t` : ''}</span></div><div class="dv-hb"><i style="width:${(hh / 24 * 100).toFixed(0)}%"></i></div>${chips}</div>`;
+    }
+    $('dv-grid').innerHTML = h;
+    $('dv-grid').querySelectorAll('.dv-c:not(.fixed)').forEach((el) => el.addEventListener('pointerdown', dragStart));
+    movesRender();
+  }
+  function movesRender() {
+    $('dv-moves').innerHTML = moves.length
+      ? `<b>${result && JSON.stringify(((result.o.moves || {}).items) || []) === JSON.stringify(moves) ? `계산에 반영한 옮기기 ${moves.length}건 — 아래 결과 확인 후 게시하면 확정` : `옮길 일정 ${moves.length}건`}</b>` + moves.map((v, i) => `<span class="mv">${esc(v.line)} ${esc(v.p)}${v.dest ? ' · ' + esc(v.dest) : ''} <b>${n0(v.t)}t</b> ${md(v.from)} → ${md(v.to)}<button type="button" data-i="${i}" aria-label="취소">✕</button></span>`).join('')
+        + '<button type="button" class="btn primary" id="dv-go">옮기기 반영해서 계산</button><button type="button" class="btn" id="dv-clear">모두 취소</button>'
+      : '<span class="hint">옮긴 일정 없음 — 사양 칸을 끌어 다른 날에 놓으세요(휴대폰은 칸을 누른 채 끌기).</span>';
+    $('dv-moves').querySelectorAll('.mv button').forEach((b) => b.onclick = () => { moves.splice(+b.dataset.i, 1); calRender(); });
+    if ($('dv-go')) $('dv-go').onclick = () => { $('c-run').click(); $('c-prog').scrollIntoView({ behavior: 'smooth', block: 'center' }); };
+    if ($('dv-clear')) $('dv-clear').onclick = () => { if (confirm('옮긴 일정을 모두 취소할까요? (계산 시작을 눌러야 계획에 반영)')) { moves = []; calRender(); } };
+  }
+  let drag = null;
+  function dragStart(e) {
+    if (e.button !== 0) return;
+    const el = e.currentTarget, c = plan().color.find((z) => z.l === cv.line && z.d === el.dataset.d), x = chipsOf(c)[+el.dataset.j];
+    drag = { el, x, from: el.dataset.d, sx: e.clientX, sy: e.clientY, on: false, ghost: null, over: null };
+    el.setPointerCapture(e.pointerId);
+    el.addEventListener('pointermove', dragMove); el.addEventListener('pointerup', dragEnd); el.addEventListener('pointercancel', dragEnd);
+  }
+  function dragMove(e) {
+    if (!drag) return;
+    if (!drag.on && Math.hypot(e.clientX - drag.sx, e.clientY - drag.sy) < 6) return;
+    if (!drag.on) { drag.on = true; drag.ghost = drag.el.cloneNode(true); drag.ghost.classList.add('dv-ghost'); document.body.appendChild(drag.ghost); }
+    drag.ghost.style.left = e.clientX + 'px'; drag.ghost.style.top = e.clientY + 'px';
+    const t = document.elementFromPoint(e.clientX, e.clientY), day = t && t.closest('.dv-day[data-d]');
+    if (drag.over && drag.over !== day) drag.over.classList.remove('over', 'nodrop');
+    drag.over = day || null;
+    if (day) day.classList.add(day.dataset.d > lastAct() && day.dataset.d !== drag.from ? 'over' : 'nodrop');
+  }
+  function dragEnd() {
+    const g = drag; drag = null;
+    if (!g) return;
+    g.el.removeEventListener('pointermove', dragMove); g.el.removeEventListener('pointerup', dragEnd); g.el.removeEventListener('pointercancel', dragEnd);
+    if (g.ghost) g.ghost.remove();
+    if (g.over) g.over.classList.remove('over', 'nodrop');
+    if (!g.on || !g.over) return;
+    const to = g.over.dataset.d;
+    if (to <= lastAct() || to === g.from) return;
+    ask(g.x, g.from, to);
+  }
+  function ask(x, from, to) {
+    const dlg = $('dv-dlg'), n = $('dv-dlg-n'), max = Math.round(x.t * 10) / 10;
+    $('dv-dlg-t').textContent = `${cv.line} ${x.p}  ${md(from)} → ${md(to)}`;
+    $('dv-dlg-s').textContent = `${GL(x.g)} · ${[x.c, x.dest, x.ship].filter(Boolean).join(' · ')} — 그 날 ${n0(x.t)}t (${(x.min / 60).toFixed(1)}시간, ${(x.t / x.min * 60).toFixed(1)}t/h)`;
+    $('dv-dlg-max').textContent = `최대 ${max}t`;
+    n.max = max; n.value = max;
+    dlg.onclose = () => {
+      if (dlg.returnValue !== 'ok') return;
+      const t = Math.min(max, +n.value || 0); if (t <= 0) return;
+      moves.push({ line: cv.line, from, to, g: x.g, p: x.p, s: x.spec, c: x.c, dest: x.dest, ship: x.ship, t });
+      calRender();
+    };
+    dlg.returnValue = ''; dlg.showModal(); n.select();
+  }
+  function renderMoves(mv) {
+    const box = $('c-mv'); if (!box) return;
+    if (!mv || (!mv.applied && !mv.skipped)) { box.innerHTML = ''; return; }
+    const im = mv.impact || {}, li = (a, f) => (a && a.length ? `<ul>${a.map(f).join('')}</ul>` : '<p class="hint">없음</p>');
+    box.innerHTML = `<div class="mv-imp"><h3>옮긴 일정과 영향</h3>`
+      + li(mv.applied, (v) => `<li>✓ ${esc(v.line)} ${esc(v.p)}${v.dest ? ' · ' + esc(v.dest) : ''} <b>${n0(v.t)}t</b> ${md(v.from)} → ${md(v.to)}${v.fromActual ? ` <small class="hint">(다시 계산한 계획에선 그 사양이 ${md(v.fromActual)}에 있어 거기서 옮김)</small>` : ''}</li>`)
+      + (mv.skipped && mv.skipped.length ? `<ul>${mv.skipped.map((v) => `<li class="warn">⚠ 못 옮김: ${esc(v.move.line)} ${esc(v.move.p)} ${md(v.move.from)} → ${md(v.move.to)} — ${esc(v.why)}</li>`).join('')}</ul>` : '')
+      + `<h3>같이 날짜가 바뀐 사양 <small>${n0(im.shiftT || 0)}t${im.shiftLast ? ` · ${md(im.shiftLast)}까지 영향` : ''}</small></h3>`
+      + li(im.shifts, (v) => `<li>${esc(v.line)} ${esc(v.p)}${v.dest ? ' · ' + esc(v.dest) : ''} ${n0(v.t)}t ${md(v.from)} → ${md(v.to)} ${v.to > v.from ? '(밀림)' : '(당겨짐)'}</li>`)
+      + `<h3>납기(선적 완료기한)</h3>` + (im.newLate && im.newLate.length ? li(im.newLate, (v) => `<li class="warn">⚠ ${esc(v.line)} ${esc(v.p)} ${esc(v.dest)} ${n0(v.t)}t — 기한 ${md(v.due)} 넘김</li>`) : '<p class="hint">새로 넘기는 것 없음</p>')
+      + (im.fixedLate && im.fixedLate.length ? li(im.fixedLate, (v) => `<li>✓ ${esc(v.p)} ${esc(v.dest)} ${n0(v.t)}t 기한 안으로 들어옴</li>`) : '')
+      + `<h3>구매 소재</h3>` + (im.mat && im.mat.length ? li(im.mat, (v) => `<li class="${v.after > v.before ? 'warn' : ''}">${esc(v.code)} 부족 ${n0(v.before)}t → ${n0(v.after)}t${v.first ? ` (첫 부족 ${md(v.first)})` : ''}</li>`) : '<p class="hint">부족 변화 없음(입고 예정 기준, 6주 뒤는 신규 발주로 맞춤)</p>')
+      + `<h3>도금(자가재)</h3>` + (im.plating && im.plating.length ? `<p class="warn">⚠ 자가재 반순 마감이 바뀜 → 도금 확정 계획 재계산 필요(관리자, 약 30분)</p>` + li(im.plating, (v) => `<li>${esc(v.sec)} ${esc(v.alloy)} 마감 ${md(v.due)}: ${n0(v.before)}t → ${n0(v.after)}t</li>`) : '<p class="hint">영향 없음 — 자가재 필요일이 같은 반순(10·20·말일) 안</p>')
+      + (im.spill && im.spill.length ? `<h3>계획 기간 밖으로 밀림</h3>` + li(im.spill, (v) => `<li class="warn">${esc(v.line)} ${esc(v.p)} ${n0(v.t)}t → 미편성</li>`) : '')
+      + '</div>';
+  }
 
   $('c-unlock').addEventListener('submit', (e) => { e.preventDefault(); unlock($('c-pw').value); });
   envs.then(() => { let s = null; try { s = localStorage.getItem(PW_KEY); } catch (x) { /* 무시 */ } if (s) unlock(s); else { $('c-unlock').hidden = false; lockMsg('계산 화면 열기'); } });

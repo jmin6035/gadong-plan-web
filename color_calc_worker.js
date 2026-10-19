@@ -53,6 +53,7 @@ self.onmessage = async (ev) => {
     for (const [k, f] of Object.entries(m.uploads || {})) { const nm = ((m.names || {})[k] || `${k}.xlsx`).replace(/[\\/]/g, '_'); py.FS.mkdirTree(`/calc/up/${k}`); const p = `/calc/up/${k}/${nm}`; py.FS.writeFile(p, new Uint8Array(f)); up[k] = p; }
     py.globals.set('UP', py.toPy(up));
     py.globals.set('IDLE', m.idle || '');
+    py.globals.set('MOVES', JSON.stringify(m.moves || []));
     const out = await py.runPythonAsync(`
 import os, json
 os.environ['CGL_R15'] = '1'
@@ -61,11 +62,11 @@ for k in [k for k in list(sys.modules) if k.split('.')[0] in ('cglplan', 'color_
 import color_calc as C
 up = dict(UP)
 step = lambda m: print('@@' + m)
-C.apply_uploads(up.get('sales'), up.get('r15'), up.get('down'), log=step, lines=up.get('lines'), idle=str(IDLE))
+C.apply_uploads(up.get('sales'), up.get('r15'), up.get('down'), log=step, lines=up.get('lines'), idle=str(IDLE), moves=str(MOVES))
 D = json.load(open('/calc/mes.json', encoding='utf-8'))
 o, s = C.run(D['ex'], D['md'], log=step)
 P = json.load(open('/calc/gp/work/integ_prep.json', encoding='utf-8'))
-prev = [{'ym': M['ym'], 'rows': [{'key': r['key'], 'day': r['day'], 'line': r['line']} for r in M['rows'] if r.get('key')]} for M in P['color']]
+prev = [{'ym': M['ym'], 'rows': [{'key': r['key'], 'day': r['day'], 'line': r['line']} for r in M['rows'] if r.get('key')]} for M in (P.get('colorBase') or P['color'])]   # 끌어 옮기기 전 자리(옮기기는 매번 다시 적용)
 json.dumps({'o': o, 's': s, 'prev': prev}, ensure_ascii=False)
 `);
     post('done', { json: out, sec: Math.round((Date.now() - t0) / 1000) });
