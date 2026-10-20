@@ -475,18 +475,29 @@
   }
 
   // ---------- 소재 월별 요약(2026-10-20 회의: 위는 월로 — 그 달에 들어와야 할 양 중 입고·발주된 양과 남은 양, 소재 그룹별 막대) ----------
+  let msMode = 'grp';
+  const USE_G = (pl, lb) => (pl === 'G' ? ({ 도금국내: '도금국내', 도금수출: '도금수출', 자가재: '자가재', 자동차: '자동차강판', 자동차내수: '자동차강판', 자동차수출: '자동차강판' }[lb] || '미상')
+    : (/계획재|주문재|건재 주/.test(lb) && !/수출/.test(lb) ? '컬러건재' : /수요/.test(lb) ? '수요개발' : '컬러수출'));
+  const GORD = { G: ['도금수출', '도금국내', '자동차강판', '자가재'], C: ['컬러수출', '컬러건재', '수요개발'] };
   function monthSum() {
     if (!$('s-msum').id) return;
     if (!MP) { $('s-msum').innerHTML = '<p class="small">소재 발주 자료가 없습니다.</p>'; return; }
-    const RV = (D.PO || {}).matRecv, ms = D.months, ym = (d) => d.slice(0, 7);
-    const cell = {}, add_ = (pl, c, m, k, t) => { if (!ms.includes(m) || (pl === 'G' && c === 'N')) return; const x = (cell[`${pl}|${c}|${m}`] = cell[`${pl}|${c}|${m}`] || { rec: 0, ord: 0, nw: 0 }); x[k] += t; };
-    for (const [k, t] of Object.entries(RV || {})) { const [pl, c, d] = k.split('|'); add_(pl, c, ym(d), 'rec', t); }
-    for (const a of MP.arrs || []) add_(a.plant, a.code, ym(a.date < today ? today : a.date), 'ord', +a.t || 0);
-    for (const j of MP.J) { if (j.kind === 'pos' || j.short < 1) continue; for (const x of j.split) if (x.t >= 1) add_(j.plant, j.code, ym(j.needBy < today ? today : j.needBy), 'nw', x.t); }
-    const nm = (c) => MP.codeNm(c), html = [];
+    const PO_ = D.PO || {}, RV = msMode === 'grp' ? ((PO_.matGrp || {}).recv) : PO_.matRecv, POG = (PO_.matGrp || {}).po || {}, ms = D.months, ym = (d) => d.slice(0, 7);
+    const cell = {}, add_ = (pl, c, m, k, t) => { if (!ms.includes(m) || t < 0.01) return; const x = (cell[`${pl}|${c}|${m}`] = cell[`${pl}|${c}|${m}`] || { rec: 0, ord: 0, nw: 0 }); x[k] += t; };
+    for (const [k, t] of Object.entries(RV || {})) { const [pl, c, d] = k.split('|'); if (msMode !== 'grp' && pl === 'G' && c === 'N') continue; add_(pl, c, ym(d), 'rec', t); }
+    for (const a of MP.arrs || []) { if (a.plant === 'G' && a.code === 'N') continue; add_(a.plant, msMode === 'grp' ? (POG[a.po] || '미상(계약 부서 없음)') : a.code, ym(a.date < today ? today : a.date), 'ord', +a.t || 0); }
+    for (const j of MP.J) {
+      if (j.kind === 'pos' || j.short < 1) continue;
+      const tot = (j.use || []).reduce((a, r) => a + (+r[3] || 0), 0), sh = {};
+      for (const r of j.use || []) { const g = USE_G(j.plant, r[1]); sh[g] = (sh[g] || 0) + (tot > 0 ? (+r[3] || 0) / tot : 0); }
+      if (!Object.keys(sh).length) sh['미상'] = 1;
+      for (const x of j.split) if (x.t >= 1) { const m = ym(j.needBy < today ? today : j.needBy); if (msMode === 'grp') for (const [g, w] of Object.entries(sh)) add_(j.plant, g, m, 'nw', x.t * w); else add_(j.plant, j.code, m, 'nw', x.t); }
+    }
+    const nm = (c) => (msMode === 'grp' ? c : MP.codeNm(c)), html = [];
     for (const pl of ['G', 'C'].filter((p_) => UI.inScope(p_))) {
-      const codes = [...new Set(Object.keys(cell).filter((k) => k[0] === pl).map((k) => k.split('|')[1]))]
-        .map((c) => [c, ms.reduce((a, m) => { const x = cell[`${pl}|${c}|${m}`]; return a + (x ? x.rec + x.ord + x.nw : 0); }, 0)]).filter(([, t]) => t >= 1).sort((a, b) => b[1] - a[1]).map(([c]) => c);
+      const all = [...new Set(Object.keys(cell).filter((k) => k[0] === pl).map((k) => k.split('|')[1]))];
+      const val = (c) => ms.reduce((a, m) => { const x = cell[`${pl}|${c}|${m}`]; return a + (x ? x.rec + x.ord + x.nw : 0); }, 0);
+      const codes = (msMode === 'grp' ? [...GORD[pl].filter((g) => all.includes(g)), ...all.filter((g) => !GORD[pl].includes(g))] : all.sort((a, b) => val(b) - val(a))).filter((c) => val(c) >= 1);
       if (!codes.length) continue;
       const tot = (m) => codes.reduce((a, c) => { const x = cell[`${pl}|${c}|${m}`] || { rec: 0, ord: 0, nw: 0 }; a.rec += x.rec; a.ord += x.ord; a.nw += x.nw; return a; }, { rec: 0, ord: 0, nw: 0 });
       const mx = Math.max(1, ...codes.flatMap((c) => ms.map((m) => { const x = cell[`${pl}|${c}|${m}`]; return x ? x.rec + x.ord + x.nw : 0; })));
@@ -494,14 +505,18 @@
       const bar = (x, M) => { const p = x.rec + x.ord + x.nw; if (p < 0.5) return '<span class="muted">-</span>'; const w = (v) => (v / M * 100).toFixed(1);
         return `<div class="msb" title="계획 ${n0(p)}t = 입고 ${n0(x.rec)} + 발주(입고 예정) ${n0(x.ord)} + 남음(새 발주 필요) ${n0(x.nw)}"><i class="r" style="width:${w(x.rec)}%"></i><i class="o" style="width:${w(x.ord)}%"></i><i class="n" style="width:${w(x.nw)}%"></i></div>
           <div class="msn"><b>${n0(p)}</b> <span class="r">입고 ${n0(x.rec)}</span> · <span class="o">발주 ${n0(x.ord)}</span> · <span class="${x.nw >= 1 ? 'n' : ''}">남음 ${n0(x.nw)}</span> <small>${Math.round((x.rec + x.ord) / p * 100)}%</small></div>`; };
-      html.push(`<div class="mss" data-dom="${pl === 'G' ? 'G' : 'C'}"><h3>${pl === 'G' ? '도금 소재 (F/H)' : '컬러 구매 소재'}</h3><div class="scroll"><table class="t msum"><thead><tr><th class="l">소재 그룹</th>${ms.map((m) => `<th class="l">${+m.slice(5)}월</th>`).join('')}</tr></thead><tbody>`
+      html.push(`<div class="mss" data-dom="${pl}"><h3>${pl === 'G' ? '도금 소재 (F/H)' : '컬러 구매 소재'}</h3><div class="scroll"><table class="t msum"><thead><tr><th class="l">${msMode === 'grp' ? '판매그룹' : '소재 그룹'}</th>${ms.map((m) => `<th class="l">${+m.slice(5)}월</th>`).join('')}</tr></thead><tbody>`
         + `<tr class="tot"><td class="l"><b>합계</b></td>${ms.map((m) => `<td class="l">${bar(tot(m), mxT)}</td>`).join('')}</tr>`
-        + codes.map((c) => `<tr><td class="l">${esc(nm(c))}</td>${ms.map((m) => `<td class="l">${bar(cell[`${pl}|${c}|${m}`] || { rec: 0, ord: 0, nw: 0 }, mx)}</td>`).join('')}</tr>`).join('') + '</tbody></table></div></div>');
+        + codes.map((c) => `<tr${/^미상/.test(c) ? ' class="unk"' : ''}><td class="l">${esc(nm(c))}</td>${ms.map((m) => `<td class="l">${bar(cell[`${pl}|${c}|${m}`] || { rec: 0, ord: 0, nw: 0 }, mx)}</td>`).join('')}</tr>`).join('') + '</tbody></table></div></div>');
     }
-    $('s-msum').innerHTML = `<h2>월별 소재 입고 계획 <small>그 달에 들어와야 할 양 = 입고 완료 + 발주(입고 예정) + 남음(아직 발주 안 한 양) — 소재 그룹별, 업체 구분 없이</small><span class="unit">톤</span></h2>`
-      + (RV ? '' : '<p class="small" style="color:var(--warn)">입고 실적(MES 소재 입고)이 아직 게시되지 않았습니다 — 다음 자동 실행부터 들어옵니다. 지금은 발주·남음만 보입니다.</p>')
+    const unk = Object.entries(cell).filter(([k]) => /\|미상/.test(k)).reduce((a, [, x]) => a + x.rec + x.ord, 0);
+    $('s-msum').innerHTML = `<h2>월별 소재 입고 계획 <small>그 달에 들어와야 할 양 = 입고 완료 + 발주(입고 예정) + 남음(아직 발주 안 한 양) — 업체 구분 없이</small><span class="unit">톤</span></h2>`
+      + `<div class="seg" id="s-msm" style="margin:2px 0 8px"><button type="button" data-m="grp" aria-pressed="${msMode === 'grp'}">판매그룹별</button><button type="button" data-m="code" aria-pressed="${msMode === 'code'}">소재 그룹별</button></div>`
+      + (msMode === 'grp' ? `<p class="small muted">판매그룹: 남음 = 그 소재를 쓰는 생산 계획의 판매그룹 비중으로 나눔 · 입고·발주 = 소재 발주의 판매 계약 → 계약 부서. 도금 소재인데 컬러 부서 계약이면 자가재.${unk >= 1 ? ` <b style="color:var(--warn)">계약 부서를 아직 못 이은 입고·발주 ${n0(unk)}t는 "미상" — 발주 계약 부서 조회(snap_raw_ask_dept)가 들어오면 나뉩니다.</b>` : ''}</p>` : '')
+      + (RV ? '' : '<p class="small" style="color:var(--warn)">입고 실적(MES 소재 입고)이 아직 게시되지 않았습니다 — 다음 자동 실행부터 들어옵니다.</p>')
       + `<div class="lg"><span><i style="background:var(--good)"></i>입고 완료(MES 소재 입고, 자사 자가재 제외)</span><span><i style="background:var(--brand-2)"></i>발주됨 · 입고 예정(MES 미입고 발주 + 입력한 기발주)</span><span><i style="background:repeating-linear-gradient(45deg,var(--bad) 0 3px,transparent 3px 6px);border:1px solid var(--bad)"></i>남음 — 계획 대비 아직 발주 안 한 양(소재 발주 계산 · 입고 필요일이 이미 지난 몫은 이번 달에 모음)</span></div>`
       + html.join('');
+    $('s-msm').querySelectorAll('button').forEach((b) => b.onclick = () => { msMode = b.dataset.m; monthSum(); });
   }
 
   // ---------- 이번 달 진행(2026-10-20 회의: 도금 생산·출하, 컬러 생산·출하 4개 그래프) ----------
@@ -518,20 +533,24 @@
         <div class="pg-s">월 계획 ${n0(m)}t · 오늘까지 계획 ${n0(sc)}t → <b class="${gap >= 0 ? 'pos' : 'neg'}">${gap >= 0 ? '+' : '−'}${n0(Math.abs(gap))}t</b> · 남은 ${n0(Math.max(0, m - ac))}t</div>
         ${sub ? `<div class="pg-g">${sub}</div>` : ''}</div>`;
     };
-    const gl = (pl, kind) => G.filter((g) => g.pl === pl && g[kind] && g.key !== 'G자가재').map((g) => { const x = g[kind]; return `<span>${esc(g.name)} <b>${n0(x.actual)}</b>/${n0(x.month)}</span>`; }).join('');
+    // 출하 실적 = MES 출하(판매 출고) 기준(사용자 10/20) — 월 계획·오늘까지 계획은 판매생산속보
+    const SDp = PO.shipDay, m0 = today.slice(0, 7);
+    const mesShip = (g) => (SDp && SDp.g && SDp.g[g] ? Object.entries(SDp.g[g]).filter(([d]) => d.slice(0, 7) === m0).reduce((a, [, v]) => a + v, 0) : null);
+    const gl = (pl, kind) => G.filter((g) => g.pl === pl && g[kind] && g.key !== 'G자가재').map((g) => { const x = g[kind], ac = kind === 'ship' && mesShip(g.key) != null ? mesShip(g.key) : x.actual; return `<span>${esc(g.name)} <b>${n0(ac)}</b>/${n0(x.month)}</span>`; }).join('');
+    const shipAct = (keys, fb) => { const v = keys.map(mesShip); return v.every((x) => x == null) ? fb : v.reduce((a, x) => a + (x || 0), 0); };
     const out = [];
     if (UI.inScope('G')) {
       const l = L.filter((x) => x.pl === 'G'), s_ = shp(['도금판매', '도금수출', '자동차강판']);
       out.push(card('G', 'prod', '도금 생산 (1·2CGL)', sum(l, 'month'), sum(l, 'sched'), sum(l, 'actual'), l[0] && md(l[0].asOf), gl('G', 'prod')));
-      out.push(card('G', 'ship', '도금 출하', sum(s_, 'month'), sum(s_, 'sched'), sum(s_, 'actual'), (PO.sr || {}).asOf && md((PO.sr.asOf).slice(0, 10)), gl('G', 'ship')));
+      out.push(card('G', 'ship', '도금 출하', sum(s_, 'month'), sum(s_, 'sched'), shipAct(['G수출', 'G국내', 'G자동차'], sum(s_, 'actual')), SDp && SDp.asOf ? md(SDp.asOf) : (PO.sr || {}).asOf && md((PO.sr.asOf).slice(0, 10)), gl('G', 'ship')));
     }
     if (UI.inScope('C')) {
       const l = L.filter((x) => x.pl === 'C'), s_ = shp(['컬러수출', '컬러건재']);
       out.push(card('C', 'prod', '컬러 생산 (1~4CCL)', sum(l, 'month'), sum(l, 'sched'), sum(l, 'actual'), l[0] && md(l[0].asOf), gl('C', 'prod')));
-      out.push(card('C', 'ship', '컬러 출하', sum(s_, 'month'), sum(s_, 'sched'), sum(s_, 'actual'), (PO.sr || {}).asOf && md((PO.sr.asOf).slice(0, 10)), gl('C', 'ship')));
+      out.push(card('C', 'ship', '컬러 출하', sum(s_, 'month'), sum(s_, 'sched'), shipAct(['C수출', 'C건재'], sum(s_, 'actual')), SDp && SDp.asOf ? md(SDp.asOf) : (PO.sr || {}).asOf && md((PO.sr.asOf).slice(0, 10)), gl('C', 'ship')));
     }
     $('s-prog').innerHTML = `<h2>이번 달 진행 <small>계획 대비 실적 — 막대 = 실적 / 월 계획, 세로선 = 오늘까지 계획</small><span class="unit">톤</span></h2><div class="pgs">${out.join('')}</div>
-      <p class="small muted" style="margin:8px 2px 0">생산 = MES 실적 · 출하 = 판매생산속보 출하 진도(그룹 합). 라인별 상세는 <a href="status.html">도금 가동 현황</a> · <a href="color_status.html">컬러 가동 현황</a></p>`;
+      <p class="small muted" style="margin:8px 2px 0">생산 = MES 실적 · 출하 실적 = MES 출하(판매 출고, 부서 → 판매그룹) · 월 계획·오늘까지 계획 = 판매생산속보. 라인별 상세는 <a href="status.html">도금 가동 현황</a> · <a href="color_status.html">컬러 가동 현황</a></p>`;
   }
 
   async function render(W, pw) {
