@@ -58,6 +58,14 @@ table.t.cond.dtab b.up { color: var(--warn); } table.t.cond.dtab b.dn { color: v
 table.t.cond.dtab tr.tot-r td { background: var(--sub); border-top: 2px solid var(--line); }
 ul.llog { margin: 6px 0 0 18px; padding: 0; font-size: 13.5px; line-height: 1.6; } ul.llog .rp { color: var(--warn); font-weight: 700; }
 .miss { border-left: 4px solid var(--warn); background: var(--warn-bg); padding: 8px 12px; border-radius: 6px; margin: 8px 0 12px; }
+.pgtab { margin: 0 0 12px; } .pgtab button { font-size: 15px; font-weight: 700; padding: 8px 18px; }
+.lg-day { margin: 14px 0 6px; font-size: 13.5px; color: var(--ink-2, inherit); }
+table.t.cond.lgt td.num { text-align: right !important; font-variant-numeric: tabular-nums; white-space: nowrap !important; }
+.lgs { display: inline-block; padding: 1px 8px; border-radius: 10px; font-size: 12.5px; font-weight: 700; white-space: nowrap; }
+.lgs.ok { background: color-mix(in srgb, var(--brand-2) 16%, transparent); color: var(--brand-2); }
+.lgs.no { background: var(--sub); color: var(--muted, #667); }
+.lgs.mid { background: var(--warn-bg); color: var(--warn); }
+table.t.cond:not(.dtab):not(.lgt) td:first-child, table.t.cond:not(.dtab):not(.lgt) td:last-child { white-space: nowrap !important; }
 </style>
 </head>
 <body>
@@ -72,7 +80,7 @@ ul.llog { margin: 6px 0 0 18px; padding: 0; font-size: 13.5px; line-height: 1.6;
     </section>
   </div>
 </main>
-<footer class="foot"><div class="wrap"><span>원자료: MES SSCHC1020(SSCH.PF_CC_WORK_ORD)·주문 사양·컬러 생산 실적 · 휴지 기준: 학습 방 조건표 × 라인 보정(최근 90일) + 블록 전환 실측 · 비교: 계획재 일별배치 휴지시간 재산출 파일(10/20 첨부)</span><span>POSCO STEELEON 도금·컬러 가동계획</span></div></footer>
+<footer class="foot"><div class="wrap"><span>원자료: MES SSCHC1020(SSCH.PF_CC_WORK_ORD)·주문 사양·컬러 생산 실적 · 휴지 기준: 1년 코일 실적 조건표 × 라인 보정(최근 90일) + 블록 전환 실측 · 비교: 계획재 일별배치 휴지시간 재산출 파일(10/20 첨부)</span><span>POSCO STEELEON 도금·컬러 가동계획</span></div></footer>
 <script src="ui/shell.js"></script>
 <script src="engine/crypto.js"></script>
 <script src="wo.js"></script>

@@ -4,14 +4,14 @@
   'use strict';
   const NAV = [
     ['home', 'index.html', '홈'], ['supply', 'supply.html', '가동 캘린더'], ['matcal', 'matcal.html', '소재 캘린더'], ['integrated', 'integrated.html', '재고 추이'], ['report', 'report.html', '주간 보고'],
-    '|도금', ['status', 'status.html', '가동 현황'], ['analysis', 'analysis.html', '조건 분석'], ['platact', 'plating_actual.html', '실적'], ['cgwo', 'cg_wo.html', '작업지시 순서'], ['cgworules', 'cg_wo_rules.html', '작업지시 규칙'],
-    '|컬러', ['colorstat', 'color_status.html', '가동 현황'], ['coloranal', 'color_analysis.html', '조건 분석'], ['coloract', 'color_actual.html', '실적'], ['planstock', 'planstock.html', '계획재'], ['wo', 'wo.html', '작업지시 순서'], ['worules', 'wo_rules.html', '작업지시 규칙'],
+    '|도금', ['status', 'status.html', '가동 현황'], ['analysis', 'analysis.html', '조건 분석'], ['platact', 'plating_actual.html', '실적'], ['cgwo', 'cg_wo.html', '작업지시 순서'],
+    '|컬러', ['colorstat', 'color_status.html', '가동 현황'], ['coloranal', 'color_analysis.html', '조건 분석'], ['coloract', 'color_actual.html', '실적'], ['planstock', 'planstock.html', '계획재'], ['wo', 'wo.html', '작업지시 순서'],
     '|소재', ['procure', 'procure.html', '소재 발주'],
     '|계획 계산', ['rolling', 'rolling.html', '도금 계획 계산'], ['colorcalc', 'color_calc.html', '컬러 계획 계산'], '|',
     ['decisions', 'decisions.html', '결정 기록'], ['health', 'health.html', '자료 상태'], ['docs', 'docs.html', '문서'],
   ];
   const TKEY = 'cgl-theme', SKEY = 'cgl-scope';
-  const ONLY = { status: 'G', analysis: 'G', rolling: 'G', platact: 'G', coloract: 'C', planstock: 'C', wo: 'C', worules: 'C', colorstat: 'C', coloranal: 'C', colorcalc: 'C' };     // 도금 자료만 있는 화면
+  const ONLY = { status: 'G', analysis: 'G', rolling: 'G', platact: 'G', coloract: 'C', planstock: 'C', wo: 'C', colorstat: 'C', coloranal: 'C', colorcalc: 'C' };     // 도금 자료만 있는 화면
   const SCN = { all: '전체', G: '도금', C: '컬러' };
   const DOCS = ['conditions', 'guide', 'requests', 'glossary', 'doc'];
   const UI = window.UI = window.UI || {};
@@ -61,8 +61,6 @@
     planstock: 'M12 3 20 7.5v9L12 21l-8-4.5v-9zM4 7.5l8 4.5 8-4.5M12 12v9',
     wo: 'M9 6h11M9 12h11M9 18h11M4 6h.01M4 12h.01M4 18h.01',
     cgwo: 'M9 6h11M9 12h11M9 18h11M4 6h.01M4 12h.01M4 18h.01',
-    worules: 'M6 3h12v18H6zM9 8h6M9 12h6M9 16h3',
-    cgworules: 'M6 3h12v18H6zM9 8h6M9 12h6M9 16h3',
     procure: 'M3 4h2.5l2.2 11h10.6L20 7H6.6M9 19.5h.01M17 19.5h.01',
     decisions: 'M5 21V4M5 4h11l-2 4 2 4H5',
     health: 'M3 12h4l2.5-6 4 12 2.5-6H21',

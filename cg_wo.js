@@ -13,7 +13,12 @@
   const tm = (s, d) => (!s ? '' : (d && s.slice(0, 5) === d.slice(5) ? s.slice(6) : `${+s.slice(0, 2)}/${+s.slice(3, 5)} ${s.slice(6)}`));
   const hm = (m) => { m = Math.round(m); return m >= 60 ? `${Math.floor(m / 60)}시간 ${m % 60}분` : `${m}분`; };
   let O = null, line = null;
-  const RULES = document.getElementById('shell') && document.getElementById('shell').dataset.page === 'cgworules';   // 작업지시 규칙 화면(사용자 10/21)
+  let view = 'seq';                                               // 탭: 작업지시 순서 | 작업지시 규칙(사용자 10/21) — 다시 바꿀 때까지 유지
+  try { view = location.hash === '#rules' ? 'rules' : (localStorage.getItem('cgwo-view') || 'seq'); } catch (e) { /* 기본 */ }
+  const tabs = () => `<div class="seg pgtab" id="wo-view"><button type="button" data-v="seq" aria-pressed="${view === 'seq'}">작업지시 순서</button><button type="button" data-v="rules" aria-pressed="${view === 'rules'}">작업지시 규칙</button></div>`;
+  function bindTabs() {
+    $('wo-view').querySelectorAll('button').forEach((b) => b.onclick = () => { view = b.dataset.v; try { localStorage.setItem('cgwo-view', view); history.replaceState(null, '', view === 'rules' ? '#rules' : location.pathname); } catch (e) { /* 무시 */ } render(); });
+  }
 
   function row(x, day) {
     const dn = x.exp >= 0.05;
@@ -73,30 +78,36 @@
       + '<div class="scroll"><table class="t cond"><thead><tr><th>조건</th><th class="l">내용</th><th class="l">MES 칸·자료</th><th>지키는 정도</th></tr></thead><tbody>'
       + C.map((r) => `<tr><td class="l"><b>${r[0]}</b></td><td class="l wrap">${r[1]}</td><td class="l bk">${r[2]}</td><td>${r[3]}</td></tr>`).join('') + '</tbody></table></div></section><section class="card">'
       + `<h3>더미·전환 기준표 — ${l} (같은 강종 안, 바뀐 것마다 더함)</h3>`
-      + (pt ? `<p class="hint">도금은 코일을 이어 붙여 돌려서, 사양이 바뀌면 라인이 서는 대신 더미 코일이 들어감(사용자 10/20). 기준 = <b>도금 학습 방(ml-schedule) 1년 전환 조건표</b> — 매일 받아 옴(바뀐 값은 아래 '최근 바뀐 기준'). 예상 시간 = 바뀐 것별 더미 작업·짧은 휴지 분(회귀, 조건끼리 겹치는 시간은 뺌).${cv ? ` 검증(${esc(cv.period)}): 하루 실제 ${cv.actual}분 · 표 ${cv.pred}분 · 상관 ${cv.corr} — <b>아직 약함</b>, 코일별 휴지 상세(hist_cg_pau_*) 들어오면 학습 방이 다시 맞춤.` : ''}</p>`
+      + (pt ? `<p class="hint">도금은 코일을 이어 붙여 돌려서, 사양이 바뀌면 라인이 서는 대신 더미 코일이 들어감. 기준 = <b>지난 1년 코일 실적으로 만든 전환 조건표</b> — 매일 갱신(바뀐 값은 아래 '기준 변경 이력'). 예상 시간 = 바뀐 것별 더미 작업·짧은 휴지 분(조건끼리 겹치는 시간은 뺌).${cv ? ` 검증(${esc(cv.period)}): 하루 실제 ${cv.actual}분 · 표 ${cv.pred}분 · 상관 ${cv.corr} — <b>아직 약함</b> — 코일별 휴지 상세 자료로 다시 맞추는 중.` : ''}</p>`
         : `<p class="hint">${esc(lr[0] || '')}~${esc(lr[1] || '')} 실제 코일 사이에 더미가 들어간 비율 × 들어가면 더미 작업 분(잠정).</p>`)
       + `<div class="scroll"><table class="t cond dtab"><thead><tr><th class="l">바뀌는 것</th><th>${pt ? '1년' : '3개월'} 건수</th><th>더미 들어간 비율</th><th>${pt ? '더미(코일·톤)' : '들어가면 더미(분)'}</th><th>예상 시간(분)</th></tr></thead><tbody>${rows}</tbody></table></div>`
       + learnBox() + '</section>';
   }
 
-  function learnBox() {             // 학습 방에서 받아 바뀐 기준(사용자 10/20: 매일 학습 결과 반영·새 규칙 보고)
+  function learnBox() {             // 기준 변경 이력(보고용, tools/learn_sync.publish): 적용한 기준 변경 · 검토 결과
     const E = O.learnLog || [];
-    if (!E.length) return '<h3>최근 바뀐 기준</h3><p class="hint">학습 방에서 받은 뒤 바뀐 값·새 규칙 없음 (매 점검 때 비교)</p>';
-    return '<h3>최근 바뀐 기준 <small class="bk">학습 방에서 받아 자동 반영한 값 · ★ 새 규칙·새로 배운 점(엔진 반영은 확인 후)</small></h3><ul class="llog">'
-      + E.slice().reverse().map((e) => `<li><b>${esc(e.at)}</b> ${(e.report || []).map((r) => `<div class="rp">★ [${esc(r.kind)}] ${esc(r.text)}</div>`).join('')}${(e.changes || []).map((c) => `<div>${esc(c.what)}: ${esc(c.before)} → <b>${esc(c.after)}</b>${c.pct != null ? ` (${c.pct > 0 ? '+' : ''}${c.pct}%)` : ''}</div>`).join('')}</li>`).join('') + '</ul>';
+    if (!E.length || !E[0].applied) return '<h3>기준 변경 이력</h3><p class="hint">최근 바뀐 기준 없음</p>';
+    const sgn = (p) => (p == null ? '-' : `${p > 0 ? '+' : '−'}${Math.abs(p)}%`);
+    const ST = { '적용 중': 'ok', '휴지 기준으로 반영': 'ok', '미적용': 'no', '점검용': 'mid', '검토 중': 'mid' };
+    return '<h3>기준 변경 이력</h3>' + E.slice().reverse().map((e) => `<div class="lg-day"><b>${esc(e.at)}</b></div>`
+      + (e.applied.length ? '<div class="scroll"><table class="t cond lgt"><thead><tr><th class="l">조정한 기준</th><th>이전</th><th>변경</th><th>증감</th></tr></thead><tbody>'
+        + e.applied.map((c) => `<tr><td class="l">${esc(c.what)}</td><td class="num">${esc(c.before)}${c.u}</td><td class="num"><b>${esc(c.after)}${c.u}</b></td><td class="num">${sgn(c.pct)}</td></tr>`).join('') + '</tbody></table></div>' : '')
+      + (e.review.length ? '<div class="scroll"><table class="t cond lgt"><thead><tr><th>구분</th><th class="l">검토한 조건·규칙</th><th class="l">근거 수치</th><th>결과</th><th class="l">비고</th></tr></thead><tbody>'
+        + e.review.map((r) => `<tr><td>${esc(r.kind)}</td><td class="l wrap">${esc(r.what)}</td><td class="l bk wrap">${esc(r.detail || '-')}</td><td><span class="lgs ${ST[r.status] || 'mid'}">${esc(r.status)}</span></td><td class="l bk wrap">${esc(r.why || '')}</td></tr>`).join('') + '</tbody></table></div>' : '')).join('');
   }
+
 
   function renderRules() {
     const L = Object.keys(O.lines);
     line = line && L.includes(line) ? line : L[0];
     $('wo-meta').textContent = `${O.now} 기준(지금) · 계산 ${O.built || ''}`;
-    $('wo-main').innerHTML = `<section class="card"><div class="seg" id="wo-lines">${L.map((l) => `<button type="button" data-l="${l}" aria-pressed="${l === line}">${l}</button>`).join('')}</div>`
-      + '<p class="hint">순서 자체는 <a href="cg_wo.html">작업지시 순서</a> 화면 — 여기는 그 순서를 짤 때 쓰는 조건과 더미 기준</p></section>' + conditions(line);
+    $('wo-main').innerHTML = tabs() + `<section class="card"><div class="seg" id="wo-lines">${L.map((l) => `<button type="button" data-l="${l}" aria-pressed="${l === line}">${l}</button>`).join('')}</div></section>` + conditions(line);
     $('wo-lines').querySelectorAll('button').forEach((b) => b.onclick = () => { line = b.dataset.l; renderRules(); });
+    bindTabs();
     if (window.UI) UI.reveal($('wo-main'));
   }
   function render() {
-    if (RULES) { renderRules(); return; }
+    if (view === 'rules') { renderRules(); return; }
     const L = Object.keys(O.lines);
     line = line && L.includes(line) ? line : L[0];
     const v = O.lines[line];
@@ -104,7 +115,7 @@
     const gain = (v.mes || 0) - (v.ours || 0);
     const plan = v.plan ? Object.entries(v.plan).map(([a, t]) => `${a} ${n0(t)}t`).join(' · ') : '-';
     const blk = (v.blocks || []).map((b) => `<span class="cgb"><b>${esc(b.sur)}</b> ${n0(b.n)}코일 · ${n0(b.t)}t</span>`).join('<span class="cga">→</span>');
-    $('wo-main').innerHTML = (O.missing && O.missing.length ? `<div class="miss"><b>아직 안 들어온 자료·조건</b> — ${O.missing.map(esc).join(' / ')}</div>` : '')
+    $('wo-main').innerHTML = tabs() + (O.missing && O.missing.length ? `<div class="miss"><b>아직 안 들어온 자료·조건</b> — ${O.missing.map(esc).join(' / ')}</div>` : '')
       + `<section class="card"><div class="seg" id="wo-lines">${L.map((l) => `<button type="button" data-l="${l}" aria-pressed="${l === line}">${l} <small>${O.lines[l].n}코일</small></button>`).join('')}</div>`
       + '<div class="kpis" style="margin-top:12px">'
       + `<div class="kpi"><div class="l">1010 대상</div><div class="v">${n0(v.n)}<small>코일 ${n0(v.tSum)}t</small></div><div class="b">확정 ${n0(v.nConf)}코일 · 톤은 추정 · 확정 계획 ${esc(md(v.day))} 강종 ${esc(plan)}</div></div>`
@@ -114,9 +125,9 @@
       + (v.n ? `<div class="wo-cmp${gain < 0 ? ' bad' : ''}"><b>1010 순서와 비교</b> — 같은 ${n0(v.n)}코일을 1010 에 들어간 순서대로 돌리면 예상 더미 ${n1(v.mes)}분 (사양 바뀜 ${n0(v.mesChg)}번) → 제안이 <b>${gain >= 0 ? `${n1(gain)}분 짧음` : `${n1(-gain)}분 김`}</b> <span class="bk">(같은 더미 기준표)</span></div>` : '')
       + (blk ? `<div class="cgbs"><span class="bk">표면사상 묶음</span> ${blk}</div>` : '')
       + '</section>'
-      + (v.n ? `<section class="card"><h2>제안 순서 <small class="bk">날짜별 · 줄마다 그 코일 앞에 생길 더미와 생산</small></h2>${table(v)}</section>` : '<section class="card"><p>1010 대상 코일이 없습니다.</p></section>')
-      + '<p class="hint">편성 조건·더미 기준표는 <a href="cg_wo_rules.html">작업지시 규칙</a> 화면에 있습니다.</p>';
+      + (v.n ? `<section class="card"><h2>제안 순서 <small class="bk">날짜별 · 줄마다 그 코일 앞에 생길 더미와 생산</small></h2>${table(v)}</section>` : '<section class="card"><p>1010 대상 코일이 없습니다.</p></section>');
     $('wo-lines').querySelectorAll('button').forEach((b) => b.onclick = () => { line = b.dataset.l; render(); });
+    bindTabs();
     if (window.UI) UI.reveal($('wo-main'));
   }
   const envReady = GP.latest('cg_wo_proposal.enc.json');
