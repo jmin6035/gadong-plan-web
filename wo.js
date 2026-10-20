@@ -28,11 +28,11 @@
     return `<tr${dn ? ' class="hasdn"' : ''}><td class="c"><b>${x.seq}</b></td>`
       + `<td class="tm">${dn ? `<span class="bk">휴지 ${tm(x.downStart, day)}</span><br>` : ''}<b>${tm(x.start, day)}</b> – ${tm(x.end, day)}</td>`
       + `<td class="l"><b>${esc(x.item)}</b><span class="gt gt${x.tier}">${TIER[x.tier]}</span><br><span class="bk">${esc(x.pdt)} · ${BLK[x.block]} · ${esc(x.con)}</span></td>`
-      + `<td class="l">${x.thk} × ${n0(x.wdt)}<br><span class="bk">${esc(x.color)}${x.back ? ` / 이면 ${esc(x.back)}` : ''}</span></td>`
-      + `<td class="num">${x.t.toFixed(1)}</td>`
+      + `<td class="l wr">${x.thk} × ${n0(x.wdt)}<br><span class="bk">${esc(x.top || x.color)}${x.back ? ` / 이면 ${esc(x.back)}` : ''}${x.top ? '' : ' <span title="풀 코드 대기(도료 코드 조회)">…</span>'}</span></td>`
+      + `<td class="num">${x.t.toFixed(1)}${x.tMade > 0.5 ? `<br><span class="bk" title="지시 ${x.tDrt}t 중 ${x.tMade}t 이미 생산">남은 양</span>` : ''}</td>`
       + `<td class="num" title="${esc(x.speedSrc)}">${n0(x.runMin)}분<br><span class="bk">L/S ${x.ls} · ${x.tph}t/h</span></td>`
       + `<td class="c">${dn ? `<span class="dnb">${n0(x.downMin)}분</span>` : '<span class="bk">0</span>'}</td>`
-      + `<td class="l desc">${esc(x.downWhy)}${why ? `<div class="why">${esc(why)}</div>` : ''}</td>`
+      + `<td class="l desc">${esc(x.downWhy).replace(/\n/g, '<br>')}${why ? `<div class="why">${esc(why)}</div>` : ''}</td>`
       + `<td class="l">${prep.join('<br>') || '<span class="bk">-</span>'}</td>`
       + `<td class="c">${md(x.mesDate) || '-'}${x.mesSeq != null ? `<br><span class="bk">${esc(x.mesSeq)}번째</span>` : ''}</td></tr>`;
   }
@@ -64,7 +64,7 @@
       if (e.kind === 'job') { h += row(byS[e.seq], curDay); return; }
       h += `<tr class="ev ${e.kind}"><td class="c">—</td><td class="tm">${tm(e.start, curDay)} – ${tm(e.end, curDay)}</td><td colspan="${NC - 2}"><b>${e.kind === 'plan' ? '휴지계획' : '라인 멈춤(기다림)'} ${hm(e.min)}</b> · ${esc(e.why)}</td></tr>`;
     });
-    return `<div class="scroll"><table class="t wo">${HEAD}<tbody>${h}</tbody></table></div>`
+    return `<div class="scroll"><table class="t wo"><colgroup><col style="width:52px"><col style="width:128px"><col style="width:220px"><col style="width:170px"><col style="width:72px"><col style="width:120px"><col style="width:84px"><col><col style="width:150px"><col style="width:104px"></colgroup>${HEAD}<tbody>${h}</tbody></table></div>`
       + '<p class="hint lg"><i class="sr"></i>생산 <i class="sd"></i>휴지(앞 작업과 바뀜) <i class="sp"></i>휴지계획 <i class="sw"></i>기다림 — 띠에 마우스를 올리면 내용이 보입니다</p>';
   }
 

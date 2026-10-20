@@ -15,14 +15,16 @@
 .wo-cmp { border-left: 4px solid var(--good); background: var(--good-bg); padding: 9px 13px; border-radius: 6px; margin: 12px 0 0; }
 .wo-cmp.bad { border-left-color: var(--warn); background: var(--warn-bg); }
 main.wrap { max-width: none; }
-table.t.wo { font-size: 15px; }
+table.t.wo { font-size: 15px; table-layout: fixed; min-width: 1380px; }
+table.t.wo td.wr { white-space: normal !important; overflow: visible; }
+table.t.wo td { overflow: hidden; text-overflow: ellipsis; }
 table.t.wo th { padding: 10px 10px; font-size: 14px; }
 table.t.wo td { padding: 9px 10px; vertical-align: top !important; line-height: 1.45; }
 table.t.wo td.l, table.t.wo th.l { text-align: left !important; }
 table.t.wo td.c { text-align: center !important; }
 table.t.wo td.num { text-align: right; font-variant-numeric: tabular-nums; }
 table.t.wo td.tm { font-variant-numeric: tabular-nums; text-align: left !important; }
-table.t.wo td.desc, table.t.wo tr.ev td { white-space: normal !important; min-width: 340px; width: 38%; }
+table.t.wo td.desc, table.t.wo tr.ev td { white-space: normal !important; overflow: visible; }
 table.t.wo tr.day td { white-space: normal !important; }
 table.wo .why { font-size: 13px; color: var(--brand-2); margin-top: 3px; text-align: left; }
 table.wo tr.hasdn td { background: color-mix(in srgb, var(--warn-bg) 35%, transparent); }
