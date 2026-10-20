@@ -109,12 +109,23 @@ table.sc td.nd { color: var(--ink-3); }
 .det .neg { color: var(--bad); font-weight: 800; } .det .pos { color: var(--good); font-weight: 800; }
 .mss { margin-bottom: 14px; } .mss h3 { font-size: 15px; margin: 8px 0 6px; padding-left: 8px; border-left: 4px solid var(--gc); }
 table.t.msum td { white-space: normal !important; vertical-align: middle !important; padding: 7px 10px; min-width: 230px; } table.t.msum td:first-child { min-width: 140px; font-weight: 700; }
-.fcw { display: flex; flex-wrap: wrap; gap: 6px 18px; overflow-x: auto; } svg.fc { display: block; flex: none; border-right: 1px solid var(--line); padding-right: 12px; } svg.fc:last-child { border-right: 0; }
-svg.fc text { font-family: inherit; } svg.fc .mh { font-size: 15px; font-weight: 800; fill: var(--ink); } svg.fc .ms { font-size: 12.5px; fill: var(--ink-2); }
-svg.fc .gl { font-size: 12px; fill: var(--ink-2); text-anchor: middle; font-weight: 600; } svg.fc .pv { font-size: 12px; fill: var(--ink); text-anchor: middle; font-weight: 700; }
-svg.fc .pc { font-size: 11px; text-anchor: middle; font-weight: 800; } svg.fc .pc.ok { fill: var(--good); } svg.fc .pc.mid { fill: var(--warn); } svg.fc .pc.lo { fill: var(--bad); }
-details.msd { margin: 4px 0 8px; } details.msd summary { cursor: pointer; font-size: 13px; color: var(--ink-2); font-weight: 700; }
 table.t.msum tr.tot td { background: var(--tint); } table.t.msum tr.unk td { color: var(--ink-3); }
+table.fm { width: 100%; border-collapse: separate; border-spacing: 0; font-variant-numeric: tabular-nums; min-width: 760px; }
+table.fm th { font-size: 13px; color: var(--ink-2); font-weight: 700; padding: 6px 10px; border-bottom: 2px solid var(--line); text-align: left; }
+table.fm td { padding: 8px 10px; border-bottom: 1px solid var(--line); vertical-align: middle; }
+table.fm td.l { font-weight: 700; white-space: nowrap; width: 120px; }
+table.fm tr.fm-tr td { background: var(--sub); }
+table.fm tr.unk td { color: var(--ink-3); }
+.fm-c { min-width: 190px; } .fm-0 { color: var(--ink-3); text-align: center; }
+.fm-h { display: flex; align-items: baseline; gap: 4px; white-space: nowrap; } .fm-h b { font-size: 15.5px; color: var(--ink); } .fm-h span { font-size: 13px; color: var(--ink-2); }
+.fm-h em { margin-left: auto; font-style: normal; font-size: 12.5px; font-weight: 800; border-radius: 10px; padding: 1px 8px; }
+.fm-h em.ok { color: var(--good); background: var(--good-bg); } .fm-h em.mid { color: var(--warn); background: var(--warn-bg); } .fm-h em.lo { color: var(--bad); background: var(--bad-bg); }
+.fm-b { display: flex; height: 10px; border-radius: 5px; overflow: hidden; margin: 5px 0 4px; background: repeating-linear-gradient(45deg, color-mix(in srgb, var(--bad) 22%, var(--surface)) 0 3px, var(--surface) 3px 6px); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--bad) 35%, transparent); }
+.fm-b i { display: block; height: 100%; } .fm-b i.r { background: var(--good); } .fm-b i.o { background: color-mix(in srgb, var(--brand-2) 70%, var(--surface)); }
+.fm-s { display: flex; gap: 8px; font-size: 12px; color: var(--ink-3); white-space: nowrap; } .fm-s .r { color: var(--good); } .fm-s .o { color: var(--brand-2); } .fm-s .n { color: var(--bad); font-weight: 700; }
+.fm-lg { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: 12.5px; color: var(--ink-2); margin: 6px 0 10px; }
+.fm-lg i { display: inline-block; width: 14px; height: 10px; border-radius: 2px; margin-right: 5px; vertical-align: middle; }
+.fm-lg i.r { background: var(--good); } .fm-lg i.o { background: color-mix(in srgb, var(--brand-2) 70%, var(--surface)); } .fm-lg i.e { background: repeating-linear-gradient(45deg, color-mix(in srgb, var(--bad) 30%, var(--surface)) 0 3px, var(--surface) 3px 6px); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--bad) 40%, transparent); }
 .msb { display: flex; height: 14px; border-radius: 4px; overflow: hidden; background: var(--grid); }
 .msb i { display: block; height: 100%; } .msb i.r { background: var(--good); } .msb i.o { background: var(--brand-2); } .msb i.n { background: repeating-linear-gradient(45deg, var(--bad) 0 3px, color-mix(in srgb, var(--bad) 25%, transparent) 3px 6px); }
 .msn { font-size: 12.5px; color: var(--ink-2); margin-top: 3px; font-variant-numeric: tabular-nums; } .msn b { color: var(--ink); font-size: 13.5px; } .msn .r { color: var(--good); } .msn .o { color: var(--brand-2); } .msn .n { color: var(--bad); font-weight: 700; } .msn small { color: var(--ink-3); margin-left: 4px; }

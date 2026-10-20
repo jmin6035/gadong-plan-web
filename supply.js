@@ -484,31 +484,24 @@
   const GORD = { G: ['도금수출', '도금국내', '자동차강판', '자가재'], C: ['가전수출', '가전내수', '건재수출', '주문재', '계획재', '수요개발'] };
   const GLB = { 주문재: '건재 주문재', 계획재: '건재 계획재', 미상: '미상 (부서 대기)', '컬러수출(세부 대기)': '컬러수출(세부?)', '컬러건재(세부 대기)': '컬러건재(세부?)' };
   // 월별 막대(2026-10-20 사용자: 알아보기 쉽게) — 막대 통 높이 = 그 달 들어와야 할 양, 아래부터 입고(진하게)·발주(연하게)로 차오르고 빈 곳(빨간 점선) = 아직 발주 안 한 양
-  function fillChart(pl, codes, cell, ms, nmf) {
-    const C0 = pl === 'G' ? '#1660c9' : '#0a8a7d', C1 = pl === 'G' ? '#8fb6ea' : '#8fd3ca';
-    const SW = pl === 'G' ? 70 : 62, PADL = 8, H = 250, T = 34, B = 40, PH = H - T - B;
+  function fillChart(pl, codes, cell, ms, nmf) {   // 월 × 그룹 칸: 확보(입고+발주)/계획 톤 + 막대(입고·발주·남음) — 사용자 10/20: 글자 겹침·%만으로는 톤을 모름 → 칸 표로
     const v = (c, m) => cell[`${pl}|${c}|${m}`] || { rec: 0, ord: 0, nw: 0 };
-    const mx = Math.max(1, ...codes.flatMap((c) => ms.map((m) => { const x = v(c, m); return x.rec + x.ord + x.nw; })));
-    const panelW = codes.length * SW + PADL * 2;
-    const out = [];
-    ms.forEach((m, mi) => {
-      let g = ''; const x0 = 0, tt = codes.reduce((a, c) => { const x = v(c, m); a.p += x.rec + x.ord + x.nw; a.f += x.rec + x.ord; return a; }, { p: 0, f: 0 });
-      g += `<text x="${x0 + PADL}" y="16" class="mh">${+m.slice(5)}월</text><text x="${x0 + PADL + 38}" y="16" class="ms">계획 ${n0(tt.p)}t · 확보 ${tt.p ? Math.round(tt.f / tt.p * 100) : 0}%</text>`;
-      codes.forEach((c, i) => {
-        const x = v(c, m), p = x.rec + x.ord + x.nw, bx = x0 + PADL + i * SW + 12, bw = SW - 24, Y = (t) => T + PH * (1 - t / mx);
-        const lb = (nmf(c)).split(' ');
-        g += `<text x="${bx + bw / 2}" y="${H - B + 16}" class="gl">${esc(lb[0])}</text>${lb[1] ? `<text x="${bx + bw / 2}" y="${H - B + 29}" class="gl">${esc(lb.slice(1).join(' '))}</text>` : ''}`;
-        if (p < 0.5) { g += `<line x1="${bx}" x2="${bx + bw}" y1="${T + PH}" y2="${T + PH}" stroke="var(--line)"/>`; return; }
-        const tip = `${+m.slice(5)}월 ${nmf(c)}: 들어와야 할 양 ${n0(p)}t — 입고 완료 ${n0(x.rec)} · 발주(입고 예정) ${n0(x.ord)} · 아직 발주 안 함 ${n0(x.nw)}`;
-        g += `<g><title>${esc(tip)}</title><rect x="${bx}" y="${Y(p)}" width="${bw}" height="${Y(0) - Y(p)}" rx="3" fill="url(#hz${pl})" stroke="var(--bad)" stroke-dasharray="3 2" stroke-width="1.2"/>`;
-        if (x.rec + x.ord > 0.5) g += `<rect x="${bx}" y="${Y(x.rec + x.ord)}" width="${bw}" height="${Y(0) - Y(x.rec + x.ord)}" rx="3" fill="${C1}"/>`;
-        if (x.rec > 0.5) g += `<rect x="${bx}" y="${Y(x.rec)}" width="${bw}" height="${Y(0) - Y(x.rec)}" rx="3" fill="${C0}"/>`;
-        const pc = Math.round((x.rec + x.ord) / p * 100);
-        g += `<text x="${bx + bw / 2}" y="${Y(p) - 14}" class="pv">${p >= 1000 ? (p / 1000).toFixed(1) + 'k' : n0(p)}</text><text x="${bx + bw / 2}" y="${Y(p) - 3}" class="pc ${pc >= 100 ? 'ok' : pc >= 60 ? 'mid' : 'lo'}">${pc}%</text></g>`;
-      });
-      out.push(`<svg class="fc" width="${panelW}" height="${H}" viewBox="0 0 ${panelW} ${H}"><defs><pattern id="hz${pl}${mi}" width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="6" height="6" fill="var(--surface)"/><rect width="2" height="6" fill="color-mix(in srgb, var(--bad) 30%, transparent)"/></pattern></defs>${g.split(`url(#hz${pl})`).join(`url(#hz${pl}${mi})`)}</svg>`);
-    });
-    return `<div class="fcw">${out.join('')}</div>`;
+    const sum = (m) => codes.reduce((a, c) => { const x = v(c, m); a.rec += x.rec; a.ord += x.ord; a.nw += x.nw; return a; }, { rec: 0, ord: 0, nw: 0 });
+    const td = (x, tot) => {
+      const p = x.rec + x.ord + x.nw;
+      if (p < 0.5) return '<td class="fm-c fm-0">-</td>';
+      const f = x.rec + x.ord, pc = Math.round(f / p * 100), w = (t) => (t / p * 100).toFixed(1);
+      const cls = pc >= 100 ? 'ok' : pc >= 60 ? 'mid' : 'lo';
+      return `<td class="fm-c${tot ? ' fm-t' : ''}" title="${esc(`계획 ${n0(p)}t = 입고 완료 ${n0(x.rec)} + 발주(입고 예정) ${n0(x.ord)} + 아직 발주 안 함 ${n0(x.nw)}`)}">`
+        + `<div class="fm-h"><b>${n0(f)}</b><span> / ${n0(p)}t</span><em class="${cls}">${pc}%</em></div>`
+        + `<div class="fm-b"><i class="r" style="width:${w(x.rec)}%"></i><i class="o" style="width:${w(x.ord)}%"></i></div>`
+        + `<div class="fm-s"><span class="r">입고 ${n0(x.rec)}</span><span class="o">발주 ${n0(x.ord)}</span><span class="${x.nw >= 1 ? 'n' : ''}">남음 ${n0(x.nw)}</span></div></td>`;
+    };
+    return `<div class="scroll"><table class="fm fm-${pl}"><thead><tr><th class="l">${msMode === 'grp' ? '판매그룹' : '소재 그룹'}</th>${ms.map((m) => `<th>${+m.slice(5)}월</th>`).join('')}</tr></thead><tbody>`
+      + `<tr class="fm-tr"><td class="l"><b>합계</b></td>${ms.map((m) => td(sum(m), true)).join('')}</tr>`
+      + codes.map((c) => `<tr${/^미상|대기/.test(c) ? ' class="unk"' : ''}><td class="l">${esc(nmf(c))}</td>${ms.map((m) => td(v(c, m))).join('')}</tr>`).join('')
+      + '</tbody></table></div>'
+      + '<div class="fm-lg"><span><i class="r"></i>입고 완료</span><span><i class="o"></i>발주(입고 예정)</span><span><i class="e"></i>남음 = 아직 발주 안 한 양</span><span>굵은 숫자 = 확보(입고+발주) / 그 달 들어와야 할 양</span></div>';
   }
   function monthSum() {
     if (!$('s-msum').id) return;
@@ -530,23 +523,14 @@
       const val = (c) => ms.reduce((a, m) => { const x = cell[`${pl}|${c}|${m}`]; return a + (x ? x.rec + x.ord + x.nw : 0); }, 0);
       const codes = (msMode === 'grp' ? [...GORD[pl].filter((g) => all.includes(g)), ...all.filter((g) => !GORD[pl].includes(g))] : all.sort((a, b) => val(b) - val(a))).filter((c) => val(c) >= 1);
       if (!codes.length) continue;
-      const tot = (m) => codes.reduce((a, c) => { const x = cell[`${pl}|${c}|${m}`] || { rec: 0, ord: 0, nw: 0 }; a.rec += x.rec; a.ord += x.ord; a.nw += x.nw; return a; }, { rec: 0, ord: 0, nw: 0 });
-      const mx = Math.max(1, ...codes.flatMap((c) => ms.map((m) => { const x = cell[`${pl}|${c}|${m}`]; return x ? x.rec + x.ord + x.nw : 0; })));
-      const mxT = Math.max(1, ...ms.map((m) => { const x = tot(m); return x.rec + x.ord + x.nw; }));
-      const bar = (x, M) => { const p = x.rec + x.ord + x.nw; if (p < 0.5) return '<span class="muted">-</span>'; const w = (v) => (v / M * 100).toFixed(1);
-        return `<div class="msb" title="계획 ${n0(p)}t = 입고 ${n0(x.rec)} + 발주(입고 예정) ${n0(x.ord)} + 남음(새 발주 필요) ${n0(x.nw)}"><i class="r" style="width:${w(x.rec)}%"></i><i class="o" style="width:${w(x.ord)}%"></i><i class="n" style="width:${w(x.nw)}%"></i></div>
-          <div class="msn"><b>${n0(p)}</b> <span class="r">입고 ${n0(x.rec)}</span> · <span class="o">발주 ${n0(x.ord)}</span> · <span class="${x.nw >= 1 ? 'n' : ''}">남음 ${n0(x.nw)}</span> <small>${Math.round((x.rec + x.ord) / p * 100)}%</small></div>`; };
-      const tbl = `<div class="scroll"><table class="t msum"><thead><tr><th class="l">${msMode === 'grp' ? '판매그룹' : '소재 그룹'}</th>${ms.map((m) => `<th class="l">${+m.slice(5)}월</th>`).join('')}</tr></thead><tbody>`
-        + `<tr class="tot"><td class="l"><b>합계</b></td>${ms.map((m) => `<td class="l">${bar(tot(m), mxT)}</td>`).join('')}</tr>`
-        + codes.map((c) => `<tr${/^미상|대기/.test(c) ? ' class="unk"' : ''}><td class="l">${esc(nm(c))}</td>${ms.map((m) => `<td class="l">${bar(cell[`${pl}|${c}|${m}`] || { rec: 0, ord: 0, nw: 0 }, mx)}</td>`).join('')}</tr>`).join('') + '</tbody></table></div>';
-      html.push(`<div class="mss" data-dom="${pl}"><h3>${pl === 'G' ? '도금 소재 (F/H)' : '컬러 구매 소재'}</h3>${fillChart(pl, codes, cell, ms, (c) => (msMode === 'grp' ? (GLB[c] || c) : MP.codeNm(c)))}<details class="msd"><summary>숫자 표 보기</summary>${tbl}</details></div>`);
+      html.push(`<div class="mss" data-dom="${pl}"><h3>${pl === 'G' ? '도금 소재 (F/H)' : '컬러 구매 소재'}</h3>${fillChart(pl, codes, cell, ms, (c) => (msMode === 'grp' ? (GLB[c] || c) : MP.codeNm(c)))}</div>`);
     }
     const unk = Object.entries(cell).filter(([k]) => /\|미상/.test(k)).reduce((a, [, x]) => a + x.rec + x.ord, 0);
     $('s-msum').innerHTML = `<h2>월별 소재 입고 계획 <small>그 달에 들어와야 할 양 = 입고 완료 + 발주(입고 예정) + 남음(아직 발주 안 한 양) — 업체 구분 없이</small><span class="unit">톤</span></h2>`
       + `<div class="seg" id="s-msm" style="margin:2px 0 8px"><button type="button" data-m="grp" aria-pressed="${msMode === 'grp'}">판매그룹별</button><button type="button" data-m="code" aria-pressed="${msMode === 'code'}">소재 그룹별</button></div>`
       + (msMode === 'grp' ? `<p class="small muted">판매그룹: 남음 = 그 소재를 쓰는 생산 계획의 판매그룹 비중으로 나눔 · 입고·발주 = 소재 발주의 판매 계약 → 계약 부서. 도금 소재인데 컬러 부서 계약이면 자가재.${unk >= 1 ? ` <b style="color:var(--warn)">계약 부서를 아직 못 이은 입고·발주 ${n0(unk)}t는 "미상" — 발주 계약 부서 조회(snap_raw_ask_dept)가 들어오면 나뉩니다.</b>` : ''}</p>` : '')
       + (RV ? '' : '<p class="small" style="color:var(--warn)">입고 실적(MES 소재 입고)이 아직 게시되지 않았습니다 — 다음 자동 실행부터 들어옵니다.</p>')
-      + `<div class="lg"><span>막대 통 = 그 달에 들어와야 할 양(위 숫자)</span><span><i style="background:#1660c9"></i>입고 완료</span><span><i style="background:#8fb6ea"></i>발주됨 · 입고 예정</span><span><i style="background:repeating-linear-gradient(45deg,color-mix(in srgb,var(--bad) 35%,transparent) 0 2px,transparent 2px 5px);border:1px dashed var(--bad)"></i>빈 곳 = 아직 발주 안 한 양</span><span>% = 확보(입고 + 발주) ÷ 들어와야 할 양 · 막대에 마우스를 올리면 숫자</span></div>`
+
       + html.join('');
     $('s-msm').querySelectorAll('button').forEach((b) => b.onclick = () => { msMode = b.dataset.m; monthSum(); });
   }

@@ -16,6 +16,8 @@
   const BLK = { general: '일반', pvs2: 'PVS2', print: '프린트' };
   const DZ = [['col', '색·도료 교체'], ['order', '주문 바뀜'], ['test', '단판TEST'], ['roll', '폭(Roll)'], ['dummy', '두께(Dummy)'], ['block', '블록·프린트 전환']];
   let O = null, line = null;
+  let howOpen = true;                                              // 편성 조건·휴지 기준표 접힘 상태 — 라인 바꿔도 유지, 다시 누를 때까지(사용자 10/20)
+  try { howOpen = localStorage.getItem('wo-how-open') !== '0'; } catch (e) { /* 저장소 못 쓰면 펼침 */ }
 
   function row(x, day) {
     const dn = x.downMin > 0.5;
@@ -103,7 +105,7 @@
       ['시각 계산', '출발 = 지금과 마지막 실적 코일 끝 중 늦은 때. 지시마다 휴지 → 생산(톤 ÷ (두께 × 폭 × L/S × 7.87)). L/S = 우리 실적. 그날 휴지계획은 그날 첫 작업 앞', 'snap_cc_seq_recent · 휴지계획', ''],
       ['부자재상태', '불량·입고대기를 "준비" 칸에 표시 (순서에서 뺄지는 확인 중)', 'PNT_STS_CD (W 입고대기 · X 불량)', '표시만'],
     ];
-    return '<details class="wo-how" open><summary>편성 조건 — 이 순서로 봅니다</summary>'
+    return `<details class="wo-how" id="wo-how"${howOpen ? ' open' : ''}><summary>편성 조건 · 휴지 기준표 — 이 순서로 봅니다</summary>`
       + '<div class="scroll"><table class="t cond"><thead><tr><th>조건</th><th class="l">내용</th><th class="l">MES 칸·자료</th><th>지키는 정도</th></tr></thead><tbody>'
       + C.map((r) => `<tr><td class="l"><b>${r[0]}</b></td><td class="l wrap">${r[1]}</td><td class="l bk">${r[2]}</td><td>${r[3]}</td></tr>`).join('') + '</tbody></table></div>'
       + downTable(l) + '</details>';
@@ -119,7 +121,6 @@
     const gain = v.mes.sum - v.ours.sum;
     const stop = v.stop ? `<div class="miss"><b>${line} 휴지 중</b> — ${esc(v.stop.note)}. ${v.stop.until ? `재가동 ${md(v.stop.until)} 0시부터 시각 계산` : '재가동일 미정 — 아래 시각은 <b>지금 바로 재가동한다고 가정</b>한 것'}</div>` : '';
     $('wo-main').innerHTML = (O.missing && O.missing.length ? `<div class="miss"><b>아직 안 들어온 자료</b> — ${O.missing.map(esc).join(' / ')}</div>` : '')
-      + conditions(line)
       + `<section class="card"><div class="seg" id="wo-lines">${L.map((l) => `<button type="button" data-l="${l}" aria-pressed="${l === line}">${l} <small>${O.lines[l].stop ? '휴지' : `${O.lines[l].nFree}건`}</small></button>`).join('')}</div>${stop}`
       + '<div class="kpis" style="margin-top:12px">'
       + `<div class="kpi"><div class="l">지금 라인</div><div class="v">${fx.length}<small>건 확정 대기</small></div><div class="b">마지막 코일 ${esc(v.lastCoil ? tm(v.lastCoil) : '-')} 끝 · 확정분 ${n0(v.tFixed)}t 은 ${esc(tm(v.fixedUntil))} 까지</div></div>`
@@ -129,7 +130,9 @@
       + (v.nFree ? `<div class="wo-cmp${gain < 0 ? ' bad' : ''}"><b>MES 순서와 비교</b> — 같은 ${v.nFree}건을 MES 에 지금 들어가 있는 작업예정일·순번대로 돌리면 휴지 ${n0(v.mes.down)}분${v.mes.wait ? ` + 도료 기다림 ${n0(v.mes.wait)}분` : ''} → 제안이 <b>${gain >= 0 ? `${n0(gain)}분 짧음` : `${n0(-gain)}분 김`}</b> <span class="bk">(같은 출발점, 같은 휴지 규칙)</span></div>` : '')
       + '</section>'
       + (v.nFree ? `<section class="card"><h2>제안 순서 <small class="bk">날짜별 · 줄마다 그 지시 앞에 생기는 휴지와 생산</small></h2>${table(v, free, 'free')}</section>` : '')
-      + (fx.length ? `<section class="card"><details class="fx"><summary>이미 확정된 대기열 ${fx.length}건 ${n0(v.tFixed)}t — MES 순서 그대로 (${esc(tm(v.from))} → ${esc(tm(v.fixedUntil))})</summary>${table(v, fx, 'fixed')}</details></section>` : '');
+      + (fx.length ? `<section class="card"><details class="fx"><summary>이미 확정된 대기열 ${fx.length}건 ${n0(v.tFixed)}t — MES 순서 그대로 (${esc(tm(v.from))} → ${esc(tm(v.fixedUntil))})</summary>${table(v, fx, 'fixed')}</details></section>` : '')
+      + conditions(line);
+    $('wo-how').addEventListener('toggle', (e) => { howOpen = e.target.open; try { localStorage.setItem('wo-how-open', howOpen ? '1' : '0'); } catch (er) { /* 무시 */ } });
     $('wo-lines').querySelectorAll('button').forEach((b) => b.onclick = () => { line = b.dataset.l; render(); });
     if (window.UI) UI.reveal($('wo-main'));
   }
