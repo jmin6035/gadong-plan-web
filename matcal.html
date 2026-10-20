@@ -107,6 +107,12 @@ table.sc td.nd { color: var(--ink-3); }
 .wkl { display: flex; flex-wrap: wrap; gap: 8px; } .wkc { all: unset; cursor: pointer; display: flex; flex-direction: column; gap: 2px; min-width: 110px; padding: 8px 12px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); }
 .wkc span { font-size: 12.5px; color: var(--ink-3); font-weight: 700; } .wkc b { font-size: 18px; } .wkc .neg { color: var(--bad); font-weight: 700; } .wkc:hover { border-color: var(--brand-2); }
 .det .neg { color: var(--bad); font-weight: 800; } .det .pos { color: var(--good); font-weight: 800; }
+.mss { margin-bottom: 14px; } .mss h3 { font-size: 15px; margin: 8px 0 6px; padding-left: 8px; border-left: 4px solid var(--gc); }
+table.t.msum td { white-space: normal !important; vertical-align: middle !important; padding: 7px 10px; min-width: 230px; } table.t.msum td:first-child { min-width: 140px; font-weight: 700; }
+table.t.msum tr.tot td { background: var(--tint); }
+.msb { display: flex; height: 14px; border-radius: 4px; overflow: hidden; background: var(--grid); }
+.msb i { display: block; height: 100%; } .msb i.r { background: var(--good); } .msb i.o { background: var(--brand-2); } .msb i.n { background: repeating-linear-gradient(45deg, var(--bad) 0 3px, color-mix(in srgb, var(--bad) 25%, transparent) 3px 6px); }
+.msn { font-size: 12.5px; color: var(--ink-2); margin-top: 3px; font-variant-numeric: tabular-nums; } .msn b { color: var(--ink); font-size: 13.5px; } .msn .r { color: var(--good); } .msn .o { color: var(--brand-2); } .msn .n { color: var(--bad); font-weight: 700; } .msn small { color: var(--ink-3); margin-left: 4px; }
 </style>
 </head>
 <body>
@@ -119,7 +125,8 @@ table.sc td.nd { color: var(--ink-3); }
   </section>
   <div id="main" hidden>
     <div class="sbar"><span id="s-meta"></span><div class="tabs" id="s-mon" role="group" aria-label="월"></div></div>
-        <section class="card matcal"><h2>소재 캘린더 <small>소재 유형별 발주 → 입고 → 생산 투입 — 칸을 누르면 업체·양·용도</small><span class="unit">톤</span></h2>
+    <section class="card" id="s-msum"></section>
+    <section class="card matcal"><h2>소재 캘린더 <small>소재 유형별 발주 → 입고 → 생산 투입 — 칸을 누르면 업체·양·용도</small><span class="unit">톤</span></h2>
       <div id="s-mcal"></div>
       <div class="calw" id="s-calw3"><table class="sc tc" id="s-cal3"></table></div>
       <div class="lg"><span><i style="background:color-mix(in srgb,#c46f00 16%,#fff)"></i>발주 — 업체별 발주 마감일</span><span><i style="background:var(--bad-bg)"></i>마감 지난 발주(오늘 칸에 모음)</span><span><i style="background:var(--good-bg)"></i>입고 — 기발주 입고 예정</span><span><i style="background:#fff;box-shadow:inset 0 0 0 2px var(--good)"></i>입고 — 새로 발주할 분이 들어와야 할 날</span><span><i style="background:var(--surface-2)"></i>생산 투입 — 그날 생산에 쓰는 양</span><span>굵은 세로선 = 주 시작(월)</span></div>

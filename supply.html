@@ -107,6 +107,20 @@ table.sc td.nd { color: var(--ink-3); }
 .wkl { display: flex; flex-wrap: wrap; gap: 8px; } .wkc { all: unset; cursor: pointer; display: flex; flex-direction: column; gap: 2px; min-width: 110px; padding: 8px 12px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); }
 .wkc span { font-size: 12.5px; color: var(--ink-3); font-weight: 700; } .wkc b { font-size: 18px; } .wkc .neg { color: var(--bad); font-weight: 700; } .wkc:hover { border-color: var(--brand-2); }
 .det .neg { color: var(--bad); font-weight: 800; } .det .pos { color: var(--good); font-weight: 800; }
+.pgs { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 12px; }
+.pg { border: 1px solid var(--line); border-top: 4px solid var(--gc); border-radius: 8px; padding: 12px 14px; background: var(--surface); }
+.pg-h { display: flex; justify-content: space-between; align-items: baseline; } .pg-h b { font-size: 15px; } .pg-h small { color: var(--ink-3); font-size: 12px; }
+.pg-v { font-size: 28px; font-weight: 800; letter-spacing: -.5px; margin-top: 4px; font-variant-numeric: tabular-nums; } .pg-v small { font-size: 14px; font-weight: 600; color: var(--ink-2); } .pg-p { font-size: 16px; color: var(--gc); margin-left: 6px; }
+.pg-bar { position: relative; height: 12px; background: var(--grid); border-radius: 6px; margin: 8px 0 6px; } .pg-bar i { position: absolute; left: 0; top: 0; bottom: 0; background: var(--gc); border-radius: 6px; }
+.pg-bar em { position: absolute; top: -4px; bottom: -4px; width: 3px; margin-left: -1px; background: var(--ink); border-radius: 2px; }
+.pg-s { font-size: 13px; color: var(--ink-2); } .pg-s .pos { color: var(--good); } .pg-s .neg { color: var(--bad); }
+.pg-g { display: flex; flex-wrap: wrap; gap: 4px 12px; margin-top: 6px; padding-top: 6px; border-top: 1px dashed var(--line); font-size: 12.5px; color: var(--ink-3); } .pg-g b { color: var(--ink); }
+table.sc tr.tot-r td { background: var(--tint-2); font-weight: 800; } table.sc tr.tot-r .lb { background: var(--tint-2); }
+table.sc tr.gr1 td { border-top: 2px solid var(--line); } table.sc tr.gr1 .lb .gn { display: inline-block; min-width: 86px; font-weight: 800; color: var(--ink); }
+table.sc tr.gr2 .lb .gn, table.sc tr.gr3 .lb .gn { display: inline-block; min-width: 86px; }
+table.sc .lb .gk { display: inline-block; font-size: 11.5px; font-weight: 700; padding: 0 7px; border-radius: 999px; background: var(--surface-2); color: var(--ink-2); }
+table.sc tr.gr1 .gk { background: color-mix(in srgb, var(--gc) 14%, var(--surface)); color: var(--gc); } table.sc tr.gr2 .gk { background: color-mix(in srgb, #c46f00 14%, var(--surface)); color: #a35a00; } table.sc tr.gr3 .gk { background: var(--good-bg); color: var(--good); }
+table.sc td.gs { color: #a35a00; } table.sc td.gk2 { color: var(--ink-2); }
 </style>
 </head>
 <body>
@@ -119,7 +133,8 @@ table.sc td.nd { color: var(--ink-3); }
   </section>
   <div id="main" hidden>
     <div class="sbar"><span id="s-meta"></span><div class="tabs" id="s-mon" role="group" aria-label="월"></div></div>
-        <section class="card"><h2>가동 캘린더 <small>도금·컬러 생산 · 제품 재고 — 날짜를 누르면 아래에 그날 라인별 품목·납기·소재 일정</small><span class="unit">톤</span></h2>
+    <section class="card" id="s-prog"></section>
+    <section class="card"><h2>가동 캘린더 <small>라인 합 · 그룹별 생산 → 출하 → 재고 — 라인별 일정은 <a href="status.html">도금</a>·<a href="color_status.html">컬러</a> 가동 현황, 날짜를 누르면 아래에 그날 품목·납기·소재</small><span class="unit">톤</span></h2>
       <div class="calw" id="s-calw"><table class="sc" id="s-cal"></table></div>
     </section>
     <div class="det" id="s-det"></div>
