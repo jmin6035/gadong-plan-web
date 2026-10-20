@@ -16,7 +16,7 @@
     $('wo-main').innerHTML = (O.missing && O.missing.length ? `<div class="miss"><b>아직 안 들어온 자료</b> — ${O.missing.map(esc).join(' / ')}</div>` : '')
       + `<section class="card"><div class="seg" id="wo-lines">${L.map((l) => `<button type="button" data-l="${l}" aria-pressed="${l === line}">${l} <small>${O.lines[l].n}</small></button>`).join('')}</div>`
       + `<div class="wo-kpi" style="margin-top:12px"><div><small>편성 대상(미확정·소재 매치)</small><b>${v.nFree != null ? v.nFree : v.n}건</b><small>${n0(v.tFree != null ? v.tFree : v.t)}t · 확정된 대기열 ${v.n - (v.nFree != null ? v.nFree : v.n)}건은 앞에 MES 순서대로</small></div><div><small>도료·PF 대기</small><b>${wait}건</b><small>준비일이 오늘 이후</small></div>`
-      + `<div><small>전환 휴지 합(실측 조건표)</small><b>${n0(v.costOurs)}분</b><small>MES 현재 순서 ${n0(v.costMes)}분</small></div></div>`
+      + `<div><small>편성 대상 전환 휴지 합(실측 조건표)</small><b>${n0(v.costFree != null ? v.costFree : v.costOurs)}분</b><small>같은 지시를 MES 예정 순서로 하면 ${n0(v.costMes)}분</small></div></div>`
       + `<p class="hint">가동 ${esc(v.from || '')} → ${esc(v.until || '')} · 시각 = 마지막 실적 코일 끝부터 (휴지계획) → 전환 → 생산(톤 ÷ 예상 t/hr)</p>`
       + `<div class="scroll"><table class="t"><thead><tr><th>제안</th><th>시작</th><th>종료</th><th>품명</th><th>그룹</th><th>톤</th><th>폭</th><th>두께</th><th>L/S<br><small>m/분</small></th><th>t/hr</th><th>생산<br><small>분</small></th><th>전환<br><small>분</small></th><th>도료생산일</th><th>PF</th><th>PF입고</th><th>MES 예정·순번</th><th class="l">이유(전환 내용)</th></tr></thead><tbody>`
       + (() => { const byS = {}; v.items.forEach((x) => { byS[x.seq] = x; }); let h = '';
