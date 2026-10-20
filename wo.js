@@ -25,18 +25,19 @@
     if (x.paint) prep.push(`도료 ${rdy && x.ready === x.paint ? `<b class="rdy">${md(x.paint)}</b>` : md(x.paint)}`);
     if (x.pf && x.pf !== '00') prep.push(`PF ${esc(x.pf)} ${x.pfDate ? md(x.pfDate) : '<b class="rdy">입고일 없음</b>'}`);
     if (x.smat) prep.push(`<b class="rdy">부자재 ${esc(x.smat)}</b>`);
+    if (why) prep.push(`<span class="why">${esc(why)}</span>`);
     return `<tr${dn ? ' class="hasdn"' : ''}><td class="c"><b>${x.seq}</b></td>`
       + `<td class="tm">${dn ? `<span class="bk">휴지 ${tm(x.downStart, day)}</span><br>` : ''}<b>${tm(x.start, day)}</b> – ${tm(x.end, day)}</td>`
       + `<td class="l"><b>${esc(x.item)}</b><span class="gt gt${x.tier}">${TIER[x.tier]}</span><br><span class="bk">${esc(x.pdt)} · ${BLK[x.block]} · ${esc(x.con)}</span></td>`
       + `<td class="l wr">${x.thk} × ${n0(x.wdt)}<br><span class="bk">${esc(x.top || x.color)}${x.back ? ` / 이면 ${esc(x.back)}` : ''}${x.top ? '' : ' <span title="풀 코드 대기(도료 코드 조회)">…</span>'}</span></td>`
       + `<td class="num">${x.t.toFixed(1)}${x.tMade > 0.5 ? `<br><span class="bk" title="지시 ${x.tDrt}t 중 ${x.tMade}t 이미 생산">남은 양</span>` : ''}</td>`
       + `<td class="num" title="${esc(x.speedSrc)}">${n0(x.runMin)}분<br><span class="bk">L/S ${x.ls} · ${x.tph}t/h</span></td>`
-      + `<td class="c">${dn ? `<span class="dnb">${n0(x.downMin)}분</span>` : '<span class="bk">0</span>'}</td>`
-      + `<td class="l desc">${esc(x.downWhy).replace(/\n/g, '<br>')}${why ? `<div class="why">${esc(why)}</div>` : ''}</td>`
+      + `<td class="l wr">${(x.chg || []).map((c) => `<div>${esc(c)}</div>`).join('')}</td>`
+      + `<td class="l wr">${(x.downs || []).length ? ((x.downs.length > 1 && dn) ? `<div class="wo-ds">합계 ${n0(x.downMin)}분</div>` : '') + x.downs.map((d) => `<div class="wo-dl"><b>${esc(d.c)}</b> <span class="${d.m ? 'wo-dm' : 'wo-d0'}">${d.m}분</span> <span class="bk">· ${esc(d.b)}</span></div>`).join('') : '<span class="bk">없음</span>'}</td>`
       + `<td class="l">${prep.join('<br>') || '<span class="bk">-</span>'}</td>`
       + `<td class="c">${md(x.mesDate) || '-'}${x.mesSeq != null ? `<br><span class="bk">${esc(x.mesSeq)}번째</span>` : ''}</td></tr>`;
   }
-  const HEAD = '<thead><tr><th>순서</th><th>시간</th><th class="l">품명 · 그룹</th><th class="l">두께 × 폭 · 색</th><th>톤</th><th>생산</th><th>휴지</th><th class="l">앞 작업과 무엇이 바뀌나 · 왜 이때</th><th class="l">준비</th><th>MES 작업예정일<br><small>담당자 입력·비교용</small></th></tr></thead>';
+  const HEAD = '<thead><tr><th>순서</th><th>시간</th><th class="l">품명 · 그룹</th><th class="l">두께 × 폭 · 색</th><th>톤</th><th>생산</th><th class="l">앞 작업과 바뀌는 것</th><th class="l">생기는 휴지 (MES 코드·분)</th><th class="l">준비 (도료·PF·부자재)</th><th>MES 작업예정일<br><small>담당자 입력·비교용</small></th></tr></thead>';
   const NC = 10;
   // 하루 띠: 0~24시 위에 생산(파랑)·휴지(주황)·휴지계획(회색)·기다림(빨강)
   const mins = (s, d) => { if (!s) return 0; const sd = s.slice(0, 5), dd = d.slice(5); if (sd < dd) return 0; if (sd > dd) return 1440; return (+s.slice(6, 8)) * 60 + (+s.slice(9, 11)); };
@@ -64,8 +65,43 @@
       if (e.kind === 'job') { h += row(byS[e.seq], curDay); return; }
       h += `<tr class="ev ${e.kind}"><td class="c">—</td><td class="tm">${tm(e.start, curDay)} – ${tm(e.end, curDay)}</td><td colspan="${NC - 2}"><b>${e.kind === 'plan' ? '휴지계획' : '라인 멈춤(기다림)'} ${hm(e.min)}</b> · ${esc(e.why)}</td></tr>`;
     });
-    return `<div class="scroll"><table class="t wo"><colgroup><col style="width:52px"><col style="width:128px"><col style="width:220px"><col style="width:170px"><col style="width:72px"><col style="width:120px"><col style="width:84px"><col><col style="width:150px"><col style="width:104px"></colgroup>${HEAD}<tbody>${h}</tbody></table></div>`
+    return `<div class="scroll"><table class="t wo"><colgroup><col style="width:52px"><col style="width:128px"><col style="width:200px"><col style="width:150px"><col style="width:64px"><col style="width:108px"><col style="width:230px"><col><col style="width:160px"><col style="width:96px"></colgroup>${HEAD}<tbody>${h}</tbody></table></div>`
       + '<p class="hint lg"><i class="sr"></i>생산 <i class="sd"></i>휴지(앞 작업과 바뀜) <i class="sp"></i>휴지계획 <i class="sw"></i>기다림 — 띠에 마우스를 올리면 내용이 보입니다</p>';
+  }
+
+  // 편성 조건(순서대로) + 휴지 계산표 — 사용자 10/20: 조건을 1. 2. 순번으로, 첨부 파일 이름까지
+  function conditions() {
+    const K = O.r15 || {}, f0 = (v) => (v == null ? '-' : Math.round(v));
+    const lb = (k) => { const v = (O.learn || {})[k]; return v ? `${f0(v.median)}분 (지난 1년 ${v.n}번 중앙값)` : '-'; };
+    const C = [
+      ['편성 대상', 'SSCHC1020 화면의 확정여부 N · 소재매치 Y · 지시 종료일 없음 (지시일 1년 안)', 'WRK_DRT_CONF · RAW_MCH_YN · WRK_DRT_END_DT', '대상 정의'],
+      ['남은 양', '지시량 − 같은 계약·지시일로 이미 생산된 코일 무게. 95% 넘게 생산됐으면 끝난 지시로 봄', 'WRK_DRT_WGT − 코일 실적 PDT_WGT', '대상 정의'],
+      ['① 도료 입고일', '도료생산일(입고일) 0시부터 넣을 수 있음 — 당일 생산 가능', 'PNT_ENT_SCHE_DAT', '반드시 지킴'],
+      ['② PF 입고일', 'PF종류가 00 이 아니면 PF입고예정일 0시부터 (당일 가능). 날짜가 비어 있으면 경고만', 'PF_SRT_CD · PF_ENT_SCHE_DAT', '반드시 지킴'],
+      ['③ 확정 대기열', '확정여부 Y 인 지시는 MES 순서 그대로 맨 앞 (순서 안 바꿈)', 'WRK_SCHE_DT · WRK_SCHE_SEQ', '반드시 지킴'],
+      ['④ 우선순위', '넣을 수 있는 지시가 많으면 수출 → 가전내수·수요개발·주문재 → 계획재 순으로 먼저 (산출근거서 컬러 배치 조건 ③). 순위 낮은 지시를 뒤로 보내 같은 폭·색 사이에 끼우는 건 허용', '계약 부서·용도·계약번호', '높은 순위를 늦추지 않음'],
+      ['⑤ 휴지 최소', '①~④ 안에서 아래 휴지 합 + 도료·PF 기다림이 가장 적은 순서 (블록끼리 모음, 넓은 폭 → 좁은 폭 등)', '아래 표', '최대한'],
+      ['시각 계산', '출발 = 지금과 마지막 실적 코일 끝 중 늦은 때. 지시마다 휴지 → 생산(톤 ÷ (두께 × 폭 × L/S × 7.87)). L/S = 우리 실적. 그날 휴지계획은 그날 첫 작업 앞', 'snap_cc_seq_recent · 휴지계획', ''],
+      ['부자재상태', '불량·입고대기를 "준비" 칸에 표시 (순서에서 뺄지는 확인 중)', 'PNT_STS_CD (W 입고대기 · X 불량)', '표시만'],
+    ];
+    const D = [
+      ['같은 색', '-', '0', '첨부 파일'],
+      ['2헤드 교대 (다른 헤드에 걸린 색으로 돌아감)', '-', '0', '첨부 파일'],
+      ['색 바뀜 (일반·PVS2)', '3432 상도 / 3434 이면+상도 / 3435 하도+상도 / 3429 하도·상도·이면 색상교체 (바뀐 도료에 따라)', `${f0(K.base_g)} − 그 지시 생산시간 (생산이 더 길면 0)`, '첨부 파일 (1년 실측은 생산이 길어도 멈춤 — 확인 중)'],
+      ['색 바뀜 (4CCL 프린트)', '3427 Ink 색상 교체 + 색상교체', `${f0(K.base_p)} − 그 지시 생산시간`, '첨부 파일'],
+      ['생산순서기준 다른 묶음으로 넘어감', '색상교체', '색 바뀜과 같게, 2헤드 교대 안 됨', '첨부 파일 02 생산순서기준'],
+      ['새 색 + 단판TEST 대상', '4198 생산검증 단판TEST', `${f0(K.test_g)} (프린트 ${f0(K.test_p)})`, '첨부 파일 05표 Y'],
+      ['폭이 넓어짐', '3419(1·2CCL) / 3418(3·4CCL) Roll 교체(폭 변경)', `${f0(K.roll_g)} (1CCL PVS2 ${f0(K.roll_pvs)}, 4CCL 프린트 ${f0(K.roll_p)})`, '첨부 파일'],
+      ['두께가 크게 바뀜', '3420 두께편차 Dummy', `${f0(K.dummy)} (두께비 1·2CCL ${K.thr12}배, 3·4CCL ${K.thr4}배 넘을 때)`, '첨부 파일'],
+      ['1CCL 일반 → PVS2 / PVS2 → 일반', '블록 전환 (EMBO 준비·마무리, Roll, 색상교체 등)', `${lb('1CCL|general>pvs2')} / ${lb('1CCL|pvs2>general')}`, '1년 실측'],
+      ['4CCL 일반 → 프린트 / 프린트 → 일반', '블록 전환 (색상교체, 부정기 설비교체, Ink, 단판TEST 등)', `${lb('4CCL|general>print')} / ${lb('4CCL|print>general')}`, '1년 실측'],
+    ];
+    return '<details class="wo-how" open><summary>편성 조건 — 이 순서로 봅니다</summary>'
+      + '<div class="scroll"><table class="t cond"><thead><tr><th>조건</th><th class="l">내용</th><th class="l">MES 칸·자료</th><th>지키는 정도</th></tr></thead><tbody>'
+      + C.map((r) => `<tr><td class="l"><b>${r[0]}</b></td><td class="l wrap">${r[1]}</td><td class="l bk">${r[2]}</td><td>${r[3]}</td></tr>`).join('') + '</tbody></table></div>'
+      + `<h3>휴지 계산 (⑤) — 지시가 바뀔 때 생기는 휴지</h3><p class="hint">첨부 파일 = ${esc(O.file || '「계획재_일별배치_휴지시간_재산출_최종.xlsx」(10/20 사용자 첨부)')} 의 03 품목별휴지시간·02 생산순서기준·05 단판TEST여부 시트. 블록 전환만 1년 실측(사용자 10/20).</p>`
+      + '<div class="scroll"><table class="t cond"><thead><tr><th class="l">상황</th><th class="l">MES 휴지 코드</th><th class="l">분</th><th class="l">근거</th></tr></thead><tbody>'
+      + D.map((r) => `<tr><td class="l">${r[0]}</td><td class="l wrap">${r[1]}</td><td class="l wrap">${r[2]}</td><td class="l bk wrap">${r[3]}</td></tr>`).join('') + '</tbody></table></div></details>';
   }
 
   function render() {
@@ -78,12 +114,7 @@
     const gain = v.mes.sum - v.ours.sum;
     const stop = v.stop ? `<div class="miss"><b>${line} 휴지 중</b> — ${esc(v.stop.note)}. ${v.stop.until ? `재가동 ${md(v.stop.until)} 0시부터 시각 계산` : '재가동일 미정 — 아래 시각은 <b>지금 바로 재가동한다고 가정</b>한 것'}</div>` : '';
     $('wo-main').innerHTML = (O.missing && O.missing.length ? `<div class="miss"><b>아직 안 들어온 자료</b> — ${O.missing.map(esc).join(' / ')}</div>` : '')
-      + '<details class="wo-how" open><summary>읽는 법 — 순서를 정한 기준</summary><ol>'
-      + '<li><b>준비된 것만</b>: 도료생산일 이후, PF종류가 있으면 PF입고예정일 이후(둘 다 당일 가능)</li>'
-      + '<li><b>먼저 넣을 묶음</b>: 넣을 수 있는 지시가 많으면 수출 → 가전내수·수요개발·주문재 → 계획재 순으로 먼저(산출근거서 컬러 배치 조건 ③). 그날 시간이 남으면 다음 순위로 채움</li>'
-      + '<li><b>묶음 안 순서 = 휴지가 가장 적은 순서</b>: 같은 색 이어서, 2헤드에 걸린 두 색 번갈아, 넓은 폭 → 좁은 폭, 두께 급변 피함, 블록(일반·PVS2·프린트)끼리 모음</li></ol>'
-      + '<p>휴지 계산 = 10/20 첨부 「계획재 일별배치 휴지시간 재산출」 파일 규칙: 색상교체 = 48분(프린트 84분) − 그 지시 생산시간(길면 0) · 2헤드 교대 0 · 순서기준 그룹이 바뀌면 색 교체 필수 · 블록(1CCL 일반↔PVS2, 4CCL 일반↔프린트)이 바뀌면 지난 1년 실측 빈 시간 중앙값(105~115분: EMBO 준비·Roll·색상교체·TEST 등 포함) · 단판TEST Y면 42분(프린트 54분) · 폭이 넓어지면 Roll교체 61~69분(4CCL 프린트 45분) · 두께비 1.5배(3·4CCL 1.3배) 넘으면 Dummy 38분</p>'
-      + '<p>시각 = 마지막 실적 코일이 끝난 때와 지금 중 늦은 때부터, 확정 대기열을 MES 순서대로 먼저 돌리고 이어서 제안 순서. 생산시간 = 톤 ÷ (두께 × 폭 × L/S × 7.87). 그날 휴지계획(계획휴지·S/D·청소 등)은 시각이 없어 그날 첫 작업 앞에 둠</p></details>'
+      + conditions()
       + `<section class="card"><div class="seg" id="wo-lines">${L.map((l) => `<button type="button" data-l="${l}" aria-pressed="${l === line}">${l} <small>${O.lines[l].stop ? '휴지' : `${O.lines[l].nFree}건`}</small></button>`).join('')}</div>${stop}`
       + '<div class="kpis" style="margin-top:12px">'
       + `<div class="kpi"><div class="l">지금 라인</div><div class="v">${fx.length}<small>건 확정 대기</small></div><div class="b">마지막 코일 ${esc(v.lastCoil ? tm(v.lastCoil) : '-')} 끝 · 확정분 ${n0(v.tFixed)}t 은 ${esc(tm(v.fixedUntil))} 까지</div></div>`
