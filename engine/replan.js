@@ -76,6 +76,11 @@
     });
     const baseState = {};
     for (const c of R.cal) baseState[`${c.line}|${c.date}`] = c.fam;
+    const fu = O.freezeDays > 0 ? GP.addDays(act.t0, O.freezeDays) : null;
+    for (const [l, cur] of Object.entries(act.state || {})) {          // 기준 계획 강종이 실제와 어긋난 라인은 동결 기간을 지금 강종으로(이미 나간 지시 = 지금 강종)
+      if (!fu || baseState[`${l}|${act.t0}`] === cur) continue;
+      for (let d = GP.addDays(act.t0, 1); d <= fu; d = GP.addDays(d, 1)) if (`${l}|${d}` in baseState) baseState[`${l}|${d}`] = cur;
+    }
     const MO = { t0: act.t0, init: act.state, freezeUntil: O.freezeDays > 0 ? GP.addDays(act.t0, O.freezeDays) : null, baseState, allowLate: O.allowLate, maxLate: O.maxLate, lateW: O.lateW, shortW: O.shortW, stabW: O.stabW, stabW2: O.stabW2, extraDown: act.extraDown || {} };
     const lockNotes = [];
     if (O.lockMC) MO.lock = GP.mcLock(P, H, R, act, lockNotes);
