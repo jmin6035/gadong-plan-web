@@ -16,10 +16,16 @@
     $('wo-main').innerHTML = (O.missing && O.missing.length ? `<div class="miss"><b>아직 안 들어온 자료</b> — ${O.missing.map(esc).join(' / ')}</div>` : '')
       + `<section class="card"><div class="seg" id="wo-lines">${L.map((l) => `<button type="button" data-l="${l}" aria-pressed="${l === line}">${l} <small>${O.lines[l].n}</small></button>`).join('')}</div>`
       + `<div class="wo-kpi" style="margin-top:12px"><div><small>편성 대상(미확정·소재 매치)</small><b>${v.nFree != null ? v.nFree : v.n}건</b><small>${n0(v.tFree != null ? v.tFree : v.t)}t · 확정된 대기열 ${v.n - (v.nFree != null ? v.nFree : v.n)}건은 앞에 MES 순서대로</small></div><div><small>도료·PF 대기</small><b>${wait}건</b><small>준비일이 오늘 이후</small></div>`
-      + `<div><small>전환 시간 합(임시 조건표)</small><b>${n0(v.costOurs)}분</b><small>MES 현재 순서 ${n0(v.costMes)}분</small></div></div>`
-      + `<div class="scroll"><table class="t"><thead><tr><th>제안</th><th>품명</th><th>그룹</th><th>톤</th><th>폭</th><th>두께</th><th>상도</th><th>PF</th><th>도료생산일</th><th>PF입고예정</th><th>준비일</th><th>MES 예정일·순번</th><th class="l">이유</th></tr></thead><tbody>`
-      + v.items.map((x) => `<tr${x.fixed ? ' style="opacity:.6"' : ''}><td><b>${x.seq}</b></td><td>${esc(x.pdt)}</td><td>${esc(x.g)}</td><td>${n0(x.t)}</td><td>${n0(x.wdt)}</td><td>${x.thk || '-'}</td><td>${esc(x.top || '')}</td><td>${esc(x.pf)}</td><td>${md(x.paint)}</td><td>${md(x.pfDate)}</td><td class="${x.ready > O.today ? 'wait' : ''}">${md(x.ready)}</td><td>${md(x.mesDate)} #${esc(x.mesSeq)}</td><td class="l">${esc(x.why)}</td></tr>`).join('')
-      + '</tbody></table></div><p class="hint">제안만 보여 줍니다(MES 에 쓰지 않음). 전환 시간은 임시 조건표 — 컬러 전환 휴지 학습 결과로 바뀝니다.</p></section>';
+      + `<div><small>전환 휴지 합(실측 조건표)</small><b>${n0(v.costOurs)}분</b><small>MES 현재 순서 ${n0(v.costMes)}분</small></div></div>`
+      + `<p class="hint">가동 ${esc(v.from || '')} → ${esc(v.until || '')} · 시각 = 마지막 실적 코일 끝부터 (휴지계획) → 전환 → 생산(톤 ÷ 예상 t/hr)</p>`
+      + `<div class="scroll"><table class="t"><thead><tr><th>제안</th><th>시작</th><th>종료</th><th>품명</th><th>그룹</th><th>톤</th><th>폭</th><th>두께</th><th>L/S<br><small>m/분</small></th><th>t/hr</th><th>생산<br><small>분</small></th><th>전환<br><small>분</small></th><th>도료생산일</th><th>PF</th><th>PF입고</th><th>MES 예정·순번</th><th class="l">이유(전환 내용)</th></tr></thead><tbody>`
+      + (() => { const byS = {}; v.items.forEach((x) => { byS[x.seq] = x; }); let h = '';
+          (v.events || v.items.map((x) => ({ kind: 'job', seq: x.seq }))).forEach((e) => {
+            if (e.kind !== 'job') { h += `<tr class="${e.kind === 'down' ? 'down' : 'waitrow'}"><td>—</td><td>${esc(e.start)}</td><td>${esc(e.end)}</td><td colspan="14" class="l"><b>${e.kind === 'down' ? '휴지' : '대기'} ${n0(e.min)}분</b> · ${esc(e.why)}</td></tr>`; return; }
+            const x = byS[e.seq]; if (!x) return;
+            h += `<tr${x.fixed ? ' class="fx"' : ''}><td><b>${x.seq}</b></td><td>${esc(x.start || '')}</td><td>${esc(x.end || '')}</td><td>${esc(x.pdt)}<br><small>${esc(x.item || '')}</small></td><td>${esc(x.g)}</td><td>${n0(x.t)}</td><td>${n0(x.wdt)}</td><td>${x.thk || '-'}</td><td title="${esc(x.speedSrc || '')}">${x.ls || '-'}</td><td>${x.tph || '-'}</td><td>${n0(x.runMin)}</td><td>${n0(x.cost)}</td><td>${md(x.paint)}</td><td>${esc(x.pf)}</td><td>${md(x.pfDate)}</td><td>${md(x.mesDate)} #${esc(x.mesSeq)}</td><td class="l">${esc(x.why)}${x.paintSrc && x.paintSrc !== '도료 코드' ? ` <small>(도료: ${esc(x.paintSrc)})</small>` : ''}</td></tr>`;
+          }); return h; })()
+      + '</tbody></table></div><p class="hint">제안만 보여 줍니다(MES 에 쓰지 않음). 전환 분 = 컬러 학습(코일 사이 빈 시간 실측) 조건표, L/S = 같은 라인·부서·품명·두께 실적 중앙값. 흐린 줄 = 이미 확정된 대기열.</p></section>';
     $('wo-lines').querySelectorAll('button').forEach((b) => b.onclick = () => { line = b.dataset.l; render(); });
     if (window.UI) UI.reveal($('wo-main'));
   }
