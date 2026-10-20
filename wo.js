@@ -14,7 +14,7 @@
   const hm = (m) => (m >= 60 ? `${Math.floor(m / 60)}시간 ${Math.round(m % 60)}분` : `${Math.round(m)}분`);
   const TIER = { 1: '수출', 2: '내수·수요개발·주문재', 3: '계획재' };
   const BLK = { general: '일반', pvs2: 'PVS2', print: '프린트' };
-  const DZ = [['col', '색상교체'], ['test', '단판TEST'], ['roll', 'Roll교체'], ['dummy', 'Dummy']];
+  const DZ = [['col', '색상교체'], ['test', '단판TEST'], ['roll', 'Roll교체'], ['dummy', 'Dummy'], ['block', '블록 전환']];
   let O = null, line = null;
 
   function row(x, day) {
@@ -60,14 +60,15 @@
     $('wo-meta').textContent = `${O.now} 기준(지금) · 계산 ${O.built || ''}`;
     const dz = DZ.filter(([k]) => v.downFree[k] > 0.5).map(([k, nm]) => `${nm} ${n0(v.downFree[k])}`).join(' · ') || '없음';
     const gain = v.mes.sum - v.ours.sum;
+    const stop = v.stop ? `<div class="miss"><b>${line} 휴지 중</b> — ${esc(v.stop.note)}. ${v.stop.until ? `재가동 ${md(v.stop.until)} 0시부터 시각 계산` : '재가동일 미정 — 아래 시각은 <b>지금 바로 재가동한다고 가정</b>한 것'}</div>` : '';
     $('wo-main').innerHTML = (O.missing && O.missing.length ? `<div class="miss"><b>아직 안 들어온 자료</b> — ${O.missing.map(esc).join(' / ')}</div>` : '')
       + '<details class="wo-how" open><summary>읽는 법 — 순서를 정한 기준</summary><ol>'
       + '<li><b>준비된 것만</b>: 도료생산일 이후, PF종류가 있으면 PF입고예정일 이후(둘 다 당일 가능)</li>'
       + '<li><b>먼저 넣을 묶음</b>: 넣을 수 있는 지시가 많으면 수출 → 가전내수·수요개발·주문재 → 계획재 순으로 먼저(산출근거서 컬러 배치 조건 ③). 그날 시간이 남으면 다음 순위로 채움</li>'
       + '<li><b>묶음 안 순서 = 휴지가 가장 적은 순서</b>: 같은 색 이어서, 2헤드에 걸린 두 색 번갈아, 넓은 폭 → 좁은 폭, 두께 급변 피함, 블록(일반·PVS2·프린트)끼리 모음</li></ol>'
-      + '<p>휴지 계산 = 계획재 휴지시간 배분방식(R15): 색상교체 = 48분(프린트 84분) − 그 지시 생산시간(길면 0) · 2헤드 교대 0 · 순서기준 그룹이나 블록이 바뀌면 색 교체 필수 · 단판TEST Y면 42분(프린트 54분) · 폭이 넓어지면 Roll교체 61~69분(4CCL 프린트 45분) · 두께비 1.5배(3·4CCL 1.3배) 넘으면 Dummy 38분</p>'
+      + '<p>휴지 계산 = 계획재 휴지시간 배분방식(R15): 색상교체 = 48분(프린트 84분) − 그 지시 생산시간(길면 0) · 2헤드 교대 0 · 순서기준 그룹이 바뀌면 색 교체 필수 · 블록(1CCL 일반↔PVS2, 4CCL 일반↔프린트)이 바뀌면 지난 1년 실측 빈 시간 중앙값(105~115분: EMBO 준비·Roll·색상교체·TEST 등 포함) · 단판TEST Y면 42분(프린트 54분) · 폭이 넓어지면 Roll교체 61~69분(4CCL 프린트 45분) · 두께비 1.5배(3·4CCL 1.3배) 넘으면 Dummy 38분</p>'
       + '<p>시각 = 마지막 실적 코일이 끝난 때와 지금 중 늦은 때부터, 확정 대기열을 MES 순서대로 먼저 돌리고 이어서 제안 순서. 생산시간 = 톤 ÷ (두께 × 폭 × L/S × 7.87). 그날 휴지계획(계획휴지·S/D·청소 등)은 시각이 없어 그날 첫 작업 앞에 둠</p></details>'
-      + `<section class="card"><div class="seg" id="wo-lines">${L.map((l) => `<button type="button" data-l="${l}" aria-pressed="${l === line}">${l} <small>${O.lines[l].nFree}건</small></button>`).join('')}</div>`
+      + `<section class="card"><div class="seg" id="wo-lines">${L.map((l) => `<button type="button" data-l="${l}" aria-pressed="${l === line}">${l} <small>${O.lines[l].stop ? '휴지' : `${O.lines[l].nFree}건`}</small></button>`).join('')}</div>${stop}`
       + '<div class="kpis" style="margin-top:12px">'
       + `<div class="kpi"><div class="l">지금 라인</div><div class="v">${fx.length}<small>건 확정 대기</small></div><div class="b">마지막 코일 ${esc(v.lastCoil ? tm(v.lastCoil) : '-')} 끝 · 확정분 ${n0(v.tFixed)}t 은 ${esc(tm(v.fixedUntil))} 까지</div></div>`
       + `<div class="kpi"><div class="l">이번 제안(편성 대상)</div><div class="v">${v.nFree}<small>건 ${n0(v.tFree)}t</small></div><div class="b">${v.nFree ? `${esc(tm(free[0].start))} → ${esc(tm(v.until))}` : '편성할 지시 없음'}${v.waitN ? ` · 도료·PF 준비 기다리는 지시 ${v.waitN}건` : ''}</div></div>`
