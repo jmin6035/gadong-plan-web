@@ -121,6 +121,39 @@ table.sc tr.gr2 .lb .gn, table.sc tr.gr3 .lb .gn { display: inline-block; min-wi
 table.sc .lb .gk { display: inline-block; font-size: 11.5px; font-weight: 700; padding: 0 7px; border-radius: 999px; background: var(--surface-2); color: var(--ink-2); }
 table.sc tr.gr1 .gk { background: color-mix(in srgb, var(--gc) 14%, var(--surface)); color: var(--gc); } table.sc tr.gr2 .gk { background: color-mix(in srgb, #c46f00 14%, var(--surface)); color: #a35a00; } table.sc tr.gr3 .gk { background: var(--good-bg); color: var(--good); }
 table.sc td.gs { color: #a35a00; } table.sc tr.grs td { font-size: 11.5px; color: var(--ink-3); padding-top: 2px; padding-bottom: 2px; } table.sc .lb .gs2 { font-size: 11.5px; color: var(--ink-3); font-weight: 600; } table.sc td.gk2 { color: var(--ink-2); }
+.vb { display: flex; gap: 4px; align-items: flex-end; margin: 10px 0 2px; }
+.vb-c { flex: 1; min-width: 0; text-align: center; }
+.vb-t { font-size: 11px; white-space: nowrap; line-height: 1.2; } .vb-t b { font-size: 13px; display: block; color: var(--ink); } .vb-t small { color: var(--ink-3); }
+.vb-a { position: relative; height: 110px; margin: 3px auto 4px; width: 34px; border-bottom: 1px solid var(--line); }
+.vb-p { position: absolute; left: 0; right: 0; bottom: 0; border: 1.5px dashed var(--ink-3); border-bottom: 0; border-radius: 4px 4px 0 0; background: repeating-linear-gradient(45deg, var(--surface) 0 3px, color-mix(in srgb, var(--bad) 10%, var(--surface)) 3px 6px); }
+.vb-a i { position: absolute; left: 4px; right: 4px; display: block; border-radius: 3px 3px 0 0; }
+.vb-ac { bottom: 0; background: var(--brand-2); } .vb-af { background: color-mix(in srgb, var(--brand-2) 32%, var(--surface)); }
+.vb-n { font-size: 12px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; } .vb-r { font-size: 11px; color: var(--ink-2); white-space: nowrap; } .vb-r b { color: var(--bad); }
+.vb-lg { display: flex; gap: 12px; font-size: 11.5px; color: var(--ink-3); margin-top: 4px; flex-wrap: wrap; } .vb-lg i { display: inline-block; width: 11px; height: 9px; border-radius: 2px; margin-right: 4px; vertical-align: middle; }
+.vb-lg i.ac { background: var(--brand-2); } .vb-lg i.af { background: color-mix(in srgb, var(--brand-2) 32%, var(--surface)); } .vb-lg i.p { border: 1.5px dashed var(--ink-3); width: 9px; height: 7px; }
+html .gtable td.hi { background: color-mix(in srgb, var(--warn) 16%, var(--surface)); }
+html .gtable .c1 small { color: var(--ink-3); font-weight: 500; }
+/* 가동 캘린더 = 가동 현황 캘린더 양식(dashboard.css 의 .gtable 규칙을 이 화면 변수로) */
+#s-calw { overflow: auto; max-height: calc(100vh - 110px); border: 1px solid var(--line); border-radius: 8px; }
+#s-cal { border-collapse: separate; border-spacing: 0; font-variant-numeric: tabular-nums; width: 100%; table-layout: fixed; }
+#s-cal th, #s-cal td { border: 0; border-right: 1px solid var(--line); border-bottom: 1px solid var(--line); text-align: center; white-space: nowrap; }
+#s-cal thead th { background: var(--th, var(--sub)); font-weight: 700; position: sticky; top: 0; z-index: 2; }
+#s-cal thead tr:nth-child(2) th { top: var(--h1, 34px); }
+#s-cal thead th.sat { background: #f7d9a8; color: #1c1c1c; } #s-cal thead th.sun { background: #f5c2c2; color: #1c1c1c; }
+#s-cal .c0 { position: sticky; left: 0; z-index: 3; background: var(--surface); } #s-cal .c1 { position: sticky; z-index: 3; background: var(--surface); text-align: left; padding-left: 6px; }
+#s-cal thead .c0, #s-cal thead .c1 { z-index: 4; }
+#s-cal th.line { font-weight: 800; border-right: 2px solid var(--line); line-height: 1.25; }
+#s-cal tr.first > * { border-top: 2px solid var(--ink-2); }
+#s-cal tr.r-fam td, #s-cal tr.r-fam .c1 { font-weight: 800; color: var(--ink); }
+#s-cal tr.r-dep td { color: var(--ink); font-weight: 500; } #s-cal tr.r-dep .c1 { font-weight: 500; color: var(--ink-2); padding-left: 14px; }
+#s-cal tr.r-hrs td, #s-cal tr.r-hrs .c1 { color: var(--ink-2); background: var(--sub); }
+#s-cal tr.r-hrs .c1 { padding-left: 14px; font-weight: 500; }
+#s-cal td.idle { background: color-mix(in srgb, var(--ink-3) 14%, transparent); }
+#s-cal td.mc { background: color-mix(in srgb, #f2b705 30%, var(--surface)); color: #1c1c1c; font-weight: 800; }
+#s-cal td.act { color: var(--ink-2); font-style: italic; }
+#s-cal .tot { font-weight: 800; background: var(--sub); }
+#s-cal td[data-d] { cursor: pointer; }
+#s-cal thead th.today { background: var(--brand-2); color: #fff; }
 </style>
 </head>
 <body>
@@ -134,8 +167,8 @@ table.sc td.gs { color: #a35a00; } table.sc tr.grs td { font-size: 11.5px; color
   <div id="main" hidden>
     <div class="sbar"><span id="s-meta"></span><div class="tabs" id="s-mon" role="group" aria-label="월"></div></div>
     <section class="card" id="s-prog"></section>
-    <section class="card"><h2>가동 캘린더 <small>라인 합 · 그룹별 생산 → 출하 → 재고 — 라인별 일정은 <a href="status.html">도금</a>·<a href="color_status.html">컬러</a> 가동 현황, 날짜를 누르면 아래에 그날 품목·납기·소재</small><span class="unit">톤</span></h2>
-      <div class="calw" id="s-calw"><table class="sc" id="s-cal"></table></div>
+    <section class="card"><h2>가동 캘린더 <small>라인별 생산(판매그룹별) · 판매그룹 출하 → 재고 — 날짜를 누르면 아래에 그날 품목·납기·소재</small><span class="unit">톤</span></h2>
+      <div class="gtable-wrap" id="s-calw"><table class="gtable" id="s-cal"></table></div>
     </section>
     <div class="det" id="s-det"></div>
     <details class="basis" style="margin-top:10px;font-size:12.5px;color:var(--ink-3)"><summary style="cursor:pointer;font-weight:700;color:var(--ink-2)">산출 기준</summary>
