@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>작업지시 순서</title>
+<meta name="description" content="컬러 SSCHC1020 편성 대상(소재 매치)을 도료생산일·PF입고예정일 → 컬러 배치 조건 순번 → 전환 최소 순으로 깐 제안 순서와 MES 현재 순번 비교">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 40'><defs><clipPath id='c'><rect width='40' height='40' rx='11'/></clipPath></defs><g clip-path='url(%23c)'><rect width='40' height='40' fill='%231b3f5f'/><path d='M-6 30 30-6h9L3 30z' fill='%233774a1'/><path d='M4 40 40 4v9L13 40z' fill='%236cb1d8'/><path d='M17 40 40 17v8L25 40z' fill='%23fff'/></g></svg>">
+<link rel="stylesheet" href="ui/theme.css">
+<style>
+.wo-kpi { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 10px; margin-bottom: 12px; }
+.wo-kpi div { border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; background: var(--surface); }
+.wo-kpi b { display: block; font-size: 22px; } .wo-kpi small { color: var(--ink-3); }
+table.t td.wait { color: var(--warn); font-weight: 700; } table.t td.l { text-align: left; white-space: normal; }
+.miss { border-left: 4px solid var(--warn); background: var(--warn-bg); padding: 8px 12px; border-radius: 6px; margin: 8px 0 12px; }
+</style>
+</head>
+<body>
+<header id="shell" data-page="wo" data-crumb="컬러" data-title="작업지시 순서" data-sub="SSCHC1020 편성 대상(소재 매치) — ① 도료생산일·PF입고예정일(당일 가능) ② 컬러 배치 조건 순번 ③ 전환 최소"></header>
+<main class="wrap">
+  <div class="docmeta" id="wo-meta"></div>
+  <div id="wo-main" style="margin-top:12px">
+    <section class="card lock" id="wo-lock">
+      <div><div class="ic" aria-hidden="true">🔒</div><h2>불러오는 중…</h2>
+        <form class="unlock" id="wo-form" hidden><input type="password" id="wo-pw" placeholder="분석 암호" autocomplete="current-password" aria-label="분석 암호"><button type="submit">열기</button></form>
+        <p class="hint" id="wo-msg"></p></div>
+    </section>
+  </div>
+</main>
+<footer class="foot"><div class="wrap"><span>원자료: MES SSCHC1020(SSCH.PF_CC_WORK_ORD)·주문 사양·도료 코드·컬러 생산 실적 — MES 에는 쓰지 않음(제안만)</span><span>POSCO STEELEON 도금·컬러 가동계획</span></div></footer>
+<script src="ui/shell.js"></script>
+<script src="engine/crypto.js"></script>
+<script src="wo.js"></script>
+</body>
+</html>
