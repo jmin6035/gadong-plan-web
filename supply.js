@@ -495,13 +495,13 @@
       return `<td class="fm-c${tot ? ' fm-t' : ''}" title="${esc(`계획 ${n0(p)}t = 입고 완료 ${n0(x.rec)} + 발주(입고 예정) ${n0(x.ord)} + 아직 발주 안 함 ${n0(x.nw)}`)}">`
         + `<div class="fm-h"><b>${n0(f)}</b><span> / ${n0(p)}t</span><em class="${cls}">${pc}%</em></div>`
         + `<div class="fm-b"><i class="r" style="width:${w(x.rec)}%"></i><i class="o" style="width:${w(x.ord)}%"></i></div>`
-        + `<div class="fm-s"><span class="r">입고 ${n0(x.rec)}</span><span class="o">발주 ${n0(x.ord)}</span><span class="${x.nw >= 1 ? 'n' : ''}">남음 ${n0(x.nw)}</span></div></td>`;
+        + `<div class="fm-s"><span class="r">입고 ${n0(x.rec)}</span><span class="o">발주 ${n0(x.ord)}</span><span class="${x.nw >= 1 ? 'n' : ''}">잔여 ${n0(x.nw)}</span></div></td>`;
     };
     return `<div class="scroll"><table class="fm fm-${pl}"><thead><tr><th class="l">${msMode === 'grp' ? '판매그룹' : '소재 그룹'}</th>${ms.map((m) => `<th>${+m.slice(5)}월</th>`).join('')}</tr></thead><tbody>`
       + `<tr class="fm-tr"><td class="l"><b>합계</b></td>${ms.map((m) => td(sum(m), true)).join('')}</tr>`
       + codes.map((c) => `<tr${/^미상|대기/.test(c) ? ' class="unk"' : ''}><td class="l">${esc(nmf(c))}</td>${ms.map((m) => td(v(c, m))).join('')}</tr>`).join('')
       + '</tbody></table></div>'
-      + '<div class="fm-lg"><span><i class="r"></i>입고 완료</span><span><i class="o"></i>발주(입고 예정)</span><span><i class="e"></i>남음 = 아직 발주 안 한 양</span><span>굵은 숫자 = 확보(입고+발주) / 그 달 들어와야 할 양</span></div>';
+      + '<div class="fm-lg"><span><i class="r"></i>입고 완료</span><span><i class="o"></i>발주(입고 예정)</span><span><i class="e"></i>잔여 = 아직 발주 안 한 양</span><span>굵은 숫자 = 확보(입고+발주) / 그 달 들어와야 할 양</span></div>';
   }
   function monthSum() {
     if (!$('s-msum').id) return;
@@ -526,9 +526,9 @@
       html.push(`<div class="mss" data-dom="${pl}"><h3>${pl === 'G' ? '도금 소재 (F/H)' : '컬러 구매 소재'}</h3>${fillChart(pl, codes, cell, ms, (c) => (msMode === 'grp' ? (GLB[c] || c) : MP.codeNm(c)))}</div>`);
     }
     const unk = Object.entries(cell).filter(([k]) => /\|미상/.test(k)).reduce((a, [, x]) => a + x.rec + x.ord, 0);
-    $('s-msum').innerHTML = `<h2>월별 소재 입고 계획 <small>그 달에 들어와야 할 양 = 입고 완료 + 발주(입고 예정) + 남음(아직 발주 안 한 양) — 업체 구분 없이</small><span class="unit">톤</span></h2>`
+    $('s-msum').innerHTML = `<h2>월별 소재 입고 계획 <small>그 달에 들어와야 할 양 = 입고 완료 + 발주(입고 예정) + 잔여(아직 발주 안 한 양) — 업체 구분 없이</small><span class="unit">톤</span></h2>`
       + `<div class="seg" id="s-msm" style="margin:2px 0 8px"><button type="button" data-m="grp" aria-pressed="${msMode === 'grp'}">판매그룹별</button><button type="button" data-m="code" aria-pressed="${msMode === 'code'}">소재 그룹별</button></div>`
-      + (msMode === 'grp' ? `<p class="small muted">판매그룹: 남음 = 그 소재를 쓰는 생산 계획의 판매그룹 비중으로 나눔 · 입고·발주 = 소재 발주의 판매 계약 → 계약 부서. 도금 소재인데 컬러 부서 계약이면 자가재.${unk >= 1 ? ` <b style="color:var(--warn)">계약 부서를 아직 못 이은 입고·발주 ${n0(unk)}t는 "미상" — 발주 계약 부서 조회(snap_raw_ask_dept)가 들어오면 나뉩니다.</b>` : ''}</p>` : '')
+      + (msMode === 'grp' ? `<p class="small muted">판매그룹: 잔여 = 그 소재를 쓰는 생산 계획의 판매그룹 비중으로 나눔 · 입고·발주 = 소재 발주의 판매 계약 → 계약 부서. 도금 소재인데 컬러 부서 계약이면 자가재.${unk >= 1 ? ` <b style="color:var(--warn)">계약 부서를 아직 못 이은 입고·발주 ${n0(unk)}t는 "미상" — 발주 계약 부서 조회(snap_raw_ask_dept)가 들어오면 나뉩니다.</b>` : ''}</p>` : '')
       + (RV ? '' : '<p class="small" style="color:var(--warn)">입고 실적(MES 소재 입고)이 아직 게시되지 않았습니다 — 다음 자동 실행부터 들어옵니다.</p>')
 
       + html.join('');
