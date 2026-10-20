@@ -109,6 +109,11 @@ table.sc td.nd { color: var(--ink-3); }
 .det .neg { color: var(--bad); font-weight: 800; } .det .pos { color: var(--good); font-weight: 800; }
 .mss { margin-bottom: 14px; } .mss h3 { font-size: 15px; margin: 8px 0 6px; padding-left: 8px; border-left: 4px solid var(--gc); }
 table.t.msum td { white-space: normal !important; vertical-align: middle !important; padding: 7px 10px; min-width: 230px; } table.t.msum td:first-child { min-width: 140px; font-weight: 700; }
+.fcw { display: flex; flex-wrap: wrap; gap: 6px 18px; overflow-x: auto; } svg.fc { display: block; flex: none; border-right: 1px solid var(--line); padding-right: 12px; } svg.fc:last-child { border-right: 0; }
+svg.fc text { font-family: inherit; } svg.fc .mh { font-size: 15px; font-weight: 800; fill: var(--ink); } svg.fc .ms { font-size: 12.5px; fill: var(--ink-2); }
+svg.fc .gl { font-size: 12px; fill: var(--ink-2); text-anchor: middle; font-weight: 600; } svg.fc .pv { font-size: 12px; fill: var(--ink); text-anchor: middle; font-weight: 700; }
+svg.fc .pc { font-size: 11px; text-anchor: middle; font-weight: 800; } svg.fc .pc.ok { fill: var(--good); } svg.fc .pc.mid { fill: var(--warn); } svg.fc .pc.lo { fill: var(--bad); }
+details.msd { margin: 4px 0 8px; } details.msd summary { cursor: pointer; font-size: 13px; color: var(--ink-2); font-weight: 700; }
 table.t.msum tr.tot td { background: var(--tint); } table.t.msum tr.unk td { color: var(--ink-3); }
 .msb { display: flex; height: 14px; border-radius: 4px; overflow: hidden; background: var(--grid); }
 .msb i { display: block; height: 100%; } .msb i.r { background: var(--good); } .msb i.o { background: var(--brand-2); } .msb i.n { background: repeating-linear-gradient(45deg, var(--bad) 0 3px, color-mix(in srgb, var(--bad) 25%, transparent) 3px 6px); }
