@@ -30,7 +30,7 @@
       + `<td class="num">${n0(x.runMin)}</td>`
       + `<td class="num ${dn ? 'dn' : 'dn0'}">${dn ? `<b>${n0(x.downMin)}</b>` : '0'}</td>`
       + `<td class="l">${esc(x.downWhy)}${x.why ? `<br><span class="why">${esc(x.why)}</span>` : ''}</td>`
-      + `<td>${x.paint ? `도료 ${rdy && x.ready === x.paint ? `<b class="rdy">${md(x.paint)}</b>` : md(x.paint)}` : ''}${pfTxt ? `<br>${pfTxt}` : ''}</td>`
+      + `<td>${x.paint ? `도료 ${rdy && x.ready === x.paint ? `<b class="rdy">${md(x.paint)}</b>` : md(x.paint)}` : ''}${pfTxt ? `<br>${pfTxt}` : ''}${x.smat ? `<br><b class="rdy">부자재 ${esc(x.smat)}</b>` : ''}</td>`
       + `<td>${md(x.mesDate)}${x.mesSeq != null ? ` <span class="bk">${esc(x.mesSeq)}번째</span>` : ''}</td></tr>`;
   }
   const HEAD = '<thead><tr><th>순서</th><th>시작–종료</th><th>품명 · 그룹</th><th>색상<br><small>Top Color</small></th><th>두께×폭</th><th>톤</th><th>속도<br><small>L/S m/분</small></th><th>생산<br><small>분</small></th><th>휴지<br><small>분</small></th><th>앞 작업과 무엇이 바뀌나 · 왜 이때</th><th>준비<br><small>도료생산일·PF</small></th><th>MES 작업예정일<br><small>담당자 입력, 비교용</small></th></tr></thead>';
