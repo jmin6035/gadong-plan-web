@@ -64,14 +64,24 @@
       ['시각 계산', '출발 = 지금. 코일마다 예상 더미 → 생산(톤 ÷ t/h). 톤 = 같은 두께·폭 제품 코일 무게 × 생산코일건수(추정), t/h = 3개월 실적 중앙값', '코일 실적', '추정'],
     ];
     const T = O.cond || [], f1 = (v) => (v >= 0.05 ? n1(v) : '0');
-    const rows = T.map((r) => { const x = r.lines[l] || {}; return x.n ? `<tr><td class="l">${esc(r.cond)}</td><td class="num">${n0(x.n)}</td><td class="num">${(x.rate * 100).toFixed(0)}%</td><td class="num">${x.minIf ? n0(x.minIf) : '-'}</td><td class="num"><b>${f1(x.exp)}</b></td></tr>` : ''; }).join('');
-    const lr = O.learnRange || [];
+    const pt = O.condSrc === '학습 방 1년 조건표';
+    const rows = T.map((r) => { const x = r.lines[l] || {}; return x.n ? `<tr><td class="l">${esc(r.cond)}${x.stage && x.stage !== '기본' ? ` <span class="bk">(${esc(x.stage)})</span>` : ''}</td><td class="num">${n0(x.n)}</td><td class="num">${(x.rate * 100).toFixed(0)}%</td><td class="num">${pt ? `${x.dn ?? '-'}코일 · ${x.dt ?? '-'}t` : (x.minIf ? n0(x.minIf) : '-')}</td><td class="num"><b>${f1(x.exp)}</b></td></tr>` : ''; }).join('');
+    const lr = O.learnRange || [], cv = (O.condVal || {})[l];
     return `<details class="wo-how" id="cg-how"${howOpen ? ' open' : ''}><summary>편성 조건 · 더미 기준표 — 이 순서로 봅니다</summary>`
       + '<div class="scroll"><table class="t cond"><thead><tr><th>조건</th><th class="l">내용</th><th class="l">MES 칸·자료</th><th>지키는 정도</th></tr></thead><tbody>'
       + C.map((r) => `<tr><td class="l"><b>${r[0]}</b></td><td class="l wrap">${r[1]}</td><td class="l bk">${r[2]}</td><td>${r[3]}</td></tr>`).join('') + '</tbody></table></div>'
-      + `<h3>더미 기준표 — ${l} (같은 강종 안, 바뀐 것마다 더함)</h3>`
-      + `<p class="hint">도금은 코일을 이어 붙여 돌려서, 사양이 바뀌면 라인이 서는 대신 더미 코일이 들어감(사용자 10/20). ${esc(lr[0] || '')}~${esc(lr[1] || '')} 실제 코일 사이에 더미가 들어간 비율 × 들어가면 더미 작업 분 = 한 번 바꿀 때 예상 더미 분. <b>잠정</b> — 정비·고장 앞뒤 더미가 섞여 있음. 코일별 휴지 상세(원격 조회 hist_cg_pau_*, 사용자 쿼리)가 들어오면 사양 전환 때문에 넣은 더미만 골라 다시 셈.</p>`
-      + `<div class="scroll"><table class="t cond dtab"><thead><tr><th class="l">바뀌는 것</th><th>3개월 건수</th><th>더미 들어간 비율</th><th>들어가면 더미(분)</th><th>예상 더미(분)</th></tr></thead><tbody>${rows}</tbody></table></div></details>`;
+      + `<h3>더미·전환 기준표 — ${l} (같은 강종 안, 바뀐 것마다 더함)</h3>`
+      + (pt ? `<p class="hint">도금은 코일을 이어 붙여 돌려서, 사양이 바뀌면 라인이 서는 대신 더미 코일이 들어감(사용자 10/20). 기준 = <b>도금 학습 방(ml-schedule) 1년 전환 조건표</b> — 매일 받아 옴(바뀐 값은 아래 '최근 바뀐 기준'). 예상 시간 = 바뀐 것별 더미 작업·짧은 휴지 분(회귀, 조건끼리 겹치는 시간은 뺌).${cv ? ` 검증(${esc(cv.period)}): 하루 실제 ${cv.actual}분 · 표 ${cv.pred}분 · 상관 ${cv.corr} — <b>아직 약함</b>, 코일별 휴지 상세(hist_cg_pau_*) 들어오면 학습 방이 다시 맞춤.` : ''}</p>`
+        : `<p class="hint">${esc(lr[0] || '')}~${esc(lr[1] || '')} 실제 코일 사이에 더미가 들어간 비율 × 들어가면 더미 작업 분(잠정).</p>`)
+      + `<div class="scroll"><table class="t cond dtab"><thead><tr><th class="l">바뀌는 것</th><th>${pt ? '1년' : '3개월'} 건수</th><th>더미 들어간 비율</th><th>${pt ? '더미(코일·톤)' : '들어가면 더미(분)'}</th><th>예상 시간(분)</th></tr></thead><tbody>${rows}</tbody></table></div>`
+      + learnBox() + '</details>';
+  }
+
+  function learnBox() {             // 학습 방에서 받아 바뀐 기준(사용자 10/20: 매일 학습 결과 반영·새 규칙 보고)
+    const E = O.learnLog || [];
+    if (!E.length) return '<h3>최근 바뀐 기준</h3><p class="hint">학습 방에서 받은 뒤 바뀐 값·새 규칙 없음 (매 점검 때 비교)</p>';
+    return '<h3>최근 바뀐 기준 <small class="bk">학습 방에서 받아 자동 반영한 값 · ★ 새 규칙·새로 배운 점(엔진 반영은 확인 후)</small></h3><ul class="llog">'
+      + E.slice().reverse().map((e) => `<li><b>${esc(e.at)}</b> ${(e.report || []).map((r) => `<div class="rp">★ [${esc(r.kind)}] ${esc(r.text)}</div>`).join('')}${(e.changes || []).map((c) => `<div>${esc(c.what)}: ${esc(c.before)} → <b>${esc(c.after)}</b>${c.pct != null ? ` (${c.pct > 0 ? '+' : ''}${c.pct}%)` : ''}</div>`).join('')}</li>`).join('') + '</ul>';
   }
 
   function render() {

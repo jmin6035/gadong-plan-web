@@ -87,7 +87,13 @@
     return `<h3>휴지 기준표 — ${l} (지시가 바뀔 때, 해당하는 줄의 분을 모두 더함)</h3>`
       + `<p class="hint">우리 기준 = 학습 방 1년 조건표(코일 실적 회귀, 조건끼리 겹치는 시간은 이미 뺌) × 이 라인 최근 90일 보정. 같은 주문·같은 사양을 이어 돌리면 0분. 예: 상도 색이 바뀌면서 폭이 100mm 넘게 넓어지면 = 새 주문 + 상도 색만 바뀜 + 폭 넓어짐 100mm 넘게. 블록 전환은 1년 실측 중앙값(${esc(blk || '해당 없음')}). 엑셀 = ${esc(O.file || '첨부 파일')} 규칙, 차이 = 우리 기준 − 엑셀 (<b class="up">+</b> 우리가 더 길게, <b class="dn">−</b> 우리가 더 짧게).</p>`
       + '<div class="scroll"><table class="t cond dtab"><thead><tr><th class="l">바뀌는 것</th><th class="l">MES 휴지 코드</th><th>우리 기준(분)</th><th>엑셀(분)</th><th>차이(분)</th><th>차이(%)</th><th class="l">엑셀 규칙</th></tr></thead><tbody>'
-      + rows + day + '</tbody></table></div>';
+      + rows + day + '</tbody></table></div>' + learnBox();
+  }
+  function learnBox() {             // 학습 방에서 받아 바뀐 기준(사용자 10/20: 매일 학습 결과 반영·새 규칙 보고)
+    const E = O.learnLog || [];
+    if (!E.length) return '<h3>최근 바뀐 기준</h3><p class="hint">학습 방(color-schedule)에서 받은 뒤 바뀐 값·새 규칙 없음 (매 점검 때 비교)</p>';
+    return '<h3>최근 바뀐 기준 <small class="bk">학습 방에서 받아 자동 반영한 값 · ★ 새 규칙·새로 배운 점(엔진 반영은 확인 후)</small></h3><ul class="llog">'
+      + E.slice().reverse().map((e) => `<li><b>${esc(e.at)}</b> ${(e.report || []).map((r) => `<div class="rp">★ [${esc(r.kind)}] ${esc(r.text)}</div>`).join('')}${(e.changes || []).map((c) => `<div>${esc(c.what)}: ${esc(c.before)} → <b>${esc(c.after)}</b>${c.pct != null ? ` (${c.pct > 0 ? '+' : ''}${c.pct}%)` : ''}</div>`).join('')}</li>`).join('') + '</ul>';
   }
 
   function conditions(l) {
