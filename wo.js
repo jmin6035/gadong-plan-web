@@ -1,5 +1,6 @@
 /* 작업지시 순서 제안: published/wo_proposal.enc.json (tools/wo_sequence.py)
-   라인 탭 → 요약(지금 라인 · 이번 제안 · 예상 휴지 · MES 순서와 비교) → 날짜별 제안 순서 표 → 확정 대기열(접힘) */
+   라인 탭 → 요약(지금 라인 · 이번 제안 · 예상 휴지 · MES 순서와 비교) → 날짜별 제안 순서 표 → 확정 대기열(접힘)
+   작업지시 규칙 화면(wo_rules.html, 같은 스크립트): 라인 탭 → 편성 조건 → 휴지 기준표 → 최근 바뀐 기준 */
 (function () {
   'use strict';
   const $ = (id) => document.getElementById(id);
@@ -16,8 +17,7 @@
   const BLK = { general: '일반', pvs2: 'PVS2', print: '프린트' };
   const DZ = [['col', '색·도료 교체'], ['order', '주문 바뀜'], ['test', '단판TEST'], ['roll', '폭(Roll)'], ['dummy', '두께(Dummy)'], ['block', '블록·프린트 전환']];
   let O = null, line = null;
-  let howOpen = true;                                              // 편성 조건·휴지 기준표 접힘 상태 — 라인 바꿔도 유지, 다시 누를 때까지(사용자 10/20)
-  try { howOpen = localStorage.getItem('wo-how-open') !== '0'; } catch (e) { /* 저장소 못 쓰면 펼침 */ }
+  const RULES = (document.getElementById('shell') || {}).dataset && document.getElementById('shell').dataset.page === 'worules';   // 작업지시 규칙 화면(사용자 10/21: 규칙·휴지는 따로 빼서 작업지시 순서 밑 메뉴로)
 
   function row(x, day) {
     const dn = x.downMin > 0.5;
@@ -110,13 +110,23 @@
       ['시각 계산', '출발 = 지금과 마지막 실적 코일 끝 중 늦은 때. 지시마다 휴지 → 생산(톤 ÷ (두께 × 폭 × L/S × 7.87)). L/S = 우리 실적. 그날 휴지계획은 그날 첫 작업 앞', 'snap_cc_seq_recent · 휴지계획', ''],
       ['부자재상태', '불량·입고대기를 "준비" 칸에 표시 (순서에서 뺄지는 확인 중)', 'PNT_STS_CD (W 입고대기 · X 불량)', '표시만'],
     ];
-    return `<details class="wo-how" id="wo-how"${howOpen ? ' open' : ''}><summary>편성 조건 · 휴지 기준표 — 이 순서로 봅니다</summary>`
+    return `<section class="card"><h2>편성 조건 <small class="bk">이 순서로 봅니다 — ${l}</small></h2>`
       + '<div class="scroll"><table class="t cond"><thead><tr><th>조건</th><th class="l">내용</th><th class="l">MES 칸·자료</th><th>지키는 정도</th></tr></thead><tbody>'
       + C.map((r) => `<tr><td class="l"><b>${r[0]}</b></td><td class="l wrap">${r[1]}</td><td class="l bk">${r[2]}</td><td>${r[3]}</td></tr>`).join('') + '</tbody></table></div>'
-      + downTable(l) + '</details>';
+      + '</section><section class="card">' + downTable(l) + '</section>';
   }
 
+  function renderRules() {
+    const L = Object.keys(O.lines);
+    line = line && L.includes(line) ? line : L[0];
+    $('wo-meta').textContent = `${O.now} 기준(지금) · 계산 ${O.built || ''}`;
+    $('wo-main').innerHTML = `<section class="card"><div class="seg" id="wo-lines">${L.map((l) => `<button type="button" data-l="${l}" aria-pressed="${l === line}">${l}</button>`).join('')}</div>`
+      + '<p class="hint">순서 자체는 <a href="wo.html">작업지시 순서</a> 화면 — 여기는 그 순서를 짤 때 쓰는 조건과 휴지 기준</p></section>' + conditions(line);
+    $('wo-lines').querySelectorAll('button').forEach((b) => b.onclick = () => { line = b.dataset.l; renderRules(); });
+    if (window.UI) UI.reveal($('wo-main'));
+  }
   function render() {
+    if (RULES) { renderRules(); return; }
     const L = Object.keys(O.lines);
     line = line && L.includes(line) ? line : (L.find((l) => O.lines[l].nFree) || L[0]);
     const v = O.lines[line];
@@ -136,8 +146,7 @@
       + '</section>'
       + (v.nFree ? `<section class="card"><h2>제안 순서 <small class="bk">날짜별 · 줄마다 그 지시 앞에 생기는 휴지와 생산</small></h2>${table(v, free, 'free')}</section>` : '')
       + (fx.length ? `<section class="card"><details class="fx"><summary>이미 확정된 대기열 ${fx.length}건 ${n0(v.tFixed)}t — MES 순서 그대로 (${esc(tm(v.from))} → ${esc(tm(v.fixedUntil))})</summary>${table(v, fx, 'fixed')}</details></section>` : '')
-      + conditions(line);
-    $('wo-how').addEventListener('toggle', (e) => { howOpen = e.target.open; try { localStorage.setItem('wo-how-open', howOpen ? '1' : '0'); } catch (er) { /* 무시 */ } });
+      + '<p class="hint">편성 조건·휴지 기준표는 <a href="wo_rules.html">작업지시 규칙</a> 화면에 있습니다.</p>';
     $('wo-lines').querySelectorAll('button').forEach((b) => b.onclick = () => { line = b.dataset.l; render(); });
     if (window.UI) UI.reveal($('wo-main'));
   }

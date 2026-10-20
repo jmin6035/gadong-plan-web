@@ -13,8 +13,7 @@
   const tm = (s, d) => (!s ? '' : (d && s.slice(0, 5) === d.slice(5) ? s.slice(6) : `${+s.slice(0, 2)}/${+s.slice(3, 5)} ${s.slice(6)}`));
   const hm = (m) => { m = Math.round(m); return m >= 60 ? `${Math.floor(m / 60)}시간 ${m % 60}분` : `${m}분`; };
   let O = null, line = null;
-  let howOpen = true;                                              // 편성 조건 접힘 상태 — 라인 바꿔도·새로고침해도 유지(사용자 10/20)
-  try { howOpen = localStorage.getItem('cgwo-how-open') !== '0'; } catch (e) { /* 펼침 */ }
+  const RULES = document.getElementById('shell') && document.getElementById('shell').dataset.page === 'cgworules';   // 작업지시 규칙 화면(사용자 10/21)
 
   function row(x, day) {
     const dn = x.exp >= 0.05;
@@ -70,14 +69,14 @@
     const pt = O.condSrc === '학습 방 1년 조건표';
     const rows = T.map((r) => { const x = r.lines[l] || {}; return x.n ? `<tr><td class="l">${esc(r.cond)}${x.stage && x.stage !== '기본' ? ` <span class="bk">(${esc(x.stage)})</span>` : ''}</td><td class="num">${n0(x.n)}</td><td class="num">${(x.rate * 100).toFixed(0)}%</td><td class="num">${pt ? `${x.dn ?? '-'}코일 · ${x.dt ?? '-'}t` : (x.minIf ? n0(x.minIf) : '-')}</td><td class="num"><b>${f1(x.exp)}</b></td></tr>` : ''; }).join('');
     const lr = O.learnRange || [], cv = (O.condVal || {})[l];
-    return `<details class="wo-how" id="cg-how"${howOpen ? ' open' : ''}><summary>편성 조건 · 더미 기준표 — 이 순서로 봅니다</summary>`
+    return `<section class="card"><h2>편성 조건 <small class="bk">이 순서로 봅니다 — ${l}</small></h2>`
       + '<div class="scroll"><table class="t cond"><thead><tr><th>조건</th><th class="l">내용</th><th class="l">MES 칸·자료</th><th>지키는 정도</th></tr></thead><tbody>'
-      + C.map((r) => `<tr><td class="l"><b>${r[0]}</b></td><td class="l wrap">${r[1]}</td><td class="l bk">${r[2]}</td><td>${r[3]}</td></tr>`).join('') + '</tbody></table></div>'
+      + C.map((r) => `<tr><td class="l"><b>${r[0]}</b></td><td class="l wrap">${r[1]}</td><td class="l bk">${r[2]}</td><td>${r[3]}</td></tr>`).join('') + '</tbody></table></div></section><section class="card">'
       + `<h3>더미·전환 기준표 — ${l} (같은 강종 안, 바뀐 것마다 더함)</h3>`
       + (pt ? `<p class="hint">도금은 코일을 이어 붙여 돌려서, 사양이 바뀌면 라인이 서는 대신 더미 코일이 들어감(사용자 10/20). 기준 = <b>도금 학습 방(ml-schedule) 1년 전환 조건표</b> — 매일 받아 옴(바뀐 값은 아래 '최근 바뀐 기준'). 예상 시간 = 바뀐 것별 더미 작업·짧은 휴지 분(회귀, 조건끼리 겹치는 시간은 뺌).${cv ? ` 검증(${esc(cv.period)}): 하루 실제 ${cv.actual}분 · 표 ${cv.pred}분 · 상관 ${cv.corr} — <b>아직 약함</b>, 코일별 휴지 상세(hist_cg_pau_*) 들어오면 학습 방이 다시 맞춤.` : ''}</p>`
         : `<p class="hint">${esc(lr[0] || '')}~${esc(lr[1] || '')} 실제 코일 사이에 더미가 들어간 비율 × 들어가면 더미 작업 분(잠정).</p>`)
       + `<div class="scroll"><table class="t cond dtab"><thead><tr><th class="l">바뀌는 것</th><th>${pt ? '1년' : '3개월'} 건수</th><th>더미 들어간 비율</th><th>${pt ? '더미(코일·톤)' : '들어가면 더미(분)'}</th><th>예상 시간(분)</th></tr></thead><tbody>${rows}</tbody></table></div>`
-      + learnBox() + '</details>';
+      + learnBox() + '</section>';
   }
 
   function learnBox() {             // 학습 방에서 받아 바뀐 기준(사용자 10/20: 매일 학습 결과 반영·새 규칙 보고)
@@ -87,7 +86,17 @@
       + E.slice().reverse().map((e) => `<li><b>${esc(e.at)}</b> ${(e.report || []).map((r) => `<div class="rp">★ [${esc(r.kind)}] ${esc(r.text)}</div>`).join('')}${(e.changes || []).map((c) => `<div>${esc(c.what)}: ${esc(c.before)} → <b>${esc(c.after)}</b>${c.pct != null ? ` (${c.pct > 0 ? '+' : ''}${c.pct}%)` : ''}</div>`).join('')}</li>`).join('') + '</ul>';
   }
 
+  function renderRules() {
+    const L = Object.keys(O.lines);
+    line = line && L.includes(line) ? line : L[0];
+    $('wo-meta').textContent = `${O.now} 기준(지금) · 계산 ${O.built || ''}`;
+    $('wo-main').innerHTML = `<section class="card"><div class="seg" id="wo-lines">${L.map((l) => `<button type="button" data-l="${l}" aria-pressed="${l === line}">${l}</button>`).join('')}</div>`
+      + '<p class="hint">순서 자체는 <a href="cg_wo.html">작업지시 순서</a> 화면 — 여기는 그 순서를 짤 때 쓰는 조건과 더미 기준</p></section>' + conditions(line);
+    $('wo-lines').querySelectorAll('button').forEach((b) => b.onclick = () => { line = b.dataset.l; renderRules(); });
+    if (window.UI) UI.reveal($('wo-main'));
+  }
   function render() {
+    if (RULES) { renderRules(); return; }
     const L = Object.keys(O.lines);
     line = line && L.includes(line) ? line : L[0];
     const v = O.lines[line];
@@ -106,9 +115,8 @@
       + (blk ? `<div class="cgbs"><span class="bk">표면사상 묶음</span> ${blk}</div>` : '')
       + '</section>'
       + (v.n ? `<section class="card"><h2>제안 순서 <small class="bk">날짜별 · 줄마다 그 코일 앞에 생길 더미와 생산</small></h2>${table(v)}</section>` : '<section class="card"><p>1010 대상 코일이 없습니다.</p></section>')
-      + conditions(line);
+      + '<p class="hint">편성 조건·더미 기준표는 <a href="cg_wo_rules.html">작업지시 규칙</a> 화면에 있습니다.</p>';
     $('wo-lines').querySelectorAll('button').forEach((b) => b.onclick = () => { line = b.dataset.l; render(); });
-    $('cg-how').addEventListener('toggle', (e) => { howOpen = e.target.open; try { localStorage.setItem('cgwo-how-open', howOpen ? '1' : '0'); } catch (er) { /* 무시 */ } });
     if (window.UI) UI.reveal($('wo-main'));
   }
   const envReady = GP.latest('cg_wo_proposal.enc.json');
