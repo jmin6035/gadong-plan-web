@@ -129,6 +129,19 @@ table.fm tr.unk td { color: var(--ink-3); }
 .msb { display: flex; height: 14px; border-radius: 4px; overflow: hidden; background: var(--grid); }
 .msb i { display: block; height: 100%; } .msb i.r { background: var(--good); } .msb i.o { background: var(--brand-2); } .msb i.n { background: repeating-linear-gradient(45deg, var(--bad) 0 3px, color-mix(in srgb, var(--bad) 25%, transparent) 3px 6px); }
 .msn { font-size: 12.5px; color: var(--ink-2); margin-top: 3px; font-variant-numeric: tabular-nums; } .msn b { color: var(--ink); font-size: 13.5px; } .msn .r { color: var(--good); } .msn .o { color: var(--brand-2); } .msn .n { color: var(--bad); font-weight: 700; } .msn small { color: var(--ink-3); margin-left: 4px; }
+.mss2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px 24px; } @media (max-width: 900px) { .mss2 { grid-template-columns: 1fr; } }
+.mss2 .mss { border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px 8px; }
+.mv-h { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 8px; font-size: 13px; color: var(--ink-2); } .mv-h > b { font-size: 15px; color: var(--ink); margin-right: 4px; } .mv-h span b { color: var(--ink); }
+.mv-h em, .mv-t em { font-style: normal; font-size: 11.5px; font-weight: 800; border-radius: 10px; padding: 0 6px; }
+.mv-h em.ok, .mv-t em.ok { color: var(--good); background: var(--good-bg); } .mv-h em.mid, .mv-t em.mid { color: var(--warn); background: var(--warn-bg); } .mv-h em.lo, .mv-t em.lo { color: var(--bad); background: var(--bad-bg); }
+.mv-s { width: 100%; font-size: 12px; color: var(--ink-3); } .mv-s .n, .mv-r.n b { color: var(--bad); font-weight: 700; }
+.mv { display: flex; gap: 6px; align-items: flex-end; margin-top: 10px; }
+.mv-c { flex: 1; min-width: 0; text-align: center; }
+.mv-t { font-size: 11px; line-height: 1.25; white-space: nowrap; } .mv-t b { display: block; font-size: 13px; color: var(--ink); } .mv-t small { color: var(--ink-3); } .mv-t em { margin-left: 2px; }
+.mv-a { position: relative; height: 130px; width: 38px; margin: 4px auto; border-bottom: 1px solid var(--line); }
+.mv-p { position: absolute; left: 0; right: 0; bottom: 0; border-radius: 4px 4px 0 0; background: repeating-linear-gradient(45deg, color-mix(in srgb, var(--bad) 22%, var(--surface)) 0 3px, var(--surface) 3px 6px); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--bad) 35%, transparent); }
+.mv-a i { position: absolute; left: 0; right: 0; bottom: 0; display: block; } .mv-a i.r { background: var(--good); } .mv-a i.o { background: color-mix(in srgb, var(--brand-2) 70%, var(--surface)); }
+.mv-n { font-size: 12px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; } .mv-r { font-size: 11.5px; color: var(--ink-3); white-space: nowrap; }
 </style>
 </head>
 <body>
