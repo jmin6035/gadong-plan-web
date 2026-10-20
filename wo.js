@@ -20,20 +20,35 @@
   function row(x, day) {
     const dn = x.downMin > 0.5;
     const rdy = x.ready > O.today;
-    const pfTxt = x.pf && x.pf !== '00' ? `PF ${esc(x.pf)} ${x.pfDate ? md(x.pfDate) : '<b class="rdy">입고일 없음</b>'}` : '';
-    return `<tr><td><b>${x.seq}</b></td>`
-      + `<td class="tm">${tm(x.start, day)}–${tm(x.end, day)}${dn ? `<br><span class="bk">휴지 ${tm(x.downStart, day)}부터</span>` : ''}</td>`
-      + `<td>${esc(x.item)}<span class="gt gt${x.tier}">${TIER[x.tier]}</span><br><span class="bk">${esc(x.pdt)} · ${BLK[x.block]}</span></td>`
-      + `<td>${esc(x.color)}${x.back ? `<br><span class="bk">이면 ${esc(x.back)}</span>` : ''}</td>`
-      + `<td>${x.thk}×${n0(x.wdt)}</td><td class="num">${x.t.toFixed(1)}</td>`
-      + `<td class="num" title="${esc(x.speedSrc)}">${x.ls}<br><span class="bk">${x.tph} t/hr</span></td>`
-      + `<td class="num">${n0(x.runMin)}</td>`
-      + `<td class="num ${dn ? 'dn' : 'dn0'}">${dn ? `<b>${n0(x.downMin)}</b>` : '0'}</td>`
-      + `<td class="l">${esc(x.downWhy)}${x.why ? `<br><span class="why">${esc(x.why)}</span>` : ''}</td>`
-      + `<td>${x.paint ? `도료 ${rdy && x.ready === x.paint ? `<b class="rdy">${md(x.paint)}</b>` : md(x.paint)}` : ''}${pfTxt ? `<br>${pfTxt}` : ''}${x.smat ? `<br><b class="rdy">부자재 ${esc(x.smat)}</b>` : ''}</td>`
-      + `<td>${md(x.mesDate)}${x.mesSeq != null ? ` <span class="bk">${esc(x.mesSeq)}번째</span>` : ''}</td></tr>`;
+    const why = (x.why || '').replace(/PF입고예정일 비어 있음\(PF종류 [^)]*\)( · )?/, '');   // 준비 칸에 따로 보임
+    const prep = [];
+    if (x.paint) prep.push(`도료 ${rdy && x.ready === x.paint ? `<b class="rdy">${md(x.paint)}</b>` : md(x.paint)}`);
+    if (x.pf && x.pf !== '00') prep.push(`PF ${esc(x.pf)} ${x.pfDate ? md(x.pfDate) : '<b class="rdy">입고일 없음</b>'}`);
+    if (x.smat) prep.push(`<b class="rdy">부자재 ${esc(x.smat)}</b>`);
+    return `<tr${dn ? ' class="hasdn"' : ''}><td class="c"><b>${x.seq}</b></td>`
+      + `<td class="tm">${dn ? `<span class="bk">휴지 ${tm(x.downStart, day)}</span><br>` : ''}<b>${tm(x.start, day)}</b> – ${tm(x.end, day)}</td>`
+      + `<td class="l"><b>${esc(x.item)}</b><span class="gt gt${x.tier}">${TIER[x.tier]}</span><br><span class="bk">${esc(x.pdt)} · ${BLK[x.block]} · ${esc(x.con)}</span></td>`
+      + `<td class="l">${x.thk} × ${n0(x.wdt)}<br><span class="bk">${esc(x.color)}${x.back ? ` / 이면 ${esc(x.back)}` : ''}</span></td>`
+      + `<td class="num">${x.t.toFixed(1)}</td>`
+      + `<td class="num" title="${esc(x.speedSrc)}">${n0(x.runMin)}분<br><span class="bk">L/S ${x.ls} · ${x.tph}t/h</span></td>`
+      + `<td class="c">${dn ? `<span class="dnb">${n0(x.downMin)}분</span>` : '<span class="bk">0</span>'}</td>`
+      + `<td class="l desc">${esc(x.downWhy)}${why ? `<div class="why">${esc(why)}</div>` : ''}</td>`
+      + `<td class="l">${prep.join('<br>') || '<span class="bk">-</span>'}</td>`
+      + `<td class="c">${md(x.mesDate) || '-'}${x.mesSeq != null ? `<br><span class="bk">${esc(x.mesSeq)}번째</span>` : ''}</td></tr>`;
   }
-  const HEAD = '<thead><tr><th>순서</th><th>시작–종료</th><th>품명 · 그룹</th><th>색상<br><small>Top Color</small></th><th>두께×폭</th><th>톤</th><th>속도<br><small>L/S m/분</small></th><th>생산<br><small>분</small></th><th>휴지<br><small>분</small></th><th>앞 작업과 무엇이 바뀌나 · 왜 이때</th><th>준비<br><small>도료생산일·PF</small></th><th>MES 작업예정일<br><small>담당자 입력, 비교용</small></th></tr></thead>';
+  const HEAD = '<thead><tr><th>순서</th><th>시간</th><th class="l">품명 · 그룹</th><th class="l">두께 × 폭 · 색</th><th>톤</th><th>생산</th><th>휴지</th><th class="l">앞 작업과 무엇이 바뀌나 · 왜 이때</th><th class="l">준비</th><th>MES 작업예정일<br><small>담당자 입력·비교용</small></th></tr></thead>';
+  const NC = 10;
+  // 하루 띠: 0~24시 위에 생산(파랑)·휴지(주황)·휴지계획(회색)·기다림(빨강)
+  const mins = (s, d) => { if (!s) return 0; const sd = s.slice(0, 5), dd = d.slice(5); if (sd < dd) return 0; if (sd > dd) return 1440; return (+s.slice(6, 8)) * 60 + (+s.slice(9, 11)); };
+  function strip(v, ph, d, byS) {
+    const seg = [];
+    const add = (a, b, cls, tip) => { const x0 = mins(a, d), x1 = mins(b, d); if (x1 > x0) seg.push(`<i class="${cls}" style="left:${(x0 / 14.4).toFixed(2)}%;width:${((x1 - x0) / 14.4).toFixed(2)}%" title="${esc(tip)}"></i>`); };
+    (v.events || []).forEach((e) => {
+      if (e.kind === 'job') { const x = byS[e.seq]; if (!x) return; if (x.downMin > 0.5) add(x.downStart, x.start, 'sd', `${x.seq} 앞 휴지 ${n0(x.downMin)}분`); add(x.start, x.end, 'sr', `${x.seq} ${x.item} ${x.color} ${x.t}t`); }
+      else if (e.ph === ph) add(e.start, e.end, e.kind === 'plan' ? 'sp' : 'sw', `${e.kind === 'plan' ? '휴지계획' : '기다림'} ${n0(e.min)}분`);
+    });
+    return `<div class="strip">${seg.join('')}<span class="h0">0시</span><span class="h6">6</span><span class="h12">12</span><span class="h18">18</span><span class="h24">24시</span></div>`;
+  }
 
   function table(v, items, ph) {
     const byS = {}; items.forEach((x) => { byS[x.seq] = x; });
@@ -44,12 +59,13 @@
       if (d !== curDay) {
         curDay = d;
         const s = ((v.days || {})[ph] || {})[d] || {};
-        h += `<tr class="day"><td colspan="12">${dayNm(d)}<small>${n0(s.n)}건 · ${n0(s.t)}t · 생산 ${hm(s.run || 0)} · 휴지 ${n0(s.down)}분${s.plan ? ` · 휴지계획 ${hm(s.plan)}` : ''}${s.wait ? ` · 기다림 ${hm(s.wait)}` : ''}</small></td></tr>`;
+        h += `<tr class="day"><td colspan="${NC}"><div class="dayh"><b>${dayNm(d)}</b><span>${n0(s.n)}건 · ${n0(s.t)}t · 생산 ${hm(s.run || 0)} · <em>휴지 ${n0(s.down)}분</em>${s.plan ? ` · 휴지계획 ${hm(s.plan)}` : ''}${s.wait ? ` · 기다림 ${hm(s.wait)}` : ''}</span></div>${strip(v, ph, d, byS)}</td></tr>`;
       }
       if (e.kind === 'job') { h += row(byS[e.seq], curDay); return; }
-      h += `<tr class="ev ${e.kind}"><td>—</td><td class="tm">${tm(e.start, curDay)}–${tm(e.end, curDay)}</td><td colspan="10"><b>${e.kind === 'plan' ? '휴지계획' : '라인 멈춤(기다림)'} ${hm(e.min)}</b> · ${esc(e.why)}</td></tr>`;
+      h += `<tr class="ev ${e.kind}"><td class="c">—</td><td class="tm">${tm(e.start, curDay)} – ${tm(e.end, curDay)}</td><td colspan="${NC - 2}"><b>${e.kind === 'plan' ? '휴지계획' : '라인 멈춤(기다림)'} ${hm(e.min)}</b> · ${esc(e.why)}</td></tr>`;
     });
-    return `<div class="scroll"><table class="t wo">${HEAD}<tbody>${h}</tbody></table></div>`;
+    return `<div class="scroll"><table class="t wo">${HEAD}<tbody>${h}</tbody></table></div>`
+      + '<p class="hint lg"><i class="sr"></i>생산 <i class="sd"></i>휴지(앞 작업과 바뀜) <i class="sp"></i>휴지계획 <i class="sw"></i>기다림 — 띠에 마우스를 올리면 내용이 보입니다</p>';
   }
 
   function render() {
