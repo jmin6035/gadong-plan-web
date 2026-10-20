@@ -14,7 +14,7 @@
   const hm = (m) => (m >= 60 ? `${Math.floor(m / 60)}시간 ${Math.round(m % 60)}분` : `${Math.round(m)}분`);
   const TIER = { 1: '수출', 2: '내수·수요개발·주문재', 3: '계획재' };
   const BLK = { general: '일반', pvs2: 'PVS2', print: '프린트' };
-  const DZ = [['col', '색상교체'], ['test', '단판TEST'], ['roll', 'Roll교체'], ['dummy', 'Dummy'], ['block', '블록 전환']];
+  const DZ = [['col', '색·도료 교체'], ['order', '주문 바뀜'], ['test', '단판TEST'], ['roll', '폭(Roll)'], ['dummy', '두께(Dummy)'], ['block', '블록·프린트 전환']];
   let O = null, line = null;
 
   function row(x, day) {
@@ -70,7 +70,26 @@
   }
 
   // 편성 조건(순서대로) + 휴지 계산표 — 사용자 10/20: 조건을 1. 2. 순번으로, 첨부 파일 이름까지
-  function conditions() {
+  function downTable(l) {          // 휴지 기준표(사용자 10/20): 우리 기준(조건표 × 라인 보정) · 엑셀 · 차이(분·%)
+    const T = O.downTable || [], ck = ((O.downCheck || {}).lines || {})[l], f0 = (v) => (v == null ? '-' : Math.round(v));
+    if (!T.length) return '';
+    const sg = (d) => (d > 0.5 ? `<b class="up">+${f0(d)}</b>` : d < -0.5 ? `<b class="dn">−${f0(-d)}</b>` : '0');
+    const pc = (o, e) => (e > 0.5 ? (() => { const p = (o - e) / e * 100; return p > 0.5 ? `<b class="up">+${f0(p)}%</b>` : p < -0.5 ? `<b class="dn">−${f0(-p)}%</b>` : '0%'; })() : (o > 0.5 ? '<span class="bk">엑셀 0</span>' : '-'));
+    const rows = T.map((r) => {
+      const x = r.lines[l] || {}, o = x.ours, e = x.excel;
+      if (o == null && !e) return '';
+      return `<tr><td class="l">${esc(r.name)}</td><td class="l bk wrap">${esc(x.code || '')}</td><td class="num"><b>${o == null ? '0' : f0(o)}</b></td>`
+        + `<td class="num">${f0(e)}</td><td class="num">${sg((o || 0) - (e || 0))}</td><td class="num">${pc(o || 0, e || 0)}</td><td class="l bk wrap">${esc(x.excelNote || '')}</td></tr>`;
+    }).join('');
+    const blk = Object.entries(O.learn || {}).filter(([k]) => k.startsWith(l + '|')).map(([k, v]) => `${k.split('|')[1].replace('general', '일반').replace('pvs2', 'PVS2').replace('print', '프린트').replace('>', ' → ')} ${f0(v.median)}분`).join(' · ');
+    const day = ck ? `<tr class="tot-r"><td class="l"><b>하루 합 (최근 90일 실제 순서에 적용)</b></td><td class="l bk">실제 ${f0(ck.actual)}분 · 주문 바뀜 하루 ${(ck.changes / Math.max(ck.days, 1)).toFixed(1)}번</td><td class="num"><b>${f0(ck.ours)}</b></td><td class="num">${f0(ck.excel)}</td><td class="num">${sg(ck.ours - ck.excel)}</td><td class="num">${pc(ck.ours, ck.excel)}</td><td class="l bk wrap">실제 대비 엑셀 ${f0((ck.excel - ck.actual) / ck.actual * 100)}% · 우리 기준은 1년 조건표 ${f0(ck.cond)}분을 실제에 맞춰 ×${ck.scale}</td></tr>` : '';
+    return `<h3>휴지 기준표 — ${l} (지시가 바뀔 때, 해당하는 줄의 분을 모두 더함)</h3>`
+      + `<p class="hint">우리 기준 = 학습 방 1년 조건표(코일 실적 회귀, 조건끼리 겹치는 시간은 이미 뺌) × 이 라인 최근 90일 보정. 같은 주문·같은 사양을 이어 돌리면 0분. 예: 상도 색이 바뀌면서 폭이 100mm 넘게 넓어지면 = 새 주문 + 상도 색만 바뀜 + 폭 넓어짐 100mm 넘게. 블록 전환은 1년 실측 중앙값(${esc(blk || '해당 없음')}). 엑셀 = ${esc(O.file || '첨부 파일')} 규칙, 차이 = 우리 기준 − 엑셀 (<b class="up">+</b> 우리가 더 길게, <b class="dn">−</b> 우리가 더 짧게).</p>`
+      + '<div class="scroll"><table class="t cond dtab"><thead><tr><th class="l">바뀌는 것</th><th class="l">MES 휴지 코드</th><th>우리 기준(분)</th><th>엑셀(분)</th><th>차이(분)</th><th>차이(%)</th><th class="l">엑셀 규칙</th></tr></thead><tbody>'
+      + rows + day + '</tbody></table></div>';
+  }
+
+  function conditions(l) {
     const K = O.r15 || {}, f0 = (v) => (v == null ? '-' : Math.round(v));
     const lb = (k) => { const v = (O.learn || {})[k]; return v ? `${f0(v.median)}분 (지난 1년 ${v.n}번 중앙값)` : '-'; };
     const C = [
@@ -80,28 +99,14 @@
       ['② PF 입고일', 'PF종류가 00 이 아니면 PF입고예정일 0시부터 (당일 가능). 날짜가 비어 있으면 경고만', 'PF_SRT_CD · PF_ENT_SCHE_DAT', '반드시 지킴'],
       ['③ 확정 대기열', '확정여부 Y 인 지시는 MES 순서 그대로 맨 앞 (순서 안 바꿈)', 'WRK_SCHE_DT · WRK_SCHE_SEQ', '반드시 지킴'],
       ['④ 준비된 날 순', '도료·PF 준비가 끝난 날이 빠른 지시부터(이미 준비된 지시는 모두 오늘 묶음). 그룹 순위(수출 → 내수 → 계획재)는 보지 않음 — 그룹 순위는 분기 가동계획에만, 주간 실제 작업지시는 고려 안 함(사용자 10/20)', '①·② 날짜', '반드시 지킴'],
-      ['⑤ 휴지 최소', '같은 날 준비된 지시끼리 아래 휴지 합이 가장 적은 순서 (블록끼리 모음, 넓은 폭 → 좁은 폭 등)', '아래 표', '최대한'],
+      ['⑤ 휴지 최소', '같은 날 준비된 지시끼리 아래 휴지 기준표로 셈한 휴지 합이 가장 적은 순서 (블록끼리 모음 — 결과적으로 같은 색·같은 주문 연속, 상도만 바뀌는 쪽 먼저, 넓은 폭 → 좁은 폭, 비슷한 두께끼리)', '아래 표 (사용자 10/20: 엑셀 대신 보정 조건표)', '최대한'],
       ['시각 계산', '출발 = 지금과 마지막 실적 코일 끝 중 늦은 때. 지시마다 휴지 → 생산(톤 ÷ (두께 × 폭 × L/S × 7.87)). L/S = 우리 실적. 그날 휴지계획은 그날 첫 작업 앞', 'snap_cc_seq_recent · 휴지계획', ''],
       ['부자재상태', '불량·입고대기를 "준비" 칸에 표시 (순서에서 뺄지는 확인 중)', 'PNT_STS_CD (W 입고대기 · X 불량)', '표시만'],
-    ];
-    const D = [
-      ['같은 색', '-', '0', '첨부 파일'],
-      ['2헤드 교대 (다른 헤드에 걸린 색으로 돌아감)', '-', '0', '첨부 파일'],
-      ['색 바뀜 (일반·PVS2)', '3432 상도 / 3434 이면+상도 / 3435 하도+상도 / 3429 하도·상도·이면 색상교체 (바뀐 도료에 따라)', `${f0(K.base_g)} − 그 지시 생산시간 (생산이 더 길면 0)`, '첨부 파일 (1년 실측은 생산이 길어도 멈춤 — 확인 중)'],
-      ['색 바뀜 (4CCL 프린트)', '3427 Ink 색상 교체 + 색상교체', `${f0(K.base_p)} − 그 지시 생산시간`, '첨부 파일'],
-      ['생산순서기준 다른 묶음으로 넘어감', '색상교체', '색 바뀜과 같게, 2헤드 교대 안 됨', '첨부 파일 02 생산순서기준'],
-      ['새 색 + 단판TEST 대상', '4198 생산검증 단판TEST', `${f0(K.test_g)} (프린트 ${f0(K.test_p)})`, '첨부 파일 05표 Y'],
-      ['폭이 넓어짐', '3419(1·2CCL) / 3418(3·4CCL) Roll 교체(폭 변경)', `${f0(K.roll_g)} (1CCL PVS2 ${f0(K.roll_pvs)}, 4CCL 프린트 ${f0(K.roll_p)})`, '첨부 파일'],
-      ['두께가 크게 바뀜', '3420 두께편차 Dummy', `${f0(K.dummy)} (두께비 1·2CCL ${K.thr12}배, 3·4CCL ${K.thr4}배 넘을 때)`, '첨부 파일'],
-      ['1CCL 일반 → PVS2 / PVS2 → 일반', '블록 전환 (EMBO 준비·마무리, Roll, 색상교체 등)', `${lb('1CCL|general>pvs2')} / ${lb('1CCL|pvs2>general')}`, '1년 실측'],
-      ['4CCL 일반 → 프린트 / 프린트 → 일반', '블록 전환 (색상교체, 부정기 설비교체, Ink, 단판TEST 등)', `${lb('4CCL|general>print')} / ${lb('4CCL|print>general')}`, '1년 실측'],
     ];
     return '<details class="wo-how" open><summary>편성 조건 — 이 순서로 봅니다</summary>'
       + '<div class="scroll"><table class="t cond"><thead><tr><th>조건</th><th class="l">내용</th><th class="l">MES 칸·자료</th><th>지키는 정도</th></tr></thead><tbody>'
       + C.map((r) => `<tr><td class="l"><b>${r[0]}</b></td><td class="l wrap">${r[1]}</td><td class="l bk">${r[2]}</td><td>${r[3]}</td></tr>`).join('') + '</tbody></table></div>'
-      + `<h3>휴지 계산 (⑤) — 지시가 바뀔 때 생기는 휴지</h3><p class="hint">첨부 파일 = ${esc(O.file || '「계획재_일별배치_휴지시간_재산출_최종.xlsx」(10/20 사용자 첨부)')} 의 03 품목별휴지시간·02 생산순서기준·05 단판TEST여부 시트. 블록 전환만 1년 실측(사용자 10/20).</p>`
-      + '<div class="scroll"><table class="t cond"><thead><tr><th class="l">상황</th><th class="l">MES 휴지 코드</th><th class="l">분</th><th class="l">근거</th></tr></thead><tbody>'
-      + D.map((r) => `<tr><td class="l">${r[0]}</td><td class="l wrap">${r[1]}</td><td class="l wrap">${r[2]}</td><td class="l bk wrap">${r[3]}</td></tr>`).join('') + '</tbody></table></div></details>';
+      + downTable(l) + '</details>';
   }
 
   function render() {
@@ -114,7 +119,7 @@
     const gain = v.mes.sum - v.ours.sum;
     const stop = v.stop ? `<div class="miss"><b>${line} 휴지 중</b> — ${esc(v.stop.note)}. ${v.stop.until ? `재가동 ${md(v.stop.until)} 0시부터 시각 계산` : '재가동일 미정 — 아래 시각은 <b>지금 바로 재가동한다고 가정</b>한 것'}</div>` : '';
     $('wo-main').innerHTML = (O.missing && O.missing.length ? `<div class="miss"><b>아직 안 들어온 자료</b> — ${O.missing.map(esc).join(' / ')}</div>` : '')
-      + conditions()
+      + conditions(line)
       + `<section class="card"><div class="seg" id="wo-lines">${L.map((l) => `<button type="button" data-l="${l}" aria-pressed="${l === line}">${l} <small>${O.lines[l].stop ? '휴지' : `${O.lines[l].nFree}건`}</small></button>`).join('')}</div>${stop}`
       + '<div class="kpis" style="margin-top:12px">'
       + `<div class="kpi"><div class="l">지금 라인</div><div class="v">${fx.length}<small>건 확정 대기</small></div><div class="b">마지막 코일 ${esc(v.lastCoil ? tm(v.lastCoil) : '-')} 끝 · 확정분 ${n0(v.tFixed)}t 은 ${esc(tm(v.fixedUntil))} 까지</div></div>`
