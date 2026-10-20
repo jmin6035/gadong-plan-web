@@ -64,7 +64,12 @@
   function renderExec() {
     const risks = [];
     for (const l of LINES) MONTHS.forEach((m) => { const g = cap(m, l) - placed(m, l); if (g > 50) risks.push(`${+m.slice(5)}월 ${l} 편성 ${fmt(placed(m, l))}t — MES 월차 ${fmt(cap(m, l))}t까지 ${fmt(g)}t 남음(${shortWhy(m, l) === '가동시간 부족' ? '수리·정지로 가동시간 부족' : '이 라인에서 만들 수 있는 판매계획 물량이 더 없음'})`); });
-    MONTHS.forEach((m) => { const u = unT(m); if (u > 50) risks.push(`${+m.slice(5)}월 미편성 ${fmt(u)}t — 만들 수 있는 라인이 그 달 한도·가동시간을 다 써서 일정에 못 넣음, 이대로면 판매계획 미달(${[...new Set(O.colorUnplaced.filter((x) => x.ym === m).map((x) => x.g))].join('·')})`); });
+    MONTHS.forEach((m) => {
+      const U = O.colorUnplaced.filter((x) => x.ym === m), u = sum(U, (x) => x.t); if (u <= 50) return;
+      const cr = U.find((x) => x.carry), gs = [...new Set(U.map((x) => x.g))].join('·');
+      risks.push(cr ? `${+m.slice(5)}월에 못 만든 ${fmt(u)}t → ${+cr.carry.slice(5)}월 1일부터 먼저 만듦(그 달 판매계획 대비 늦음, ${gs})`
+        : `${+m.slice(5)}월 미편성 ${fmt(u)}t — 만들 수 있는 라인이 가동시간을 다 써서 일정에 못 넣음, 이대로면 판매계획 미달(${gs})`);
+    });
     const q = sum(MONTHS, (m) => monT(m));
     $('d-exec').innerHTML = `<p class="headline">4분기 <b>${fmt(q)}t</b> · 미편성 <b>${fmt(unT())}t</b> · 계획재 <b>${fmt(sum(O.color, (c) => c.g['계획재'] || 0))}t</b> · 실적 ~${md(lastAct)}</p>`
       + (risks.length ? risks.map((t) => `<p class="risk">⚠ ${esc(t)}</p>`).join('') : '<p class="ok">✓ 미편성 없음, 모든 라인 월차 한도까지 편성</p>');
@@ -177,7 +182,7 @@
   function renderEarly() {
     const U = O.colorUnplaced.slice().sort((a, b) => (a.ym < b.ym ? -1 : a.ym > b.ym ? 1 : b.t - a.t));
     $('d-early').innerHTML = '<tr><th>월</th><th>그룹</th><th>품명</th><th>고객·목적지</th><th>가능 라인</th><th>톤</th></tr>'
-      + (U.map((u) => `<tr><td>${+u.ym.slice(5)}월</td><td>${esc(GL(u.g))}</td><td>${esc(u.p)}</td><td>${esc(u.c || '')}${u.dest ? ' · ' + esc(u.dest) : ''}</td><td>${esc(u.lines || '')}</td><td class="n">${fmt(u.t)}</td></tr>`).join('') || '<tr><td colspan="6">없음</td></tr>');
+      + (U.map((u) => `<tr><td>${+u.ym.slice(5)}월${u.carry ? ` → ${+u.carry.slice(5)}월 이월` : ''}</td><td>${esc(GL(u.g))}</td><td>${esc(u.p)}</td><td>${esc(u.c || '')}${u.dest ? ' · ' + esc(u.dest) : ''}</td><td>${esc(u.lines || '')}</td><td class="n">${fmt(u.t)}</td></tr>`).join('') || '<tr><td colspan="6">없음</td></tr>');
   }
 
   // ---------------- 자료 열기(분석 암호) ----------------
