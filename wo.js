@@ -11,7 +11,7 @@
   const dayNm = (d) => `${md(d)}(${WD[new Date(d + 'T00:00:00').getDay()]})`;
   // 'MM-DD HH:MM' → 그날이면 시각만, 다른 날이면 날짜도
   const tm = (s, d) => (!s ? '' : (d && s.slice(0, 5) === d.slice(5) ? s.slice(6) : `${+s.slice(0, 2)}/${+s.slice(3, 5)} ${s.slice(6)}`));
-  const hm = (m) => (m >= 60 ? `${Math.floor(m / 60)}시간 ${Math.round(m % 60)}분` : `${Math.round(m)}분`);
+  const hm = (m) => { m = Math.round(m); return m >= 60 ? `${Math.floor(m / 60)}시간 ${m % 60}분` : `${m}분`; };
   const TIER = { 1: '수출', 2: '내수·수요개발·주문재', 3: '계획재' };
   const BLK = { general: '일반', pvs2: 'PVS2', print: '프린트' };
   const DZ = [['col', '색·도료 교체'], ['order', '주문 바뀜'], ['test', '단판TEST'], ['roll', '폭(Roll)'], ['dummy', '두께(Dummy)'], ['block', '블록·프린트 전환']];
@@ -36,11 +36,10 @@
       + `<td class="num" title="${esc(x.speedSrc)}">${n0(x.runMin)}분<br><span class="bk">L/S ${x.ls} · ${x.tph}t/h</span></td>`
       + `<td class="l wr">${(x.chg || []).map((c) => `<div>${esc(c)}</div>`).join('')}</td>`
       + `<td class="l wr">${(x.downs || []).length ? ((x.downs.length > 1 && dn) ? `<div class="wo-ds">합계 ${n0(x.downMin)}분</div>` : '') + x.downs.map((d) => `<div class="wo-dl"><b>${esc(d.c)}</b> <span class="${d.m ? 'wo-dm' : 'wo-d0'}">${d.m}분</span> <span class="bk">· ${esc(d.b)}</span></div>`).join('') : '<span class="bk">없음</span>'}</td>`
-      + `<td class="l">${prep.join('<br>') || '<span class="bk">-</span>'}</td>`
-      + `<td class="c">${md(x.mesDate) || '-'}${x.mesSeq != null ? `<br><span class="bk">${esc(x.mesSeq)}번째</span>` : ''}</td></tr>`;
+      + `<td class="l">${prep.join('<br>') || '<span class="bk">-</span>'}</td></tr>`;
   }
-  const HEAD = '<thead><tr><th>순서</th><th>시간</th><th class="l">품명 · 그룹</th><th class="l">두께 × 폭 · 색</th><th>톤</th><th>생산</th><th class="l">앞 작업과 바뀌는 것</th><th class="l">생기는 휴지 (MES 코드·분)</th><th class="l">준비 (도료·PF·부자재)</th><th>MES 작업예정일<br><small>담당자 입력·비교용</small></th></tr></thead>';
-  const NC = 10;
+  const HEAD = '<thead><tr><th>순서</th><th>시간</th><th class="l">품명 · 그룹</th><th class="l">두께 × 폭 · 색</th><th>톤</th><th>생산</th><th class="l">앞 작업과 바뀌는 것</th><th class="l">생기는 휴지 (MES 코드·분)</th><th class="l">준비 (도료·PF·부자재)</th></tr></thead>';
+  const NC = 9;
   // 하루 띠: 0~24시 위에 생산(파랑)·휴지(주황)·휴지계획(회색)·기다림(빨강)
   const mins = (s, d) => { if (!s) return 0; const sd = s.slice(0, 5), dd = d.slice(5); if (sd < dd) return 0; if (sd > dd) return 1440; return (+s.slice(6, 8)) * 60 + (+s.slice(9, 11)); };
   function strip(v, ph, d, byS) {
@@ -67,7 +66,7 @@
       if (e.kind === 'job') { h += row(byS[e.seq], curDay); return; }
       h += `<tr class="ev ${e.kind}"><td class="c">—</td><td class="tm">${tm(e.start, curDay)} – ${tm(e.end, curDay)}</td><td colspan="${NC - 2}"><b>${e.kind === 'plan' ? '휴지계획' : '라인 멈춤(기다림)'} ${hm(e.min)}</b> · ${esc(e.why)}</td></tr>`;
     });
-    return `<div class="scroll"><table class="t wo"><colgroup><col style="width:52px"><col style="width:128px"><col style="width:200px"><col style="width:150px"><col style="width:64px"><col style="width:108px"><col style="width:230px"><col><col style="width:160px"><col style="width:96px"></colgroup>${HEAD}<tbody>${h}</tbody></table></div>`
+    return `<div class="scroll"><table class="t wo"><colgroup><col style="width:52px"><col style="width:128px"><col style="width:200px"><col style="width:150px"><col style="width:64px"><col style="width:108px"><col style="width:230px"><col><col style="width:170px"></colgroup>${HEAD}<tbody>${h}</tbody></table></div>`
       + '<p class="hint lg"><i class="sr"></i>생산 <i class="sd"></i>휴지(앞 작업과 바뀜) <i class="sp"></i>휴지계획 <i class="sw"></i>기다림 — 띠에 마우스를 올리면 내용이 보입니다</p>';
   }
 
