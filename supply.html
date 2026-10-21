@@ -154,7 +154,7 @@ html .gtable .c1 small { color: var(--ink-3); font-weight: 500; }
 :is(#s-cal, #s-ship) .tot { font-weight: 800; color: var(--ink); background: var(--sub) !important; font-size: 13px; }
 :is(#s-cal, #s-ship) td[data-d] { cursor: pointer; } :is(#s-cal, #s-ship) tbody tr:hover td:not(.sdblock) { filter: brightness(.97); }
 #s-ship tr.r-s td { font-weight: 700; color: var(--ink); } #s-ship tr.r-s td.sh { background: var(--pt-ship); } #s-ship tr.r-s td.sh.past { background: var(--pt-shipA); }
-#s-ship tr.r-k td { font-size: 12px; color: var(--ink-2); font-weight: 600; } #s-ship tr.r-k td.ok { background: var(--pt-ok); } #s-ship tr.r-k td.hi { background: var(--pt-hi); color: #6b4300; } #s-ship tr.r-k td.hi2 { background: var(--pt-hi2); color: #5a3000; font-weight: 800; } #s-ship tr.r-k td.neg { color: var(--bad); font-weight: 800; background: color-mix(in srgb, var(--bad) 12%, var(--surface)); }
+#s-ship tr.r-k td { font-size: 12px; color: var(--ink-2); font-weight: 600; } #s-ship tr.r-k td.ok { background: var(--pt-ok); } #s-ship tr.r-k td.hi { background: var(--pt-hi); color: var(--pt-hiT); } #s-ship tr.r-k td.hi2 { background: var(--pt-hi2); color: var(--pt-hi2T); font-weight: 800; } #s-ship tr.r-k td.neg { color: var(--bad); font-weight: 800; background: color-mix(in srgb, var(--bad) 12%, var(--surface)); }
 #s-ship tr.r-k .c1 { font-size: 11.5px; }
 .glegend { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 16px; font-size: 12.5px; color: var(--ink-2); margin: 0 0 10px; }
 .glegend .sw { display: inline-block; width: 14px; height: 14px; border-radius: 4px; margin-right: 6px; vertical-align: -3px; box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--ink) 10%, transparent); }
@@ -169,9 +169,9 @@ html :is(#s-cal, #s-ship) tbody td.tot { font-size: 12.5px; letter-spacing: 0; }
 html :is(#s-cal, #s-ship) th.line { font-size: 13.5px; padding: 0 2px 0 7px; }
 html #s-ship th.line { font-size: 12.5px; }
 /* 가동 캘린더 2차(2026-10-21 사용자: 도금/컬러 구분, 색 줄이기 — 강종 막대·M/C·종일 정지만 색) */
-:root { --pt-AL: #2a78d6; --pt-AZ: #e2672c; --pt-MAC: #14a06e; --pt-MC: #f5b700; --pt-gG: #1f3b5c; --pt-gC: #1c5a50; --pt-sd: #dfe3e9; --pt-sdT: #3a4350; --pt-mcT: #8a5a00; }
-@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --pt-gG: #2a4d75; --pt-gC: #24695e; --pt-sd: #2c3440; --pt-sdT: #c9d1db; --pt-mcT: #f0c45a; } }
-:root[data-theme="dark"] { --pt-gG: #2a4d75; --pt-gC: #24695e; --pt-sd: #2c3440; --pt-sdT: #c9d1db; --pt-mcT: #f0c45a; }
+:root { --pt-AL: #2a78d6; --pt-AZ: #e2672c; --pt-MAC: #14a06e; --pt-MC: #f5b700; --pt-gG: #1f3b5c; --pt-gC: #1c5a50; --pt-sd: #dfe3e9; --pt-sdT: #3a4350; --pt-mcT: #8a5a00; --pt-gA: #333a45; --pt-Cx: #6a4fc4; --pt-Cb: #0b8793; --pt-Cd: #b4467c; --pt-hiT: #6b4300; --pt-hi2T: #5a3000; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --pt-gG: #2a4d75; --pt-gC: #24695e; --pt-sd: #2c3440; --pt-sdT: #c9d1db; --pt-mcT: #f0c45a; --pt-gA: #46505e; --pt-hiT: #ffd58a; --pt-hi2T: #ffe2b0; } }
+:root[data-theme="dark"] { --pt-gG: #2a4d75; --pt-gC: #24695e; --pt-sd: #2c3440; --pt-sdT: #c9d1db; --pt-mcT: #f0c45a; --pt-gA: #46505e; --pt-hiT: #ffd58a; --pt-hi2T: #ffe2b0; }
 #s-cal tr.r-p td { background: transparent; }
 #s-cal tr.r-p td.past, #s-cal tr.r-h td.past { background: var(--pt-act); }
 #s-cal tr.r-p td.idle { background: repeating-linear-gradient(135deg, transparent 0 4px, color-mix(in srgb, var(--ink-3) 14%, transparent) 4px 5px); }
@@ -188,10 +188,17 @@ html #s-ship th.line { font-size: 12.5px; }
 #s-cal td.tot.mcn { font-size: 11.5px; color: var(--pt-mcT); }
 #s-cal td.sdblock { background: var(--pt-sd); color: var(--pt-sdT); }
 #s-cal td.sdblock small { color: var(--pt-sdT); }
-#s-cal tr.grp > * { position: static; background: var(--pt-gG); color: #fff; border: 0; padding: 7px 10px; text-align: left; font-size: 13px; }
-#s-cal tr.grp .gh { position: sticky; left: 0; z-index: 3; font-size: 14px; font-weight: 800; letter-spacing: .08em; }
-#s-cal tr.grp .gs { font-weight: 500; color: rgba(255,255,255,.88); } #s-cal tr.grp .gs b { color: #fff; font-weight: 800; }
-#s-cal tr.grp.C > * { background: var(--pt-gC); }
+:is(#s-cal, #s-ship) tr.grp > * { background: var(--pt-gG); color: #fff; border-right-color: rgba(255,255,255,.12); border-bottom-color: rgba(255,255,255,.12); font-weight: 800; }
+:is(#s-cal, #s-ship) tr.grp.C > * { background: var(--pt-gC); } :is(#s-cal, #s-ship) tr.grp.A > * { background: var(--pt-gA); }
+:is(#s-cal, #s-ship) tr.grp .gh { font-size: 13.5px; letter-spacing: .02em; text-align: left; padding-left: 10px; line-height: 1.2; }
+:is(#s-cal, #s-ship) tr.grp .gh small { display: block; font-size: 10.5px; font-weight: 600; opacity: .8; letter-spacing: 0; }
+:is(#s-cal, #s-ship) tr.grp .gh2 { color: rgba(255,255,255,.85); font-weight: 600; font-size: 11.5px; }
+:is(#s-cal, #s-ship) tr.grp td.tot.gt { background: color-mix(in srgb, #000 22%, var(--pt-gG)) !important; color: #fff; }
+:is(#s-cal, #s-ship) tr.grp.C td.tot.gt { background: color-mix(in srgb, #000 22%, var(--pt-gC)) !important; } :is(#s-cal, #s-ship) tr.grp.A td.tot.gt { background: color-mix(in srgb, #000 22%, var(--pt-gA)) !important; }
+:is(#s-cal, #s-ship) tr.grp td.tb { border-left: 2px solid #8fc1ff; }
+#s-ship tr.grp.A + tr.grp.A > * { border-bottom: 2px solid var(--surface); }
+#s-cal tr.r-a td.f-C수출 { background: var(--pt-Cx); } #s-cal tr.r-a td.f-C건재 { background: var(--pt-Cb); } #s-cal tr.r-a td.f-C수요 { background: var(--pt-Cd); }
+.glegend .sw.f-C수출 { background: var(--pt-Cx); } .glegend .sw.f-C건재 { background: var(--pt-Cb); } .glegend .sw.f-C수요 { background: var(--pt-Cd); } .glegend .sw.sumsw { background: var(--pt-gG); }
 #s-cal tr.gap td { height: 12px; padding: 0; border: 0; background: var(--surface); }
 #s-cal tr.grp + tr.first > * { border-top: 0; }
 :is(#s-cal) th.line.G { box-shadow: inset 4px 0 0 var(--pt-gG); } :is(#s-cal) th.line.C { box-shadow: inset 4px 0 0 var(--pt-gC); }
@@ -199,8 +206,8 @@ html #s-ship th.line { font-size: 12.5px; }
 .glegend .sw.f-AL { background: var(--pt-AL); } .glegend .sw.f-AZ { background: var(--pt-AZ); } .glegend .sw.f-MAC { background: var(--pt-MAC); }
 .glegend .sw.mcsw { background: var(--pt-MC); box-shadow: none; } .glegend .sw.sdsw { background: var(--pt-sd); }
 .glegend .muted { color: var(--ink-3); }
-html #s-cal tr.grp td.gs { text-align: left !important; padding-left: 14px; }
 html :is(#s-cal, #s-ship) tbody td.w4 { font-size: 10.5px; letter-spacing: -0.7px; }
+html :is(#s-cal, #s-ship) tbody td.w5 { font-size: 9.5px; letter-spacing: -0.9px; }
 </style>
 </head>
 <body>
