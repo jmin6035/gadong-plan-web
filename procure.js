@@ -152,7 +152,23 @@
       <p class="small">저장 위치 = 이 브라우저. 다른 사람과 맞추려면 내보낸 파일을 보내 가져오기. 자료 계산 ${String(D.built).replace('T', ' ')}</p>`);
   }
 
-  const TABS = [['cal', '발주 캘린더'], ['board', '판단 목록·구매 요청'], ['arr', '입고예정'], ['ord', '주문재 목록'], ['sup', '업체 기준정보'], ['basis', '계산 기준·설정']];
+  // POSCO F/H 인도납기일 대비 실제 입고(사양별) + 인도납기 변경 이력(2026-10-21 사용자: 인도납기일은 포스코 자동 입력·러프 — 사양별로 빠르고 늦은 것, 변경 이력 매일 쌓기. 입고 예정일 계산에 반영은 보류)
+  function dueTab() {
+    const F = D.fhDue, K = D.dueTrack;
+    if (!F) return card('p-due', 'F/H 인도납기 대비 입고', '', '<p class="muted">자료 없음 — 사내 PC 다음 자동 실행 뒤 표시</p>');
+    const sd = (v) => (v == null ? '-' : v > 0 ? `<span class="late">+${v}일</span>` : v < 0 ? `<b class="early">${v}일</b>` : '0일');
+    const head = '<tr><th class="l">소재</th><th>두께(mm)</th><th>폭(mm)</th><th>입고 건</th><th>입고(t)</th><th>인도납기 대비<br><small>중앙</small></th><th>빠른 쪽<br><small>25%</small></th><th>늦은 쪽<br><small>75%</small></th><th>늦게 온 비율</th><th>발주→입고<br><small>중앙</small></th><th>발주→인도납기<br><small>중앙</small></th></tr>';
+    const tr = (r, sub) => `<tr${sub ? ' class="sum"' : ''}><td class="l"><b>${esc(r.grp)}</b></td><td>${esc(r.thk || '전체')}</td><td>${esc(r.wdt || '전체')}</td><td>${n0(r.n)}</td><td>${n0(r.t)}</td><td>${sd(r.med)}</td><td>${sd(r.q1)}</td><td>${sd(r.q3)}</td><td class="${r.lateP >= 30 ? 'late' : ''}">${r.lateP}%</td><td>${r.lt == null ? '-' : r.lt + '일'}</td><td>${r.dl == null ? '-' : r.dl + '일'}</td></tr>`;
+    const grp = F.byGrp.map((g) => tr(g, true) + F.rows.filter((r) => r.grp === g.grp).map((r) => tr(r)).join('')).join('');
+    const chg = K && K.recent && K.recent.length ? `<div class="scroll"><table class="t"><thead><tr><th>바뀐 날</th><th>발주 행번</th><th class="l">소재</th><th>두께</th><th>폭</th><th>이전 인도납기</th><th>바뀐 인도납기</th><th>이동</th></tr></thead><tbody>${K.recent.map((c) => `<tr><td>${md(c.d)}</td><td>${esc(c.po)}</td><td class="l">${esc(c.grp || '-')} <small class="muted">${esc(c.sup || '')}</small></td><td>${c.thk || '-'}</td><td>${c.wdt ? n0(c.wdt) : '-'}</td><td>${esc(String(c.from).replace(/(\d{4})(\d\d)(\d\d)/, '$2/$3'))}</td><td>${esc(String(c.to).replace(/(\d{4})(\d\d)(\d\d)/, '$2/$3'))}</td><td>${sd(c.shift)}</td></tr>`).join('')}</tbody></table></div>`
+      : `<p class="muted">${K ? `${md(K.start)}부터 발주 ${n0(K.nPo)}개 행번의 인도납기를 매일 비교 중 — 아직 바뀐 것 없음` : '변경 이력은 사내 PC 다음 자동 실행부터 쌓임'}</p>`;
+    return card('p-due', 'POSCO F/H 인도납기 대비 실제 입고', `입고 ${md(F.from)}~${md(F.to)} · 발주 ${n0(F.nPo)}행번 · ${n0(F.t)}t · 음수 = 인도납기보다 먼저 입고`,
+      `<div class="scroll"><table class="t due"><thead>${head}</thead><tbody>${grp}</tbody></table></div>
+      <p class="small">인도납기 = MES 발주(MO_GC_ORD_ASK) 인도납기일(포스코 자동 입력, 현재 값). 입고 = MES 입고 실적(실제 입고일, 예정분 제외). 톤 가중. 사양 = 소재 · 두께 · 폭 구간(입고 100t 이상만). 지금 입고 예정일 계산은 발주일 + 업체 리드타임(포스코 F/H 35일) 그대로 — 바꾸는 건 보류(회의 후 결정).</p>`)
+      + card('p-duechg', '인도납기 변경 이력', K ? `${md(K.start)}부터 매일 비교 · 누적 ${n0(K.nChg)}건 · 최근 60일` : '', chg);
+  }
+
+  const TABS = [['cal', '발주 캘린더'], ['board', '판단 목록·구매 요청'], ['arr', '입고예정'], ['due', 'F/H 인도납기 대비 입고'], ['ord', '주문재 목록'], ['sup', '업체 기준정보'], ['basis', '계산 기준·설정']];
 
   /* ---------- 발주 캘린더: 이 날 무엇을 발주하고, 무엇이 들어와야 하나 ---------- */
   const CK = { order: { name: '발주 마감', color: 'var(--bad)' }, need: { name: '입고 필요', color: 'var(--s3)' }, arr: { name: '입고 예정(기발주)', color: 'var(--s1)' } };
@@ -202,7 +218,7 @@
 
   function render() {
     const y = scrollY;
-    const body = { cal: calTab, board, arr: arrivals, ord: orders, sup: suppliers, basis }[tab]();
+    const body = { cal: calTab, board, arr: arrivals, due: dueTab, ord: orders, sup: suppliers, basis }[tab]();
     const fresh = lastTab !== tab; lastTab = tab;
     $('p-main').innerHTML = `<nav class="tabs big noprint">${TABS.map(([k, n]) => `<button type="button" data-tab="${k}" aria-pressed="${k === tab}">${n}</button>`).join('')}</nav><div class="${fresh ? 'fade' : ''}">${body}</div>`;
     UI.sub(`날짜별 발주 마감 · 입고 필요 → 업체 판단 → 구매 요청 · 기준일 ${S.today} · 확정 컬러·도금 계획 기준`);
