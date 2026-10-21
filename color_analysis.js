@@ -55,7 +55,7 @@
       .filter((x) => cf === 'all' || (cf === 'act' ? x.flag : cf === 'apply' ? x.apply : !x.flag))
       .sort((p, q) => Math.abs(q.h || 0) - Math.abs(p.h || 0) || q.t - p.t);
     const big = P.filter((x) => x.t >= 150), small = P.filter((x) => x.t < 150);
-    const row = (x) => { const d = Math.max(-0.4, Math.min(0.4, x.diff)), w = Math.abs(d) / 0.4 * 50, vd = verdict(x);
+    const row = (x) => { const d = Math.max(-0.4, Math.min(0.4, x.diff)), w = Math.abs(d) / 0.4 * 34, vd = verdict(x);   // 막대 반폭 최대 34% — 끝에 붙는 % 글자가 옆 칸을 넘지 않게
       return `<div class="cp-row ${x.apply ? 'ap' : x.flag ? '' : 'ok'}"><div class="cp-n"><b>${esc(x.prod)}</b><small>${A.N4}주 ${fmt(x.t)}t</small></div>
         <div class="cp-bar"><span class="mid"></span><span class="band"></span><i class="${x.diff >= 0 ? 'p' : 'n'}" style="${x.diff >= 0 ? 'left:50%' : `left:${50 - w}%`};width:${w}%"></i><em style="${x.diff >= 0 ? `left:calc(${50 + w}% + 6px)` : `right:calc(${50 + w}% + 6px)`}">${x.diff >= 0 ? '+' : ''}${fmt(x.diff * 100, 1)}%</em></div>
         <div class="cp-v">${fmt(x.cur, 2)} → <b>${fmt(x.act, 2)}</b> <small>t/hr</small>${x.v12 != null ? `<small class="muted"> · 앞 ${A.N12}주 ${fmt(x.v12, 2)}</small>` : ''}</div>

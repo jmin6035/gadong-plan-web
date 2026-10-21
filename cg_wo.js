@@ -31,13 +31,12 @@
       + `<td class="l"><b>${esc(x.raw)}</b>${x.conf ? '' : '<span class="gt gt3">미확정</span>'}<br><span class="bk">${x.con ? esc(x.con) : '계약 연결 대기'}</span></td>`
       + `<td class="c">${md(x.req) || '-'}</td>`
       + `<td class="l wr">${spec}</td>`
-      + `<td class="num" title="1010 표에 무게가 없어 추정: 같은 두께·폭 제품 코일 무게 × 생산코일 ${esc(x.cnt)}개">${n1(x.t)}<br><span class="bk">추정 ${esc(x.cnt)}코일</span></td>`
-      + `<td class="num" title="${esc(x.tphSrc)}">${n0(x.runMin)}분<br><span class="bk">${n1(x.tph)}t/h</span></td>`
+      + `<td class="num" title="톤은 추정(1010 표에 무게가 없음): 같은 두께·폭 제품 코일 무게 × 생산코일 ${esc(x.cnt)}개 · 속도 ${esc(x.tphSrc)}"><b>${n1(x.t)}t</b> · ${n0(x.runMin)}분<br><span class="bk">추정 ${esc(x.cnt)}코일 · ${n1(x.tph)}t/h</span></td>`
       + `<td class="l chg">${(x.chg || []).map((c) => `<div>${esc(c)}</div>`).join('')}</td>`
       + `<td class="l wr">${(x.downs || []).length ? ((x.downs.length > 1 && dn) ? `<div class="wo-ds">합계 ${n1(x.exp)}분</div>` : '') + x.downs.map((d) => `<div class="wo-dl"><b>${esc(d.c)}</b> <span class="wo-dm">${n1(d.m)}분</span><div class="bk">${esc(d.b)}</div></div>`).join('') : '<span class="bk">없음</span>'}</td></tr>`;
   }
-  const HEAD = '<thead><tr><th>순서</th><th>시간 (추정)</th><th class="l">소재 코일 · 계약</th><th>생산요청일</th><th class="l">두께 × 폭 · 후처리 · 도유</th><th>톤</th><th>생산</th><th class="l">앞 코일과 바뀌는 것</th><th class="l">예상 더미 (분 · 근거)</th></tr></thead>';
-  const NC = 9;
+  const HEAD = '<thead><tr><th>순서</th><th>시간 (추정)</th><th class="l">소재 코일 · 계약</th><th>생산요청일</th><th class="l">두께 × 폭 · 후처리 · 도유</th><th>톤 · 생산</th><th class="l">앞 코일과 바뀌는 것</th><th class="l">예상 더미 (분 · 근거)</th></tr></thead>';
+  const NC = 8;
   const mins = (s, d) => { if (!s) return 0; const sd = s.slice(0, 5), dd = d.slice(5); if (sd < dd) return 0; if (sd > dd) return 1440; return (+s.slice(6, 8)) * 60 + (+s.slice(9, 11)); };
   function strip(v, d, byS) {
     const seg = [];
@@ -56,7 +55,7 @@
       }
       h += row(x, cur);
     });
-    return `<div class="scroll"><table class="t wo cgwo"><colgroup><col style="width:52px"><col style="width:128px"><col style="width:170px"><col style="width:84px"><col style="width:330px"><col style="width:84px"><col style="width:84px"><col style="width:250px"><col></colgroup>${HEAD}<tbody>${h}</tbody></table></div>`
+    return `<div class="scroll"><table class="t wo cgwo"><colgroup><col style="width:54px"><col style="width:124px"><col style="width:160px"><col style="width:84px"><col style="width:210px"><col style="width:124px"><col><col style="width:190px"></colgroup>${HEAD}<tbody>${h}</tbody></table></div>`
       + '<p class="hint lg"><i class="sr"></i>생산 <i class="sd"></i>예상 더미(앞 코일과 바뀜) — 띠에 마우스를 올리면 내용이 보입니다. 시각·톤은 추정(1010 표에 무게가 없음)</p>';
   }
 

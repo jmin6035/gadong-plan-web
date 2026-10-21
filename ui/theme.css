@@ -739,7 +739,7 @@ html .cc-line:hover { border-color: var(--brand-2); } html .cc-line.on { border-
 .cp-row { padding: 8px 0; border-bottom: 1px solid var(--grid); } .cp-row.ok { opacity: .7; }
 .cp-n b { display: block; font-size: 15px; } .cp-n small { font-size: 12.5px; color: var(--ink-3); }
 .cp-bar { position: relative; height: 22px; } .cp-bar .mid { position: absolute; left: 50%; top: -4px; bottom: -4px; width: 1px; background: var(--ink-3); z-index: 1; }
-.cp-bar .band { position: absolute; left: 43.75%; width: 12.5%; top: 0; bottom: 0; background: var(--grid); border-radius: 3px; }
+.cp-bar .band { position: absolute; left: 45.75%; width: 8.5%; top: 0; bottom: 0; background: var(--grid); border-radius: 3px; }
 .cp-bar i { position: absolute; top: 3px; height: 16px; border-radius: 3px; transform-origin: left; animation: growL .8s var(--ease) both; } .cp-bar i.p { background: var(--good); } .cp-bar i.n { background: var(--bad); transform-origin: right; }
 .cp-row.ok .cp-bar i { background: var(--steel-2); }
 .cp-bar em { position: absolute; top: 2px; font-style: normal; font-size: 13px; font-weight: 700; white-space: nowrap; }
@@ -870,3 +870,23 @@ html body .gtable td.kt-test { background: color-mix(in srgb, var(--k-test) 35%,
 .vz-meter em { position: absolute; top: -4px; bottom: -4px; width: 2px; margin-left: -1px; background: var(--ink); border-radius: 1px; }
 svg.vz { display: block; width: 100%; height: auto; overflow: visible; } svg.vz text { font-size: 13px; fill: var(--ink-3); } svg.vz text.v { fill: var(--ink); font-weight: 700; }
 svg.vz .gl { stroke: var(--vz-grid); stroke-width: 1; } svg.vz .ax { stroke: var(--ink-3); stroke-width: 1; }
+
+/* ===== 전 화면 칸·글자 정리(2026-10-21 사용자: 오와 열이 안 맞음 — 글자 몇 자에 칸이 너무 크거나, 글자가 너무 작음) =====
+   ① 열이 적은 표는 화면 폭을 꽉 채우지 않고 내용만큼(최소 520px, 넘치면 가로 스크롤) — 캘린더(gtable·sc)·색 지도는 그대로
+   ② 화면 글자 최소 12px(캘린더 4자리 숫자만 11px) */
+html body :is(table.t, table.data, table.edit, table.dt):not(.gtable):not(.sc):not(.du-g):not(.wo):not(.bd):not(.full) { width: auto; min-width: min(100%, 360px); max-width: 100%; }
+html body :is(table.t, table.data, table.edit, table.dt):not(.gtable):not(.sc) td.why { max-width: 560px; }
+html body main :is(small, .small) { font-size: max(12px, .85em) !important; }
+html body main table.gtable td { font-size: 12px !important; } html body main table.gtable th { font-size: max(12px, 1em) !important; }
+html body main table.gtable td.w4, html body main table.gtable td.w5, html body main table.sc td.w4 { font-size: 11px !important; }
+html body main :is(.vz-y span, .vz-cap small, .sp-ax span, .cc-ax span, .st-s small, .lg small, button.lg small) { font-size: 12px !important; }
+html body main table.t.wo span, html body main table.dt.mt small, html body main table.sc :is(td, th, span) { font-size: max(12px, 1em) !important; }
+html body main table.t.wo td.l { overflow: visible; white-space: normal; overflow-wrap: anywhere; }
+html body main div.ln { font-size: max(12px, 1em); }
+html body main :is(.k .s, .ln .sp-cap, .ln .nx) { white-space: normal; overflow: visible; text-overflow: clip; line-height: 1.35; font-size: max(12px, 1em); }   /* 홈 카드 보조 글: 잘림(…) 대신 두 줄 */
+html body main .srcl { font-size: 12px !important; }
+html body main table.t.wo td.l { white-space: normal !important; }
+html body main table.t.wo td.l .bk { white-space: normal; overflow-wrap: anywhere; }
+html body main table.t.wo td.chg { white-space: normal !important; overflow: visible; }
+html body main .card :is(.g2, .grid2, .two, .wk-grid):not(:first-child) { margin-top: var(--gap); }
+html body main #c-src.cc-steps { grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); }
