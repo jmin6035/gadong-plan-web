@@ -30,7 +30,8 @@
     const why = (x.why || '').replace(/PF입고예정일 비어 있음\(PF종류 [^)]*\)( · )?/, '');   // 준비 칸에 따로 보임
     const prep = [];
     if (x.paint) prep.push(`도료 ${rdy && x.ready === x.paint ? `<b class="rdy">${md(x.paint)}</b>` : md(x.paint)}`);
-    if (x.pf && x.pf !== '00') prep.push(`PF ${esc(x.pf)} ${x.pfDate ? md(x.pfDate) : '<b class="rdy">입고일 없음</b>'}`);
+    if (x.pf && x.pf !== '00') prep.push(`PF ${esc(x.pf)} ${x.pfDate ? md(x.pfDate) : (x.dateErr && x.dateErr.includes('PF') ? '' : '<b class="rdy">입고일 없음</b>')}`);
+    if (x.dateErr) prep.push(`<b class="rdy" title="MES 입고예정일이 반년 넘게 먼 날짜 — 입력 오류로 보고 기다리지 않게 계산">${esc(x.dateErr)} (확인)</b>`);
     if (x.smat) prep.push(`<b class="rdy">부자재 ${esc(x.smat)}</b>`);
     if (why) prep.push(`<span class="why">${esc(why)}</span>`);
     return `<tr${dn ? ' class="hasdn"' : ''}><td class="c"><b>${x.seq}</b></td>`
@@ -70,7 +71,7 @@
       if (e.kind === 'job') { h += row(byS[e.seq], curDay); return; }
       h += `<tr class="ev ${e.kind}"><td class="c">—</td><td class="tm">${tm(e.start, curDay)} – ${tm(e.end, curDay)}</td><td colspan="${NC - 2}"><b>${e.kind === 'plan' ? '휴지계획' : '라인 멈춤(기다림)'} ${hm(e.min)}</b> · ${esc(e.why)}</td></tr>`;
     });
-    return `<div class="scroll"><table class="t wo"><colgroup><col style="width:56px"><col style="width:136px"><col style="width:160px"><col style="width:130px"><col style="width:112px"><col><col style="width:210px"><col style="width:112px"></colgroup>${HEAD}<tbody>${h}</tbody></table></div>`
+    return `<div class="scroll"><table class="t wo"><colgroup><col style="width:4%"><col style="width:10%"><col style="width:13%"><col style="width:11%"><col style="width:9%"><col style="width:18%"><col style="width:25%"><col style="width:10%"></colgroup>${HEAD}<tbody>${h}</tbody></table></div>`
       + '<p class="hint lg"><i class="sr"></i>생산 <i class="sd"></i>휴지(앞 작업과 바뀜) <i class="sp"></i>휴지계획 <i class="sw"></i>기다림 — 띠에 마우스를 올리면 내용이 보입니다</p>';
   }
 
@@ -145,7 +146,9 @@
     const dz = DZ.filter(([k]) => v.downFree[k] > 0.5).map(([k, nm]) => `${nm} ${n0(v.downFree[k])}`).join(' · ') || '없음';
     const gain = v.mes.sum - v.ours.sum;
     const stop = v.stop ? `<div class="miss"><b>${line} 휴지 중</b> — ${esc(v.stop.note)}. ${v.stop.until ? `재가동 ${md(v.stop.until)} 0시부터 시각 계산` : '재가동일 미정 — 아래 시각은 <b>지금 바로 재가동한다고 가정</b>한 것'}</div>` : '';
+    const ns = (O.nospec || []).filter((x) => x.line === line);
     $('wo-main').innerHTML = tabs() + (O.missing && O.missing.length ? `<div class="miss"><b>아직 안 들어온 자료</b> — ${O.missing.map(esc).join(' / ')}</div>` : '')
+      + (ns.length ? `<div class="miss"><b>순서에서 뺀 지시 ${ns.length}건 — 계약 상세(두께·폭)가 MES 에 없음</b>: ${ns.map((x) => `${esc(x.con)} ${esc(x.item)} ${x.t}t(지시 ${md(x.drtDate)})`).join(' · ')}. 오래전 지시가 종료되지 않고 남은 것으로 보임 — MES 정리 확인</div>` : '')
       + `<section class="card"><div class="seg" id="wo-lines">${L.map((l) => `<button type="button" data-l="${l}" aria-pressed="${l === line}">${l} <small>${O.lines[l].stop ? '휴지' : `${O.lines[l].nFree}건`}</small></button>`).join('')}</div>${stop}`
       + '<div class="kpis" style="margin-top:12px">'
       + `<div class="kpi"><div class="l">지금 라인</div><div class="v">${fx.length}<small>건 확정 대기</small></div><div class="b">마지막 코일 ${esc(v.lastCoil ? tm(v.lastCoil) : '-')} 끝 · 확정분 ${n0(v.tFixed)}t 은 ${esc(tm(v.fixedUntil))} 까지</div></div>`
