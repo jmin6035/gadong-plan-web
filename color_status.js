@@ -47,7 +47,6 @@
     $('d-empty').hidden = true; $('d-body').hidden = false;
     $('d-title').textContent = `'26.${MONTHS.map((m) => +m.slice(5)).join('·')}월 컬러 CCL 가동계획`;
     $('d-meta').textContent = [`확정 계획(계획재 = 운영안 반영)`, `계산 ${String(O.built).replace('T', ' ')}`, lastAct && `실적 ~${md(lastAct)}`, '계획 기간 2026-10-01 ~ 2026-12-31'].filter(Boolean).join(' · ');
-    renderExec();
     const q = sum(MONTHS, (m) => monT(m)), pl = sum(O.color, (c) => c.g['계획재'] || 0);
     let mx = 0, mxK = ''; for (const l of LINES) MONTHS.forEach((m) => { const v = load(m, l); if (v > mx) { mx = v; mxK = `${+m.slice(5)}월 ${l}`; } });
     $('d-kpis').innerHTML = [
@@ -68,18 +67,6 @@
     $('d-date').min = '2026-10-01'; $('d-date').max = '2026-12-31';
     renderNow();
     if (window.UI) UI.reveal(document.querySelector('main'));
-  }
-
-  function renderExec() {
-    const risks = [];
-    for (const l of LINES) MONTHS.forEach((m) => { const g = cap(m, l) - placed(m, l); if (g > 50) risks.push(`${+m.slice(5)}월 ${l} 편성 ${fmt(placed(m, l))}t — MES 월차 ${fmt(cap(m, l))}t까지 ${fmt(g)}t 남음(${shortWhy(m, l) === '가동시간 부족' ? '수리·정지로 가동시간 부족' : '이 라인에서 만들 수 있는 판매계획 물량이 더 없음'})`); });
-    MONTHS.forEach((m) => {
-      const U = O.colorUnplaced.filter((x) => x.ym === m), u = sum(U, (x) => x.t); if (u <= 50) return;
-      const cr = U.find((x) => x.carry), gs = [...new Set(U.map((x) => x.g))].join('·');
-      risks.push(cr ? `${+m.slice(5)}월에 못 만든 ${fmt(u)}t → ${+cr.carry.slice(5)}월 1일부터 먼저 만듦(그 달 판매계획 대비 늦음, ${gs})`
-        : `${+m.slice(5)}월 미편성 ${fmt(u)}t — 만들 수 있는 라인이 가동시간을 다 써서 일정에 못 넣음, 이대로면 판매계획 미달(${gs})`);
-    });
-    $('d-exec').innerHTML = (risks.length ? risks.map((t) => `<p class="risk">⚠ ${esc(t)}</p>`).join('') : '<p class="ok">✓ 미편성 없음, 모든 라인 월차 한도까지 편성</p>');
   }
 
   // ---------------- 월별 가동계획 표: 라인 합계 행 + 그룹 행 + 가동시간 (도금 표와 같은 클래스) ----------------

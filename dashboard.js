@@ -49,6 +49,7 @@
       const e = await GP.latest('plating_actual.enc.json'); if (!e || !A) return;
       const x = await GP.decryptJSON(e, pw); if (!x || !x.dayMin) return;
       A.actMin = {}; for (const [d, L] of Object.entries(x.dayMin)) for (const [l, m] of Object.entries(L)) A.actMin[`${l}|${d}`] = m;
+      A.accHist = x.accHist || null;                              // 날마다 '그날 아침 계획 vs 실적'(사내 PC 매일 기록) — 계획 대비 실적 표
       render();
     } catch (err) { /* 실적 자료 없으면 환산값 */ }
   }
@@ -107,28 +108,26 @@
     }).join('');
   }
   $('d-date').onchange = () => R && renderNow();
-  // 계획 대비 실적(사용자 10/21: '실적 반영 재계획' 설명 삭제, 칸이 애매 → 라인마다 계획·실적·차이를 줄로 나눠 칸마다 숫자 하나)
+  // 계획 대비 실적(사용자 10/21): 최근 7일, 날마다 '그날 아침 계획 vs 실적'(사내 PC 매일 기록 accHist, 없으면 재계획 비교) — 라인마다 계획·실적·차이 줄, 부서별 비교는 뺌(계획상 그날 부서는 정해지지 않음)
   function renderReplan() {
-    const rp = R.replan, el = $('d-replan');
-    if (!rp || !rp.vsPlan || !rp.vsPlan.length) { el.hidden = true; return; }
+    const el = $('d-replan'), rp = R.replan || {};
+    const src = (A && A.accHist && A.accHist.length) ? A.accHist : (rp.vsPlan || []);
+    if (!src.length) { el.hidden = true; return; }
     el.hidden = false;
-    const L = R.P.lines, days = [...new Set(rp.vsPlan.map((r) => r[0]))].slice(-7);
-    const get = (d, l) => rp.vsPlan.find((x) => x[0] === d && x[1] === l) || [d, l, 0, 0];
-    const cum = (l) => { const x = rp.vsPlan.filter((r) => r[1] === l); return [GP.sum(x, (r) => r[2]), GP.sum(x, (r) => r[3])]; };
+    const L = R.P.lines, days = [...new Set(src.map((r) => r[0]))].sort().slice(-7);
+    const get = (d, l) => src.find((x) => x[0] === d && x[1] === l) || [d, l, 0, 0];
     const sg = (v) => `${v > 0.5 ? '+' : v < -0.5 ? '−' : ''}${GP.fmt(Math.abs(v))}`;
     const pc = (a, p) => (p > 0 ? `${GP.fmt(a / p * 100, 1)}%` : '-');
     const body = L.concat(['합계']).map((l) => {
       const P = (d) => (l === '합계' ? GP.sum(L, (x) => get(d, x)[2]) : get(d, l)[2]), A_ = (d) => (l === '합계' ? GP.sum(L, (x) => get(d, x)[3]) : get(d, l)[3]);
-      const [cp, ca] = l === '합계' ? L.reduce((s, x) => { const c = cum(x); return [s[0] + c[0], s[1] + c[1]]; }, [0, 0]) : cum(l);
-      const tr = (lab, f, cls, tot, last) => `<tr class="${cls}">${lab}${days.map((d) => { const v = f(d); return `<td class="n${cls === 'df' && v < -0.5 ? ' neg' : cls === 'df' && v > 0.5 ? ' pos' : ''}">${cls === 'df' ? sg(v) : GP.fmt(v)}</td>`; }).join('')}${tot}</tr>`;
+      const cp = GP.sum(days, P), ca = GP.sum(days, A_);
+      const tr = (lab, f, cls, tot) => `<tr class="${cls}">${lab}${days.map((d) => { const v = f(d); return `<td class="n${cls === 'df' && v < -0.5 ? ' neg' : cls === 'df' && v > 0.5 ? ' pos' : ''}">${cls === 'df' ? sg(v) : GP.fmt(v)}</td>`; }).join('')}${tot}</tr>`;
       return tr(`<th class="ln" rowspan="3">${l}</th><th class="k">계획</th>`, P, 'pl', `<td class="n s">${GP.fmt(cp)}</td><td class="n s" rowspan="3"><b class="${ca < cp - 1 ? 'neg' : ''}">${pc(ca, cp)}</b></td>`)
         + tr('<th class="k">실적</th>', A_, 'ac', `<td class="n s"><b>${GP.fmt(ca)}</b></td>`)
         + tr('<th class="k">차이</th>', (d) => A_(d) - P(d), 'df', `<td class="n s ${ca - cp < -0.5 ? 'neg' : ca - cp > 0.5 ? 'pos' : ''}">${sg(ca - cp)}</td>`);
     }).join('');
-    const dep = rp.byDept ? `<table class="vs3 dep"><thead><tr><th>부서</th><th>계획</th><th>실적</th><th>차이</th><th>달성</th></tr></thead><tbody>${rp.byDept.filter((r) => r[1] || r[2]).map(([c, p, a]) => `<tr><th class="ln">${c}</th><td class="n">${GP.fmt(p)}</td><td class="n"><b>${GP.fmt(a)}</b></td><td class="n ${a < p - 0.5 ? 'neg' : a > p + 0.5 ? 'pos' : ''}">${sg(a - p)}</td><td class="n">${p ? pc(a, p) : '-'}</td></tr>`).join('')}</tbody></table>` : '';
-    el.innerHTML = `<h2>계획 대비 실적 <small class="muted">${rp.vsFrom ? `${GP.md(rp.vsFrom)} 다음 날부터 · ` : ''}단위 톤 · 차이 = 실적 − 계획(빨강 = 미달)</small></h2>
-      <div class="vs3-wrap"><div class="scroll"><table class="vs3"><thead><tr><th colspan="2">라인</th>${days.map((d) => `<th>${GP.md(d)}</th>`).join('')}<th>누계</th><th>달성</th></tr></thead><tbody>${body}</tbody></table></div>
-      ${dep ? `<div class="scroll"><h3 class="vs3-h">부서별 누계</h3>${dep}</div>` : ''}</div>`;
+    el.innerHTML = `<h2>계획 대비 실적 <small class="muted">최근 ${days.length}일 · 계획 = 그날 아침 재계획이 잡은 생산 · 단위 톤 · 차이 = 실적 − 계획(빨강 = 미달)</small></h2>
+      <div class="scroll"><table class="vs3"><thead><tr><th colspan="2">라인</th>${days.map((d) => `<th>${GP.md(d)}</th>`).join('')}<th>${days.length}일 합</th><th>달성</th></tr></thead><tbody>${body}</tbody></table></div>`;
   }
   // ---------------- 일별 차트 (라인별 작은 배수, 같은 y축) ----------------
   function renderDaily() {

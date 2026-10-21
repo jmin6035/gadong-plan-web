@@ -164,12 +164,17 @@
       <div class="ft-line big">${mk('ar', r.arrDays, `실제 입고 <b>${r.arrDays}일</b>`)}${mk('tf', r.tfDays, `TF 기준 <b>${r.tfDays}일</b>`)}${mk('du', r.dueDays, `인도납기 <b>${r.dueDays}일</b>`)}<i class="ft-span" style="left:${X(Math.min(r.arrDays, r.tfDays, r.dueDays))}%;width:${X(Math.max(r.arrDays, r.tfDays, r.dueDays)) - X(Math.min(r.arrDays, r.tfDays, r.dueDays))}%"></i></div>${axis}
       <p class="ft-say">발주하고 <b>${r.arrDays}일</b>쯤 들어옵니다 — TF 기준(${r.tfDays}일)보다 <b>${r.tfDays - r.arrDays}일 빠르고</b>, 인도납기(${r.dueDays}일)보다 <b>${r.dueDays - r.arrDays}일 빠름</b>.</p></div>`;
     const lead = PK.length ? `POSCO F/H는 <b>발주 후 약 ${PK[0].arrDays}일</b>에 들어옵니다. 소재 계획의 TF 기준(<b>${PK[0].tfDays}일</b>)이 인도납기일(<b>${PK[0].dueDays}일</b>)보다 실제에 가깝습니다.` : '';
-    const rows = (kind) => F.rows.filter((r) => r.kind === kind && r.arrDays != null).sort((x, y) => x.arrDays - y.arrDays).map((r) => `<tr><td class="l">${esc(r.thk)}mm</td><td class="l">${esc(r.wdt)}</td><td>${n0(r.t)}t</td>
+    // 사양별 표: 기본 = 인도납기 − 실제(차이) 큰 순(내림차순, 사용자 10/21), 머리를 누르면 그 칸으로 내림차순 ↔ 오름차순
+    const SK = { arr: (r) => r.arrDays, due: (r) => r.dueDays, gap: (r) => r.dueDays - r.arrDays, t: (r) => r.t, thk: (r) => r.thk, wdt: (r) => r.wdt };
+    const st = (window.__ftSort = window.__ftSort || { k: 'gap', d: -1 });
+    const cmp = (x, y) => { const a = SK[st.k](x), b = SK[st.k](y); return (a < b ? -1 : a > b ? 1 : 0) * st.d || (y.dueDays - y.arrDays) - (x.dueDays - x.arrDays); };
+    const rows = (kind) => F.rows.filter((r) => r.kind === kind && r.arrDays != null).sort(cmp).map((r) => `<tr><td class="l">${esc(r.thk)}mm</td><td class="l">${esc(r.wdt)}</td><td>${n0(r.t)}t</td>
       <td class="ar"><b>${r.arrDays}일</b></td><td>${r.tfDays}일</td><td class="du">${r.dueDays}일</td>
       <td class="ft-cell"><div class="ft-line">${mk('ar', r.arrDays)}${mk('tf', r.tfDays)}${mk('du', r.dueDays)}</div></td>
       <td class="${r.dueDays - r.arrDays >= 14 ? 'gap' : ''}">${r.dueDays - r.arrDays}일</td></tr>`).join('');
-    const tbl = (kind) => `<h3 class="fd-h">${esc(kind)} — 사양별 <small>실제 입고가 빠른 순 · 마지막 칸 = 인도납기보다 며칠 먼저 들어오나</small></h3>
-      <div class="scroll"><table class="t ft-t"><thead><tr><th class="l">두께</th><th class="l">폭</th><th>발주량</th><th>실제 입고</th><th>TF 기준</th><th>인도납기</th><th class="ft-cell">발주 후 일수 (0 → 50일)</th><th>인도납기 − 실제</th></tr></thead><tbody>${rows(kind)}</tbody></table></div>`;
+    const sh = (k, lb, cls = '') => `<th class="${cls} ft-s${st.k === k ? ' on' : ''}" data-fk="${k}">${lb}${st.k === k ? (st.d < 0 ? ' ▼' : ' ▲') : ''}</th>`;
+    const tbl = (kind) => `<h3 class="fd-h">${esc(kind)} — 사양별 <small>${{ gap: '인도납기보다 먼저 들어오는 일수', arr: '실제 입고 일수', due: '인도납기 일수', t: '발주량', thk: '두께', wdt: '폭' }[st.k]} ${st.d < 0 ? '큰' : '작은'} 순 · 칸 머리를 누르면 정렬</small></h3>
+      <div class="scroll"><table class="t ft-t"><thead><tr>${sh('thk', '두께', 'l')}${sh('wdt', '폭', 'l')}${sh('t', '발주량')}${sh('arr', '실제 입고')}<th>TF 기준</th>${sh('due', '인도납기')}<th class="ft-cell">발주 후 일수 (0 → 50일)</th>${sh('gap', '인도납기 − 실제')}</tr></thead><tbody>${rows(kind)}</tbody></table></div>`;
     const O = (F.open || []).filter((x) => x.kind !== '수입 FH'), ymd = (v) => `${+v.slice(5, 7)}/${+v.slice(8, 10)}`;
     const arrOf = (k) => (PK.find((r) => r.kind === k) || {}).arrDays;
     const addD = (v, n) => { const d = new Date(v + 'T00:00:00'); d.setDate(d.getDate() + n); return d.toISOString().slice(0, 10); };
@@ -243,6 +248,7 @@
     UI.sub(`날짜별 발주 마감 · 입고 필요 → 업체 판단 → 구매 요청 · 기준일 ${S.today} · 확정 컬러·도금 계획 기준`);
     $('p-meta').innerHTML = `<span><b>기준일</b>${S.today}</span><span><b>자료</b>확정 컬러·도금 계획 · 소재재고List · 재고현황</span><span><b>계산</b>${String(D.built).replace('T', ' ')}</span><span><b>단위</b>톤</span>`;
     if (tab === 'cal') calInit();
+    if (tab === 'due') $('p-main').querySelectorAll('th[data-fk]').forEach((th) => th.addEventListener('click', () => { const st = window.__ftSort; st.d = st.k === th.dataset.fk ? -st.d : -1; st.k = th.dataset.fk; render(); }));
     UI.reveal($('p-main')); UI.count($('p-main')); justOpened = null;
     scrollTo(0, y);
   }

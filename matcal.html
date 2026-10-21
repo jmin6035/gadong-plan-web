@@ -173,6 +173,13 @@ table.sc td.neg { background: var(--bad-bg); color: var(--bad); font-weight: 800
 table.sc td.dl { outline: 2px solid var(--bad); outline-offset: -2px; }
 #s-cal2 tr.sub td.lb { font-size: 11.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding: 0 6px; }
 #s-cal2 tbody td:not(.lb) { font-variant-numeric: tabular-nums; }
+
+/* 소재 캘린더 왼쪽 칸이 첫 날짜 칸과 겹치던 것(10/21) — 고정 폭(표 고정 배치는 첫 줄 폭을 따름) */
+#s-cal3 thead th.lb, #s-cal3 td.lb { width: 196px; min-width: 196px; max-width: 196px; box-sizing: border-box; overflow: hidden; white-space: nowrap; }
+#s-cal3 .lb { position: sticky; left: 0; z-index: 3; background: var(--surface); box-shadow: 2px 0 0 var(--line); }
+#s-cal3 thead .lb { z-index: 5; background: var(--th); }
+#s-cal3 .lb .tn { min-width: 98px; }
+#s-cal3 .tot { position: sticky; right: 0; z-index: 3; box-shadow: -2px 0 0 var(--line); }
 </style>
 </head>
 <body>
