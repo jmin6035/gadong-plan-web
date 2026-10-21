@@ -260,7 +260,7 @@
     const gship = (g, d) => { if (SD && SD.asOf && d <= SD.asOf) return { t: ((SD.g || {})[g] || {})[d] || 0, act: true }; const i = diff(d, D.days[0]); const v = (OD[g] || [])[i]; return { t: v || 0, act: false }; };
     const NM = { G수출: '도금수출', G국내: '도금국내', G자동차: '자동차강판', G자가재: '자가재(→ 컬러 소재)', C수출: '컬러수출', C건재: '컬러건재', C수요: '수요개발' };
     // 2026-10-21 사용자: 가동 캘린더 = 가동 현황 캘린더를 라인별로만 — 라인마다 생산(t)·휴지(h), M/C 날 노랑, 종일 정지는 블록. 출하·재고는 아래 따로(s-ship)
-    const W1 = ['일', '월', '화', '수', '목', '금', '토'], KN = { plan: '계획휴지', sd: 'S/D', repair: '수리', clean: '청소', test: 'Test', sample: '샘플', jr: '정기수리', color: '색상교체·청소', roll: '폭·롤 전환', etc: '기타 정지', gap: '기록 없는 정지(TEST 등)' }, HARD = ['plan', 'sd', 'repair', 'jr', 'gap'];
+    const W1 = ['일', '월', '화', '수', '목', '금', '토'], KN = { plan: '계획휴지', sd: 'S/D', repair: '수리', clean: '청소', test: 'Test', sample: '샘플', jr: '정기수리', color: '색상교체·청소', roll: '폭·롤 전환', etc: '기타 정지', gap: '기록 없는 정지(TEST 등)' }, HARD = ['plan', 'sd', 'repair', 'jr'];
     const headG = (lab) => `<colgroup><col class="cc0"><col class="cc1">${ds.map(() => '<col>').join('')}<col class="ctot"></colgroup><thead><tr><th class="c0" rowspan="2">${lab}</th><th class="c1" rowspan="2">구분</th>`
       + ds.map((d) => `<th data-d="${d}" class="${d === today ? 'today tb' : ''}">${+d.slice(8)}</th>`).join('') + '<th class="tot" rowspan="2">계</th></tr><tr>'
       + ds.map((d) => `<th class="wk ${wd(d) === 6 ? 'sat' : wd(d) === 0 ? 'sun' : ''}${d === today ? ' tb' : ''}">${W1[wd(d)]}</th>`).join('') + '</tr></thead><tbody>';
