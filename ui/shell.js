@@ -10,7 +10,7 @@
     '|계획 계산', ['rolling', 'rolling.html', '도금 계획 계산'], ['colorcalc', 'color_calc.html', '컬러 계획 계산'], '|',
     ['decisions', 'decisions.html', '결정 기록'], ['health', 'health.html', '자료 상태'], ['docs', 'docs.html', '문서'],
   ];
-  const TKEY = 'cgl-theme', SKEY = 'cgl-scope';
+  const TKEY = 'cgl-theme', SKEY = 'cgl-scope', NKEY = 'cgl-nav-open';
   const ONLY = { status: 'G', analysis: 'G', rolling: 'G', platact: 'G', coloract: 'C', planstock: 'C', wo: 'C', colorstat: 'C', coloranal: 'C', colorcalc: 'C' };     // 도금 자료만 있는 화면
   const SCN = { all: '전체', G: '도금', C: '컬러' };
   const DOCS = ['conditions', 'guide', 'requests', 'glossary', 'doc'];
@@ -73,18 +73,23 @@
   function build() {
     const h = document.getElementById('shell'); if (!h) return;
     const d = h.dataset, esc = (s) => String(s || '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
-    let grp = '종합';
-    const nav = NAV.map((x) => {
-      if (typeof x === 'string') { grp = x.slice(1) || '관리'; return `<div class="nv-grp"${GRPCLR[grp] ? ` style="--gk:${GRPCLR[grp]}"` : ''}>${grp}</div>`; }
-      const on = x[0] === d.page || (x[0] === 'docs' && DOCS.includes(d.page));
-      return `<a href="${x[1]}"${on ? ' aria-current="page"' : ''}${ONLY[x[0]] ? ` data-only="${ONLY[x[0]]}"` : ''}>${icon(x[0])}<span>${x[2]}</span></a>`;
+    // 메뉴: '경영 보고'(오너용 5개)는 늘 펼침, 나머지 실무 묶음은 접어 두고 머리글을 누르면 펼침(지금 화면이 든 묶음은 자동으로 펼침, 펼친 상태 기억)
+    let open0 = []; try { open0 = JSON.parse(localStorage.getItem(NKEY) || '[]'); } catch (e) { /* 무시 */ }
+    const secs = []; let cur = { g: '경영 보고', items: [] }; secs.push(cur);
+    NAV.forEach((x) => { if (typeof x === 'string') { cur = { g: x.slice(1) || '관리', items: [] }; secs.push(cur); } else cur.items.push(x); });
+    const link = (x) => { const on = x[0] === d.page || (x[0] === 'docs' && DOCS.includes(d.page));
+      return `<a href="${x[1]}"${on ? ' aria-current="page"' : ''}${ONLY[x[0]] ? ` data-only="${ONLY[x[0]]}"` : ''}>${icon(x[0])}<span>${x[2]}</span></a>`; };
+    const nav = secs.map((S, i) => {
+      if (i === 0) return `<div class="nv-grp first">${S.g}</div>${S.items.map(link).join('')}`;
+      const here = S.items.some((x) => x[0] === d.page || (x[0] === 'docs' && DOCS.includes(d.page))), op = here || open0.includes(S.g);
+      return `${i === 1 ? '<div class="nv-sup">실무</div>' : ''}<div class="nv-sec${op ? ' open' : ''}" data-g="${S.g}"><button type="button" class="nv-grp nv-tg" aria-expanded="${op}"${GRPCLR[S.g] ? ` style="--gk:${GRPCLR[S.g]}"` : ''}>${S.g}<span class="nv-n">${S.items.length}</span><svg class="nv-ch" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></button><div class="nv-items">${S.items.map(link).join('')}</div></div>`;
     }).join('');
     const TH = { auto: '자동', light: '밝게', dark: '어둡게' };
     h.className = 'shell-top';
     h.innerHTML = `<div class="topbar noprint"><button type="button" class="hamb" aria-label="메뉴 열기" aria-expanded="false"><i></i><i></i><i></i></button><a class="brand" href="index.html">${MARK}<span class="bt"><b>POSCO STEELEON</b><small>도금·컬러 가동계획</small></span></a><a class="fresh" id="ui-fresh-m" href="health.html" hidden></a></div>
       <aside class="side" aria-label="메뉴">
         <a class="brand" href="index.html">${MARK}<span class="bt"><b>POSCO STEELEON</b><small>도금·컬러 가동계획</small></span></a>
-        <nav class="shell-nav"><div class="nv-grp first">종합</div>${nav}</nav>
+        <nav class="shell-nav">${nav}</nav>
         <div class="side-foot noprint">
           <div class="scope"><span>보기</span><div class="scope-seg" role="group" aria-label="공정 보기">${Object.entries(SCN).map(([k, n]) => `<button type="button" data-sc="${k}" aria-pressed="${k === scope}">${n}</button>`).join('')}</div></div>
           <div class="sf-row"><a class="fresh" id="ui-fresh" href="health.html" hidden></a><button type="button" id="ui-theme" class="thm" aria-label="화면 모드">${TH[theme]}</button></div>
@@ -98,7 +103,11 @@
     h.querySelector('.hamb').addEventListener('click', () => open(!document.body.classList.contains('nav-open')));
     h.querySelector('.scrim').addEventListener('click', () => open(false));
     addEventListener('keydown', (e) => { if (e.key === 'Escape') open(false); });
-    const cur = h.querySelector('.shell-nav a[aria-current]'); if (cur) requestAnimationFrame(() => cur.scrollIntoView({ block: 'nearest' }));
+    h.querySelectorAll('.nv-tg').forEach((b) => b.addEventListener('click', () => {
+      const sec = b.parentElement, v = !sec.classList.contains('open'); sec.classList.toggle('open', v); b.setAttribute('aria-expanded', String(v));
+      const L = [...h.querySelectorAll('.nv-sec.open')].map((x) => x.dataset.g); try { localStorage.setItem(NKEY, JSON.stringify(L)); } catch (e) { /* 무시 */ }
+    }));
+    const curA = h.querySelector('.shell-nav a[aria-current]'); if (curA) requestAnimationFrame(() => curA.scrollIntoView({ block: 'nearest' }));
     h.querySelectorAll('.scope-seg button').forEach((b) => b.addEventListener('click', () => { if (b.dataset.sc !== scope) setScope(b.dataset.sc); }));
     h.querySelectorAll('.shell-nav a[data-only]').forEach((a) => a.classList.toggle('dim', scope !== 'all' && !a.dataset.only.includes(scope)));
     notice();

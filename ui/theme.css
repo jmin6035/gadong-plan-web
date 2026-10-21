@@ -917,3 +917,13 @@ html body main .det table.dt td { white-space: normal; }
 html body main :is(#s-cal, #s-ship, #g-table) :is(.c0, .c1) { z-index: 6; }
 html body main :is(.k .v, .kpi .v, .sum-v, .st-v) small { font-size: 15px !important; }   /* 큰 숫자 옆 단위는 작게 유지 */
 html body main table.t.wo th { white-space: normal !important; line-height: 1.3; }
+
+/* 메뉴 묶음 접기(2026-10-21): 경영 보고 5개는 늘 펼침, 실무 묶음은 머리글 눌러 펼침 */
+.nv-sup { margin: 22px 10px 2px; padding-top: 12px; border-top: 1px solid rgba(255,255,255,.12); font-size: 11.5px; font-weight: 800; letter-spacing: .1em; color: var(--side-ink-2); }
+button.nv-tg { width: calc(100% - 20px); background: none; border: 0; cursor: pointer; font: inherit; font-size: 12.5px; font-weight: 700; letter-spacing: .06em; color: var(--side-ink-2); padding: 6px 0; margin: 8px 10px 2px; text-align: left; }
+button.nv-tg:hover { color: var(--side-ink); }
+.nv-tg .nv-n { font-size: 11px; font-weight: 600; opacity: .7; letter-spacing: 0; }
+.nv-tg .nv-ch { width: 14px; height: 14px; margin-left: auto; fill: none; stroke: currentColor; stroke-width: 2; transition: transform .2s; }
+.nv-sec.open .nv-ch { transform: rotate(90deg); }
+.nv-sec .nv-items { display: none; }
+.nv-sec.open .nv-items { display: block; }

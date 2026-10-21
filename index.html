@@ -17,6 +17,41 @@
 .meta { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 14px; font-size: 13px; color: var(--ink-2); margin-top: 12px; }
 .meta b { color: var(--ink); font-weight: 700; }
 .meta .tabs button { font-size: 13px; padding: 4px 10px; }
+/* ===== 오너 한눈에: 상태 4칸(주간보고와 같은 기준) ===== */
+.own { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
+.ot { position: relative; display: block; background: var(--surface); border: 1px solid var(--line); border-top: 4px solid var(--tc, var(--good)); border-radius: 10px; padding: 14px 16px 12px; color: var(--ink); text-decoration: none; }
+.ot:hover { border-color: var(--tc); }
+.ot.good { --tc: var(--good); } .ot.warn { --tc: var(--warn); } .ot.bad { --tc: var(--bad); }
+.ot .hd { display: flex; align-items: center; gap: 8px; font-size: 16px; font-weight: 800; }
+.ot .st { margin-left: auto; font-size: 13px; font-weight: 800; color: var(--tc); border: 1px solid var(--tc); border-radius: 999px; padding: 1px 9px; }
+.ot .big { font-size: 40px; font-weight: 800; letter-spacing: -1.5px; line-height: 1.1; margin-top: 6px; color: var(--tc); font-variant-numeric: tabular-nums; }
+.ot .big small { font-size: 17px; letter-spacing: 0; margin-left: 2px; }
+.ot .lb { font-size: 14px; color: var(--ink-2); font-weight: 600; }
+.ot .bar { position: relative; height: 8px; border-radius: 4px; background: var(--grid); margin: 9px 0 8px; }
+.ot .bar i { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 4px; background: var(--tc); transform-origin: left; animation: grow .9s var(--ease) both .2s; }
+.ot .bar u { position: absolute; top: -4px; bottom: -4px; width: 2px; background: var(--ink); }
+.ot .ln1 { font-size: 15px; font-variant-numeric: tabular-nums; } .ot .ln1 b { font-weight: 800; }
+.ot .ln2 { font-size: 14px; color: var(--ink-2); margin-top: 3px; font-variant-numeric: tabular-nums; }
+.ot .ln2 b { color: var(--ink); }
+table.fc { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; }
+table.fc th { font-size: 14px; color: var(--ink-3); font-weight: 700; text-align: right; padding: 4px 8px 8px; border-bottom: 1px solid var(--line); white-space: nowrap; }
+table.fc td { padding: 9px 8px; text-align: right; border-bottom: 1px solid var(--grid); white-space: nowrap; font-size: 15px; }
+table.fc th.l, table.fc td.l { text-align: left; } table.fc td.l { font-weight: 700; }
+table.fc td small { display: block; font-size: 13px; color: var(--ink-3); font-weight: 500; }
+table.fc td.bad b { color: var(--bad); } table.fc td.warn b { color: var(--warn); } table.fc td.good b { color: var(--good); }
+ul.iss { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+ul.iss li { display: grid; grid-template-columns: auto 1fr; gap: 4px 10px; align-items: start; border-left: 4px solid var(--warn); background: var(--warn-bg); border-radius: 0 8px 8px 0; padding: 8px 12px; }
+ul.iss li.bad { border-left-color: var(--bad); background: var(--bad-bg, var(--warn-bg)); }
+ul.iss .ar { font-size: 13px; font-weight: 800; color: var(--ink-2); white-space: nowrap; padding-top: 1px; }
+ul.iss a { color: var(--ink); text-decoration: none; font-size: 15px; } ul.iss a:hover { text-decoration: underline; }
+ul.iss small { grid-column: 2; font-size: 13px; color: var(--ink-3); }
+details.more-d { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 0 16px; }
+details.more-d > summary { cursor: pointer; padding: 13px 0; font-size: 16px; font-weight: 800; }
+details.more-d > summary small { font-weight: 500; color: var(--ink-3); margin-left: 8px; font-size: 14px; }
+details.more-d[open] { padding-bottom: 14px; }
+table.gt tr.tot td { font-weight: 800; border-top: 1px solid var(--line); background: var(--hover); }
+@media (max-width: 1100px) { .own { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 560px) { .own { grid-template-columns: 1fr; } .ot .big { font-size: 34px; } }
 /* KPI 띠 */
 .kstrip { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 10px; }
 .k { position: relative; background: var(--surface); border: 1px solid var(--line); border-top: 3px solid var(--gc, var(--brand-2)); border-radius: 8px; padding: 10px 12px 9px; text-decoration: none; color: var(--ink); overflow: hidden; }
@@ -123,12 +158,18 @@ table.mini td.r { text-align: right; font-variant-numeric: tabular-nums; }
     <p class="hint" id="h-msg"></p>
   </section>
   <div class="dash" id="h-dash">
-    <div class="kstrip" id="h-k"><div class="skel" style="grid-column:1/-1"><i style="width:30%"></i><i></i></div></div>
-    <div class="lines" id="h-lines"></div>
-    <div class="row2"><section class="card" id="h-week" hidden></section><section class="card" id="h-grp" hidden></section><section class="card" id="h-wo" hidden></section></div>
-    <div class="row3"><section class="card" id="h-load" data-pl="G" hidden></section><section class="card" id="h-stock" hidden></section></div>
+    <div class="own" id="h-own"><div class="skel" style="grid-column:1/-1"><i style="width:30%"></i><i></i></div></div>
+    <div class="row3"><section class="card" id="h-fc" hidden></section><section class="card" id="h-iss" hidden></section></div>
+    <section class="card" id="h-grp" hidden></section>
+    <details class="more-d" id="h-more">
+      <summary>실무 상세 <small>라인별 진도 · 2주 일정 · 현장 작업지시 · 월별 도금 계획 · 발주 마감</small></summary>
+      <div class="dash">
+        <div class="lines" id="h-lines"></div>
+        <div class="row2"><section class="card" id="h-week" hidden></section><section class="card" id="h-wo" hidden></section></div>
+        <div class="row3"><section class="card" id="h-load" data-pl="G" hidden></section><section class="card" id="h-due" hidden></section></div>
+      </div>
+    </details>
     <details class="basis" id="h-basis" hidden></details>
-    <section class="card" id="h-menu"><h2>메뉴</h2><div class="menu" id="h-groups"></div></section>
   </div>
 </main>
 <footer class="foot"><div class="wrap"><span>자료는 암호화되어 게시되며 이 브라우저 안에서만 풉니다</span><span>POSCO STEELEON 도금·컬러 가동계획</span></div></footer>
