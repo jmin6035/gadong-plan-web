@@ -69,7 +69,7 @@
     const fams = [...new Set(L.flatMap((l) => P.lineFamilies[l]))];
     const leg = fams.map((f) => `<span><i class="sw" style="background:${famVar(f)}"></i>${f}</span>`).join('') + '<span><i class="sw" style="background:var(--mc)"></i>M/C·재가동</span><span><i class="sw" style="background:var(--down)"></i>설비정지·실적 미달</span><span><i class="sw" style="background:var(--sd)"></i>정기수리</span>';
     $('d-legend').innerHTML = leg;
-    $('g-legend').innerHTML = '<span><i class="sw" style="background:var(--mc)"></i>M/C·재가동</span><span><i class="sw" style="background:var(--down)"></i>설비정지·실적 미달</span><span><i class="sw" style="background:var(--sd)"></i>정기수리</span>';   // 표에는 강종 색을 안 씀(사용자 10/21) — 강종은 줄 이름 글자로
+    $('g-legend').innerHTML = '<span><i class="sw" style="background:var(--mc)"></i>M/C·재가동</span><span><i class="sw" style="background:var(--sd)"></i>정기수리</span>';   // 표에는 강종 색을 안 씀(사용자 10/21) — 강종은 줄 이름 글자로
     $('g-tabs').innerHTML = H.ym.map(([, m], i) => `<button type="button" data-g="${i}">${m}월</button>`).join('');
     const today = localToday(), ti = A.mIdx(today);
     renderGantt(gMonth == null ? (ti >= 0 ? ti : 0) : Math.min(gMonth, H.ym.length - 1));
@@ -109,10 +109,11 @@
   function renderReplan() {
     const el = $('d-replan'), rp = R.replan || {};
     const nd = (L) => new Set((L || []).map((r) => r[0])).size;
-    const src = [A && A.accHist, A && A.accLast, rp.vsPlan].filter((L) => L && L.length).sort((a, b) => nd(b) - nd(a))[0] || [];   // 날 수가 가장 많은 기록(사내 PC 매일 기록 → 홈 자료 5일 → 재계획 비교)
+    const lastD = (L) => L.reduce((a, r) => (r[0] > a ? r[0] : a), '');
+    const src = [A && A.accHist, A && A.accLast, rp.vsPlan].filter((L) => L && L.length).sort((a, b) => lastD(b).localeCompare(lastD(a)) || nd(b) - nd(a))[0] || [];   // 가장 최근 날까지 있는 기록 우선(옛 재계획 비교 10/1~6 이 뜨던 것, 10/22)   // 날 수가 가장 많은 기록(사내 PC 매일 기록 → 홈 자료 5일 → 재계획 비교)
     if (!src.length) { el.hidden = true; return; }
     el.hidden = false;
-    const L = R.P.lines, days = [...new Set(src.map((r) => r[0]))].sort().slice(-7);
+    const L = R.P.lines, d1 = lastD(src), d0 = GP.ymd(...(() => { const t = new Date(d1 + 'T00:00:00'); t.setDate(t.getDate() - 6); return [t.getFullYear(), t.getMonth() + 1, t.getDate()]; })()), days = [...new Set(src.map((r) => r[0]))].filter((d) => d >= d0).sort();   // 마지막 실적일 기준 최근 7일
     const get = (d, l) => src.find((x) => x[0] === d && x[1] === l) || [d, l, 0, 0];
     const sg = (v) => `${v > 0.5 ? '+' : v < -0.5 ? '−' : ''}${GP.fmt(Math.abs(v))}`;
     const pc = (a, p) => (p > 0 ? `${GP.fmt(a / p * 100, 1)}%` : '-');
@@ -230,7 +231,7 @@
           else if (r.kind === 'dep') { v = dep[`${l}|${d}|${r.c}`] || 0; txt = v > 0.5 ? String(Math.round(v)) : ''; }   // 일별 칸은 쉼표 없이(한 달이 폭에 맞게)
           else { const u = A.dayMin(l, d) / 60; txt = u > 0 ? u.toFixed(1) : ''; }
           tot += v;
-          const cls = [GP.isSwitch(c) ? 'mc' : '', GP.isDown(c) ? 'down' : '', d === today ? 'today' : ''].filter(Boolean).join(' ');
+          const cls = [GP.isSwitch(c) ? 'mc' : '', d === today ? 'today' : ''].filter(Boolean).join(' ');   // 실적 미달 빨간 밑줄은 뺌 — 날짜별 미달은 위 '계획 대비 실적' 표(10/22 사용자: 이게 뭔지 모름)
           h += `<td class="${cls}${txt === 'M/C' ? ' mclab' : ''}" style="--ci:${i}">${txt}</td>`;
         });
         h += `<td class="tot">${r.kind === 'hrs' ? '' : GP.fmt(tot)}</td></tr>`;

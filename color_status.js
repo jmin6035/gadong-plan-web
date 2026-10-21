@@ -69,20 +69,27 @@
     let h = `<colgroup><col class="cc0"><col class="cc1">${ds.map(() => '<col>').join('')}<col class="ctot"></colgroup><thead><tr><th class="c0" rowspan="2">라인</th><th class="c1" rowspan="2">구분</th>`
       + ds.map((d) => `<th class="${d === today ? 'today' : ''}">${+d.slice(8)}</th>`).join('') + '<th class="tot" rowspan="2">계</th></tr><tr>'
       + ds.map((d) => { const w = wd(d); return `<th class="wk ${w === '토' ? 'sat' : w === '일' ? 'sun' : ''}">${w}</th>`; }).join('') + '</tr></thead><tbody>';
-    for (const l of LINES) {
-      const gs = CG.filter((g) => ds.some((d) => ((by[`${l}|${d}`] || { g: {} }).g[g] || 0) > 0.5));
-      const rows = [{ k: 'fam' }].concat(gs.map((g) => ({ k: 'dep', g })), [{ k: 'hrs' }], ds.some((d) => dn[`${l}|${d}`]) ? [{ k: 'stop' }] : []);
+    const rowsOf = (l) => { const gs = CG.filter((g) => ds.some((d) => ((by[`${l}|${d}`] || { g: {} }).g[g] || 0) > 0.5)); return [{ k: 'fam' }].concat(gs.map((g) => ({ k: 'dep', g })), [{ k: 'hrs' }], ds.some((d) => dn[`${l}|${d}`]) ? [{ k: 'stop' }] : []); };
+    const kindOf = (l, d) => { const k = (dn[`${l}|${d}`] || []).find((x) => HARD.includes(x[0])); return k ? k[0] : 'repair'; };
+    const runsOf = (l) => { const R_ = []; ds.forEach((d, i) => { if (!fullDay(l, d)) return; const kk = kindOf(l, d), r0 = R_[R_.length - 1]; if (r0 && r0[1] === i - 1 && r0[2] === kk) r0[1] = i; else R_.push([i, i, kk]); }); return R_; };
+    const RUNS = LINES.map(runsOf), NROW = LINES.map((l) => rowsOf(l).length);
+    const same = (li, run) => li >= 0 && li < LINES.length && RUNS[li].some((x) => x[0] === run[0] && x[1] === run[1] && x[2] === run[2]);   // 위·아래 라인이 같은 날 같은 휴지면 한 칸으로 합침(10/22 사용자)
+    for (const [li, l] of LINES.entries()) {
+      const rows = rowsOf(l);
       rows.forEach((r, ri) => {
         h += `<tr class="r-${r.k}${ri === 0 ? ' first' : ''}">`;
         if (ri === 0) h += `<th class="c0 line" rowspan="${rows.length}">${l}</th>`;
         h += `<th class="c1">${r.k === 'fam' ? '<b>합계</b>' : r.k === 'dep' ? GL(r.g) : r.k === 'hrs' ? '가동시간(h)' : '휴지(h)'}</th>`;
         let t = 0;
-        const fdIdx = ds.map((d, i) => (fullDay(l, d) ? i : -1)).filter((i) => i >= 0);
-        const runs = []; fdIdx.forEach((i) => { const r0 = runs[runs.length - 1]; if (r0 && r0[1] === i - 1) r0[1] = i; else runs.push([i, i]); });
+        const runs = RUNS[li];
         ds.forEach((d, i) => {
           const run = runs.find((x) => x[0] <= i && i <= x[1]);
           if (run) {
-            if (ri === 0 && i === run[0]) { const k = (dn[`${l}|${d}`] || []).find((x) => HARD.includes(x[0])), kk = k ? k[0] : 'repair', n = run[1] - run[0] + 1; h += `<td class="sdblock k-${kk}${n === 1 ? ' one' : ''}" colspan="${n}" rowspan="${rows.length}" title="${esc(dnTxt(l, d))}">${KN[kk]}<small>${md(ds[run[0]])}${run[1] > run[0] ? '~' + md(ds[run[1]]) : ''}</small><small>${n * 24}h</small></td>`; }
+            if (ri === 0 && i === run[0] && !same(li - 1, run)) {
+              let lj = li, rs = 0; while (lj === li || same(lj, run)) { rs += NROW[lj]; lj++; }
+              const kk = run[2], n = run[1] - run[0] + 1, ls = LINES.slice(li, lj);
+              h += `<td class="sdblock k-${kk}${n === 1 ? ' one' : ''}" colspan="${n}" rowspan="${rs}" title="${esc(ls.map((x) => `${x} ${dnTxt(x, d)}`).join(' / '))}">${KN[kk]}<small>${md(ds[run[0]])}${run[1] > run[0] ? '~' + md(ds[run[1]]) : ''}</small><small>${n * 24}h</small>${ls.length > 1 ? `<small>${ls.join('·')}</small>` : ''}</td>`;
+            }
             return;
           }
           const c = by[`${l}|${d}`], T = c ? tot(c) : 0, idle = T < 0.5;
