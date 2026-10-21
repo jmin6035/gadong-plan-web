@@ -291,7 +291,8 @@
     const runsOf = (l) => { const fi = ds.map((d, i) => (full(l, d) ? i : -1)).filter((i) => i >= 0), rs = [];
       fi.forEach((i) => { const r = rs[rs.length - 1]; if (r && r[1] === i - 1) r[1] = i; else rs.push([i, i]); }); return rs; };
     const sdCell = (l, run, span) => { const d = ds[run[0]], k0 = (dn[`${l}|${d}`] || []).find((x) => HARD.includes(x[0])), kk = k0 ? k0[0] : 'plan', n = run[1] - run[0] + 1;
-      return `<td class="sdblock${n === 1 ? ' one' : ''}" colspan="${n}" rowspan="${span}" title="${esc(dTxt(l, d))}" data-d="${d}">${KN[kk]}<small>${md(ds[run[0]])}${n > 1 ? '~' + md(ds[run[1]]) : ''}</small></td>`; };
+      const SH = { plan: '휴지', sd: 'S/D', repair: '수리', jr: '정기수리' };
+      return `<td class="sdblock${n === 1 ? ' one' : ''}" colspan="${n}" rowspan="${span}" title="${esc(`${KN[kk]} ${md(ds[run[0]])}${n > 1 ? '~' + md(ds[run[1]]) : ''} · ${dTxt(l, d)}`)}" data-d="${d}">${n === 1 ? (SH[kk] || KN[kk]) : n === 2 && KN[kk].length > 3 ? SH[kk] || KN[kk] : KN[kk]}<small>${md(ds[run[0]])}${n > 1 ? '~' + md(ds[run[1]]) : ''}</small></td>`; };
     const isMC = (x) => x && /M\/C/.test(x.ev || '');
     const CGM = { 가전수출: 'C수출', 가전내수: 'C수출', 건재수출: 'C수출', 계획재: 'C건재', 주문재: 'C건재', 수요개발: 'C수요' }, CGN = { C수출: '컬러수출', C건재: '컬러건재', C수요: '수요개발' }, CGS = { C수출: '수출', C건재: '건재', C수요: '수요' };
     const cTop = (x) => { const a = {}; for (const [g, t] of Object.entries(x.g || {})) { const k = CGM[g] || (/^C/.test(g) ? g : 'C건재'); a[k] = (a[k] || 0) + t; } return Object.entries(a).sort((p, q) => q[1] - p[1])[0][0]; };
@@ -313,13 +314,13 @@
         tot += t;
         const cls = [mc ? 'mcc' : key ? `fc f-${key}` : 'idle'];
         if (t >= 999.5) cls.push('w4');
-        G2 += `<td class="${cls.join(' ')}${d === today ? ' tb' : ''}" style="--ci:${i}" data-d="${d}"${tip.length ? ` title="${esc(tip.join(' · '))}"` : ''}>${t >= 0.5 ? Math.round(t) : ''}</td>`;
+        G2 += `<td class="${cls.join(' ')}${d === today ? ' tb' : ''}" style="--ci:${i}" data-d="${d}"${tip.length ? ` title="${esc(tip.join(' · '))}"` : ''}>${t >= 0.5 ? n0(t) : ''}</td>`;
       });
       G2 += `<td class="tot"${nmc ? ` title="${l} M/C ${nmc}회"` : ''}>${n0(tot)}</td></tr>`;
     };
     const grpRow = (pl, lines) => { const src = pl === 'G' ? D.pl : D.co; let T = 0;                     // 공장 띠 = 일별 공장 생산 합(사용자 10/21)
       G2 += `<tr class="grp ${pl}"><th class="c0 gh" colspan="2">${pl === 'G' ? '도금 합' : '컬러 합'}<small>${pl === 'G' ? '1·2CGL' : '1~4CCL'}</small></th>` + ds.map((d) => { const t = lines.reduce((a, l) => a + ((src[`${l}|${d}`] || {}).t || 0), 0); T += t;
-        return `<td class="${t >= 999.5 ? 'w4' : ''}${d === today ? ' tb' : ''}" data-d="${d}" title="${md(d)} ${pl === 'G' ? '도금' : '컬러'} 생산 합 ${n0(t)}t">${t >= 0.5 ? Math.round(t) : ''}</td>`; }).join('') + `<td class="tot gt">${n0(T)}</td></tr>`; };
+        return `<td class="${t >= 999.5 ? 'w4' : ''}${d === today ? ' tb' : ''}" data-d="${d}" title="${md(d)} ${pl === 'G' ? '도금' : '컬러'} 생산 합 ${n0(t)}t">${t >= 0.5 ? n0(t) : ''}</td>`; }).join('') + `<td class="tot gt">${n0(T)}</td></tr>`; };
     if (UI.inScope('G')) { grpRow('G', ['1CGL', '2CGL']); for (const l of ['1CGL', '2CGL']) lineBlock('G', l); }
     if (UI.inScope('C')) { if (UI.inScope('G')) G2 += `<tr class="gap"><td colspan="${ds.length + 3}"></td></tr>`; grpRow('C', ['1CCL', '2CCL', '3CCL', '4CCL']); for (const l of ['1CCL', '2CCL', '3CCL', '4CCL']) lineBlock('C', l); }
     const sw = (c, t) => `<span><i class="sw ${c}"></i>${t}</span>`, sep = '<i class="gsep"></i>';
@@ -335,7 +336,7 @@
         let tot = 0;
         ds.forEach((d, i) => {
           let txt = '', cls = [], tip = '';
-          if (rk === 's') { const x = gship(g, d); tot += x.t; if (x.t >= 0.5) { txt = String(Math.round(x.t)); cls.push('sh'); if (x.t >= 999.5) cls.push(x.t >= 9999.5 ? 'w5' : 'w4'); tip = `${md(d)} ${NM[g]} 출하 ${n0(x.t)}t${x.act ? ' (MES 출하 실적)' : ' (계획 출고)'}`; } }
+          if (rk === 's') { const x = gship(g, d); tot += x.t; if (x.t >= 0.5) { txt = n0(x.t); cls.push('sh'); if (x.t >= 999.5) cls.push(x.t >= 9999.5 ? 'w5' : 'w4'); tip = `${md(d)} ${NM[g]} 출하 ${n0(x.t)}t${x.act ? ' (MES 출하 실적)' : ' (계획 출고)'}`; } }
           else { const x = D.sw[`${g}|${d}`]; if (x) { const r = x.tgt ? x.v / x.tgt : 0; txt = (x.v / 1000).toFixed(1); tip = `${md(d)} ${NM[g]} 기말 재고 ${n0(x.v)}t / 목표 ${n0(x.tgt)}t (${x.tgt ? Math.round(r * 100) : '-'}%)`; cls.push(x.v < 0 ? 'neg' : !x.tgt ? '' : r > 1.3 ? 'hi2' : r > 1 ? 'hi' : 'ok'); } }
           S2 += `<td class="${cls.join(' ')}${dayCls(d)}" style="--ci:${i}" data-d="${d}"${tip ? ` title="${esc(tip)}"` : ''}>${txt}</td>`;
         });
@@ -346,7 +347,7 @@
       S2 += `<tr class="grp ${cls}${ri === 0 ? ' first' : ''}">` + (ri === 0 ? `<th class="c0 gh" rowspan="2">${lab}</th>` : '') + `<th class="c1 gh2">${lb}</th>`;
       let tot = 0;
       ds.forEach((d) => { let txt = '', tip = '';
-        if (rk === 's') { const t = gs.reduce((a, g) => a + gship(g, d).t, 0); tot += t; if (t >= 0.5) { txt = String(Math.round(t)); tip = `${md(d)} ${lab} 출하 ${n0(t)}t`; } S2 += `<td class="${t >= 9999.5 ? 'w5' : t >= 999.5 ? 'w4' : ''}${d === today ? ' tb' : ''}" data-d="${d}"${tip ? ` title="${esc(tip)}"` : ''}>${txt}</td>`; return; }
+        if (rk === 's') { const t = gs.reduce((a, g) => a + gship(g, d).t, 0); tot += t; if (t >= 0.5) { txt = n0(t); tip = `${md(d)} ${lab} 출하 ${n0(t)}t`; } S2 += `<td class="${t >= 9999.5 ? 'w5' : t >= 999.5 ? 'w4' : ''}${d === today ? ' tb' : ''}" data-d="${d}"${tip ? ` title="${esc(tip)}"` : ''}>${txt}</td>`; return; }
         const xs = gs.map((g) => D.sw[`${g}|${d}`]).filter(Boolean); if (xs.length) { const v = xs.reduce((a, x) => a + x.v, 0), tg = xs.reduce((a, x) => a + (x.tgt || 0), 0); txt = (v / 1000).toFixed(1); tip = `${md(d)} ${lab} 기말 재고 ${n0(v)}t / 목표 ${n0(tg)}t (${tg ? Math.round(v / tg * 100) : '-'}%)`; }
         S2 += `<td class="${d === today ? 'tb' : ''}" data-d="${d}"${tip ? ` title="${esc(tip)}"` : ''}>${txt}</td>`; });
       S2 += `<td class="tot gt">${rk === 's' ? n0(tot) : ''}</td></tr>`;
@@ -378,7 +379,12 @@
     typeCal(ds, head);
     document.querySelectorAll('#s-cal [data-d]').forEach((el) => el.onclick = () => pick(el.dataset.d, 'g'));      // 가동 캘린더 → 생산 상세
     document.querySelectorAll('#s-cal2 [data-d]').forEach((el) => el.onclick = () => pick(el.dataset.d, 'm'));     // 소재 캘린더 → 소재 상세
-    for (const [w, t] of [[$('s-calw'), $('s-cal')], [$('s-calw3'), $('s-cal3')], [$('s-calw2'), $('s-cal2')]]) { const th = t.querySelector(`thead th[data-d="${add(today, -2)}"]`); if (th && w.scrollWidth > w.clientWidth) { const st = [...t.querySelectorAll('thead tr:first-child :is(.c0,.c1,.lb)')].reduce((a, x) => a + x.getBoundingClientRect().width, 0) || 122; w.scrollLeft = Math.round(th.getBoundingClientRect().left - t.getBoundingClientRect().left - st); } }   // 고정 칸 폭만큼 정확히 — 날짜 칸이 반쯤 가려져 '깨져 보이던' 것(10/21)
+    const snap = () => { for (const [w, t] of [[$('s-calw'), $('s-cal')], [$('s-calw3'), $('s-cal3')], [$('s-calw2'), $('s-cal2')]]) { if (!w || !t) continue; const th = t.querySelector(`thead th[data-d="${add(today, -2)}"]`); if (!th || w.scrollWidth <= w.clientWidth) continue;
+      const t0 = t.getBoundingClientRect().left, st = [...t.querySelectorAll('thead tr:first-child :is(.c0,.c1,.lb)')].reduce((a, x) => a + x.getBoundingClientRect().width, 0) || 122;
+      const mx = w.scrollWidth - w.clientWidth, want = th.getBoundingClientRect().left - t0 - st;
+      const cand = [...t.querySelectorAll('thead tr:first-child th[data-d]')].map((x) => x.getBoundingClientRect().left - t0 - st).filter((v) => v <= Math.min(want, mx) + 0.5);   // 칸 경계에만 멈춤(끝까지 밀려 칸이 반쯤 가려지던 것)
+      w.scrollLeft = Math.max(0, Math.ceil(cand.length ? Math.max(...cand) : 0)); } };   // 고정 칸 폭만큼 정확히(날짜 칸이 반쯤 가려져 '깨져 보이던' 것, 10/21) — 글꼴·폭이 정해진 뒤 다시 맞춤
+    snap(); requestAnimationFrame(snap); setTimeout(snap, 400);
     const sync = (a, b) => a.addEventListener('scroll', () => { if (Math.abs(b.scrollLeft - a.scrollLeft) > 1) b.scrollLeft = a.scrollLeft; });   // 두 달력 가로 스크롤 함께
     if (!cal.synced) { const W3 = [$('s-calw'), $('s-calw3'), $('s-calw2')]; for (const x of W3) for (const y of W3) if (x !== y) sync(x, y); cal.synced = true; }
     charts(ds);

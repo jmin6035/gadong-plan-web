@@ -214,7 +214,7 @@ html body main :is(#s-cal, #s-ship) { min-width: 1500px !important; }
 :is(#s-cal, #s-ship) .c1 { box-shadow: 2px 0 0 var(--line); }
 :is(#s-cal, #s-ship) tbody td { color: var(--ink); }
 :is(#s-cal, #s-ship) tr.grp > * { background: var(--pt-gbg) !important; color: var(--ink) !important; border-bottom: 1px solid var(--line) !important; border-right-color: var(--grid) !important; }
-:is(#s-cal, #s-ship) tr.grp .gh { box-shadow: inset 4px 0 0 var(--pt-g), 4px 0 0 var(--pt-gbg); } :is(#s-cal, #s-ship) tr.grp.C .gh { box-shadow: inset 4px 0 0 var(--pt-c), 4px 0 0 var(--pt-gbg); }
+:is(#s-cal, #s-ship) tr.grp .gh { box-shadow: inset 4px 0 0 var(--pt-g); } :is(#s-cal, #s-ship) tr.grp.C .gh { box-shadow: inset 4px 0 0 var(--pt-c); }
 :is(#s-cal, #s-ship) tr.grp .gh small, :is(#s-cal, #s-ship) tr.grp .gh2 { color: var(--ink-3) !important; opacity: 1; }
 :is(#s-cal, #s-ship) tr.grp td.tot.gt, :is(#s-cal, #s-ship) tr.grp.C td.tot.gt, :is(#s-cal, #s-ship) tr.grp.A td.tot.gt { background: var(--pt-gbg2) !important; color: var(--ink) !important; }
 :is(#s-cal, #s-ship) tr.grp td.tb { border-left: 2px solid var(--brand-2); }
@@ -249,6 +249,31 @@ html body main :is(#s-cal, #s-ship) { min-width: 1500px !important; }
 #s-cal td.sdblock.one { writing-mode: horizontal-tb !important; font-size: 11px; }
 .glegend .sw.f-AL { background: color-mix(in srgb, var(--pt-AL) 30%, var(--surface)); } .glegend .sw.f-AZ { background: color-mix(in srgb, var(--pt-AZ) 30%, var(--surface)); } .glegend .sw.f-MAC { background: color-mix(in srgb, var(--pt-MAC) 30%, var(--surface)); }
 .glegend .sw.f-C수출 { background: color-mix(in srgb, var(--pt-Cx) 30%, var(--surface)); } .glegend .sw.f-C건재 { background: color-mix(in srgb, var(--pt-Cb) 30%, var(--surface)); } .glegend .sw.f-C수요 { background: color-mix(in srgb, var(--pt-Cd) 30%, var(--surface)); }
+
+/* 가동 캘린더 5차(10/21 사용자: 계획휴지 글자 잘림 · 생산 없음 색 안 보임 · 1,000t 쉼표) */
+html body main #s-cal { min-width: 1180px !important; }
+html :is(#s-cal, #s-ship) tbody td.w4, html :is(#s-cal, #s-ship) tbody td.w5 { font-size: 12.5px !important; letter-spacing: -0.2px !important; }
+#s-cal tr.r-p td.idle, #s-cal tr.grp td.idle { background: repeating-linear-gradient(135deg, var(--pt-idle1) 0 4px, var(--pt-idle2) 4px 8px) !important; }
+.glegend .sw.idsw { background: repeating-linear-gradient(135deg, var(--pt-idle1) 0 3px, var(--pt-idle2) 3px 6px) !important; box-shadow: inset 0 0 0 1px var(--line) !important; }
+#s-cal td.sdblock.one { font-size: 12px !important; padding: 2px 0 !important; }
+#s-cal td.sdblock.one small { display: none !important; }
+:root { --pt-idle1: #c9d0d9; --pt-idle2: #eef1f4; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --pt-idle1: #46505d; --pt-idle2: #252c35; } }
+:root[data-theme="dark"] { --pt-idle1: #46505d; --pt-idle2: #252c35; }
+
+/* 계 칸은 오른쪽에 고정(스크롤해도 늘 보이게, 10/21) */
+:is(#s-cal, #s-ship) .tot { position: sticky; right: 0; z-index: 3; box-shadow: -2px 0 0 var(--line); }
+:is(#s-cal, #s-ship) thead .tot { z-index: 4; }
+
+/* 한 달이 넓은 화면에 스크롤 없이 들어가게(칸이 가려지지 않게, 10/21): 라인 칸 96px, 숫자 12.5px */
+html #s-cal col.cc0 { width: 52px !important; } html #s-cal col.cc1 { width: 44px !important; } html #s-cal col.ctot { width: 64px !important; }
+html #s-cal .c1 { left: 52px !important; }
+html #s-cal tbody td { font-size: 12.5px !important; letter-spacing: -0.3px !important; }
+html #s-cal tbody td.tot { font-size: 12.5px !important; letter-spacing: 0 !important; }
+
+html #s-cal tr.grp td { font-size: 12px !important; font-weight: 700 !important; letter-spacing: -0.4px !important; padding-left: 0 !important; padding-right: 0 !important; }
+html #s-cal tr.grp td.tot { font-size: 13px !important; letter-spacing: 0 !important; }
+html #s-cal tr.r-p td { font-size: 12px !important; letter-spacing: -0.35px !important; }
 </style>
 </head>
 <body>
