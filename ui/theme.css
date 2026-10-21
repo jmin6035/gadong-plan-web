@@ -871,22 +871,49 @@ html body .gtable td.kt-test { background: color-mix(in srgb, var(--k-test) 35%,
 svg.vz { display: block; width: 100%; height: auto; overflow: visible; } svg.vz text { font-size: 13px; fill: var(--ink-3); } svg.vz text.v { fill: var(--ink); font-weight: 700; }
 svg.vz .gl { stroke: var(--vz-grid); stroke-width: 1; } svg.vz .ax { stroke: var(--ink-3); stroke-width: 1; }
 
-/* ===== 전 화면 칸·글자 정리(2026-10-21 사용자: 오와 열이 안 맞음 — 글자 몇 자에 칸이 너무 크거나, 글자가 너무 작음) =====
-   ① 열이 적은 표는 화면 폭을 꽉 채우지 않고 내용만큼(최소 520px, 넘치면 가로 스크롤) — 캘린더(gtable·sc)·색 지도는 그대로
-   ② 화면 글자 최소 12px(캘린더 4자리 숫자만 11px) */
-html body :is(table.t, table.data, table.edit, table.dt):not(.gtable):not(.sc):not(.du-g):not(.wo):not(.bd):not(.full) { width: auto; min-width: min(100%, 360px); max-width: 100%; }
-html body :is(table.t, table.data, table.edit, table.dt):not(.gtable):not(.sc) td.why { max-width: 560px; }
-html body main :is(small, .small) { font-size: max(12px, .85em) !important; }
-html body main table.gtable td { font-size: 12px !important; } html body main table.gtable th { font-size: max(12px, 1em) !important; }
-html body main table.gtable td.w4, html body main table.gtable td.w5, html body main table.sc td.w4 { font-size: 11px !important; }
-html body main :is(.vz-y span, .vz-cap small, .sp-ax span, .cc-ax span, .st-s small, .lg small, button.lg small) { font-size: 12px !important; }
-html body main table.t.wo span, html body main table.dt.mt small, html body main table.sc :is(td, th, span) { font-size: max(12px, 1em) !important; }
-html body main table.t.wo td.l { overflow: visible; white-space: normal; overflow-wrap: anywhere; }
-html body main div.ln { font-size: max(12px, 1em); }
-html body main :is(.k .s, .ln .sp-cap, .ln .nx) { white-space: normal; overflow: visible; text-overflow: clip; line-height: 1.35; font-size: max(12px, 1em); }   /* 홈 카드 보조 글: 잘림(…) 대신 두 줄 */
-html body main .srcl { font-size: 12px !important; }
-html body main table.t.wo td.l { white-space: normal !important; }
+/* ===== 글자 크기 체계(2026-10-21 사용자: "글자를 작게 할 필요 없고, 글자를 크게 해서 칸을 넓게 쓰면 된다") =====
+   표는 화면 폭을 꽉 채우고 글자를 키움 — 본문·표 칸 16 · 표 머리 15 · 보조 글(작은 글·설명·단위·태그·범례) 14 이상
+   캘린더(31일 한 줄)는 13.5(4자리 숫자 칸 12.5), 넘치면 가로 스크롤 */
+html body main :is(table.t, table.data, table.edit, table.dt, table.gt, table.evt, table.vs) { width: 100%; }
+html body main :is(table.t, table.data, table.edit, table.dt, table.gt, table.evt, table.vs) td { font-size: 16px !important; }
+html body main :is(table.t, table.data, table.edit, table.dt, table.gt, table.evt, table.vs) th { font-size: 15px !important; }
+html body main :is(table.t, table.data, table.edit, table.dt) td.why { font-size: 15px !important; }
+html body main table.dt :is(th, td) { padding: 8px 10px; }
+html body main :is(small, .small, .hint, .muted, .unit, .tag, .st, .pill, .docmeta, .bk, .legend span, .lg, .lg span, .lg small, .glegend span, .vz-lg span) { font-size: max(14px, .85em) !important; }
+html body main :is(td, th) :is(small, .small, .muted, .bk, .tag, .st, .pill, span.mu) { font-size: 14px !important; }
+/* 타일·카드 보조 글 */
+html body main :is(.kpi .b, .kpi .l, .sum-l, .sum-s, .sum-a span, .st-s, .st-s small, .st-h .st-b, .st-w, .wk-k span, .wk-k b, .wk-ch p, .ln-card p, .lrow span, .ln .nums, .ln .nums b, a.k .l, .cc-src small, .cc-line p, .cp-head span, .cp-n small, .cp-v small, dd small, .gm-t span, .cal-note, .fin, .fto, .srcl, .why, .pre, .kd2) { font-size: 14px !important; }
+html body main :is(.vz-y span, .vz-cap small, .vz-cap b, .sp-ax span, .cc-ax span, .dv-dh span, .dv-wh) { font-size: 13.5px !important; }
+html body main div.ln { font-size: max(14px, 1em); }
+html body main :is(.k .s, .ln .sp-cap, .ln .nx) { white-space: normal; overflow: visible; text-overflow: clip; line-height: 1.4; font-size: 14px; }   /* 홈 카드 보조 글: 잘림(…) 대신 두 줄 */
+/* 가동 캘린더 상세 — 소재 → 생산 → 납기 흐름 */
+html body main .flw .fs { padding: 4px 10px; } html body main .flw .fs small { font-size: 13px !important; } html body main .flw .fs b { font-size: 15px !important; }
+html body main table.dt.fl td.st { font-size: 14.5px !important; min-width: 180px; max-width: 280px; }
+html body main .det h3 { font-size: 18px; }
+/* 캘린더(31일) */
+html body main table.gtable td { font-size: 13.5px !important; } html body main table.gtable th { font-size: 14px !important; }
+html body main :is(table.gtable td.w4, table.gtable td.w5, table.sc td.w4) { font-size: 12.5px !important; }
+html body main table.sc :is(td, th, span) { font-size: 13.5px !important; }
+html body main .calc .chip { font-size: 13.5px !important; } html body main .calc .more { font-size: 13px !important; }
+html body main button.dv-c :is(b, small) { font-size: 13.5px !important; }
+/* 작업지시 표 */
+html body main table.t.wo td.l { overflow: visible; white-space: normal !important; overflow-wrap: anywhere; }
 html body main table.t.wo td.l .bk { white-space: normal; overflow-wrap: anywhere; }
 html body main table.t.wo td.chg { white-space: normal !important; overflow: visible; }
+html body main table.t.wo :is(div.sp2, .wo-dl) { font-size: 15px; }
+/* 간격 */
 html body main .card :is(.g2, .grid2, .two, .wk-grid):not(:first-child) { margin-top: var(--gap); }
 html body main #c-src.cc-steps { grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); }
+html body main :is(.docmeta b, #h-meta, #h-meta b, .hd .fam, .wo-l b, .wo-l span, .pg-g span, .ln-big span, .gm-leg span, .ln-mixl span, h2 .num, label > span, .gt, table.t.wo .sp2, table.t.wo td > b) { font-size: 14px !important; }
+html body main :is(.strip span, .calc .more) { font-size: 13px !important; }
+html body main .flw .fs small { font-size: 13.5px !important; }
+html body main :is(ul, ol) > li { font-size: max(14px, 1em); }
+/* 31일 캘린더: 하루 칸을 48px 이상으로 — 글자를 줄이지 않고 표를 넓혀 가로 스크롤(왼쪽 라인·구분 열은 고정) */
+html body main :is(#s-cal, #s-ship, #g-table, table.sc) { min-width: 1760px !important; }
+html body main :is(table.gtable td.w4, table.gtable td.w5, table.sc td.w4) { font-size: 13.5px !important; }
+/* 가동 상세: 흐름(소재 → 생산 → 납기)은 칸이 모자라면 다음 줄로 */
+html body main .flw { flex-wrap: wrap; white-space: normal; row-gap: 5px; }
+html body main .det table.dt td { white-space: normal; }
+html body main :is(#s-cal, #s-ship, #g-table) :is(.c0, .c1) { z-index: 6; }
+html body main :is(.k .v, .kpi .v, .sum-v, .st-v) small { font-size: 15px !important; }   /* 큰 숫자 옆 단위는 작게 유지 */
+html body main table.t.wo th { white-space: normal !important; line-height: 1.3; }

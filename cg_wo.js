@@ -55,7 +55,7 @@
       }
       h += row(x, cur);
     });
-    return `<div class="scroll"><table class="t wo cgwo"><colgroup><col style="width:54px"><col style="width:124px"><col style="width:160px"><col style="width:84px"><col style="width:210px"><col style="width:124px"><col><col style="width:190px"></colgroup>${HEAD}<tbody>${h}</tbody></table></div>`
+    return `<div class="scroll"><table class="t wo cgwo"><colgroup><col style="width:56px"><col style="width:136px"><col style="width:160px"><col style="width:84px"><col style="width:200px"><col style="width:124px"><col><col style="width:180px"></colgroup>${HEAD}<tbody>${h}</tbody></table></div>`
       + '<p class="hint lg"><i class="sr"></i>생산 <i class="sd"></i>예상 더미(앞 코일과 바뀜) — 띠에 마우스를 올리면 내용이 보입니다. 시각·톤은 추정(1010 표에 무게가 없음)</p>';
   }
 
