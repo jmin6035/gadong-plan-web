@@ -44,7 +44,12 @@
     render();
   }
   // 지난 날짜 가동시간 = MES 도금 실적(사내 PC 게시 plating_actual.enc.json 의 dayMin) — 없으면 환산값(최대 24h)
+  async function accFromPortal(pw) {
+    try { const e = await GP.latest('portal.enc.json'); if (!e || !A) return; const o = await GP.decryptJSON(e, pw);
+      const L = Object.values((o && o.acc) || {}).flatMap((x) => x.last || []); if (L.length) { A.accLast = L; render(); } } catch (err) { /* 없으면 재계획 비교 */ }
+  }
   async function actualMinutes(pw) {
+    accFromPortal(pw);
     try {
       const e = await GP.latest('plating_actual.enc.json'); if (!e || !A) return;
       const x = await GP.decryptJSON(e, pw); if (!x || !x.dayMin) return;
@@ -61,14 +66,6 @@
     $('d-title').textContent = `'${String(H.ym[0][0]).slice(2)}.${H.ym.map(([, m]) => m).join('·')}월 도금 CGL 가동계획`;
     $('d-meta').textContent = [meta.asOf && `판매계획 기준 ${meta.asOf}`, meta.savedAt && `계산 ${new Date(meta.savedAt).toLocaleString('ko-KR')}`, meta.auto && `MES 자동 갱신 ${new Date(meta.auto.runAt).toLocaleString('ko-KR')}${meta.auto.actualTo ? ` (실적 ~${GP.md(meta.auto.actualTo)})` : ''}`, `계획 기간 ${H.D0} ~ ${H.D1}`].filter(Boolean).join(' · ');
     renderNow(); renderReplan();
-    const mcT = GP.sum(L, (l) => A.mc[l]), maxLoad = Math.max(...Object.values(A.load));
-    const maxKey = Object.keys(A.load).find((k) => A.load[k] === maxLoad), [ml, mi] = maxKey.split('|');
-    $('d-kpis').innerHTML = [
-      [`${mcT}회`, 'M/C(강종 전환)', `${L.map((l) => `${l} ${A.mc[l]}회`).join(' · ')}`],
-      [`${GP.fmt(A.short + A.lateT)}t`, '결품·지연', `결품 ${GP.fmt(A.short)}t · 지연 ${GP.fmt(A.lateT)}t`, A.short + A.lateT > 0.5],
-      [`${GP.fmt(A.earlyT)}t`, '전월 선생산', '납기월 이전 생산'],
-      [`${GP.fmt(maxLoad * 100, 1)}%`, '최대 월 부하', `${H.ym[+mi][1]}월 ${ml}`, maxLoad > 0.995],
-    ].map(([v, l, sub, bad]) => `<div class="kpi ${bad ? 'bad' : ''}"><span class="kl">${l}</span><b>${v}</b><span class="ks">${sub}</span></div>`).join('');
     const fams = [...new Set(L.flatMap((l) => P.lineFamilies[l]))];
     const leg = fams.map((f) => `<span><i class="sw" style="background:${famVar(f)}"></i>${f}</span>`).join('') + '<span><i class="sw" style="background:var(--mc)"></i>M/C·재가동</span><span><i class="sw" style="background:var(--down)"></i>설비정지·실적 미달</span><span><i class="sw" style="background:var(--sd)"></i>정기수리</span>';
     $('d-legend').innerHTML = leg;
@@ -111,7 +108,8 @@
   // 계획 대비 실적(사용자 10/21): 최근 7일, 날마다 '그날 아침 계획 vs 실적'(사내 PC 매일 기록 accHist, 없으면 재계획 비교) — 라인마다 계획·실적·차이 줄, 부서별 비교는 뺌(계획상 그날 부서는 정해지지 않음)
   function renderReplan() {
     const el = $('d-replan'), rp = R.replan || {};
-    const src = (A && A.accHist && A.accHist.length) ? A.accHist : (rp.vsPlan || []);
+    const nd = (L) => new Set((L || []).map((r) => r[0])).size;
+    const src = [A && A.accHist, A && A.accLast, rp.vsPlan].filter((L) => L && L.length).sort((a, b) => nd(b) - nd(a))[0] || [];   // 날 수가 가장 많은 기록(사내 PC 매일 기록 → 홈 자료 5일 → 재계획 비교)
     if (!src.length) { el.hidden = true; return; }
     el.hidden = false;
     const L = R.P.lines, days = [...new Set(src.map((r) => r[0]))].sort().slice(-7);
@@ -127,7 +125,7 @@
         + tr('<th class="k">차이</th>', (d) => A_(d) - P(d), 'df', `<td class="n s ${ca - cp < -0.5 ? 'neg' : ca - cp > 0.5 ? 'pos' : ''}">${sg(ca - cp)}</td>`);
     }).join('');
     el.innerHTML = `<h2>계획 대비 실적 <small class="muted">최근 ${days.length}일 · 계획 = 그날 아침 재계획이 잡은 생산 · 단위 톤 · 차이 = 실적 − 계획(빨강 = 미달)</small></h2>
-      <div class="scroll"><table class="vs3"><thead><tr><th colspan="2">라인</th>${days.map((d) => `<th>${GP.md(d)}</th>`).join('')}<th>${days.length}일 합</th><th>달성</th></tr></thead><tbody>${body}</tbody></table></div>`;
+      <div class="scroll"><table class="vs3"><colgroup><col style="width:72px"><col style="width:68px">${days.map(() => '<col>').join('')}<col style="width:11%"><col style="width:9%"></colgroup><thead><tr><th colspan="2">라인</th>${days.map((d) => `<th>${GP.md(d)}</th>`).join('')}<th>${days.length}일 합</th><th>달성</th></tr></thead><tbody>${body}</tbody></table></div>`;
   }
   // ---------------- 일별 차트 (라인별 작은 배수, 같은 y축) ----------------
   function renderDaily() {

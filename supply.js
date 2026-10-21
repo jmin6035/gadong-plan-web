@@ -383,12 +383,18 @@
     typeCal(ds, head);
     document.querySelectorAll('#s-cal [data-d]').forEach((el) => el.onclick = () => pick(el.dataset.d, 'g'));      // 가동 캘린더 → 생산 상세
     document.querySelectorAll('#s-cal2 [data-d]').forEach((el) => el.onclick = () => pick(el.dataset.d, 'm'));     // 소재 캘린더 → 소재 상세
-    const snap = () => { for (const [w, t] of [[$('s-calw'), $('s-cal')], [$('s-calw3'), $('s-cal3')], [$('s-calw2'), $('s-cal2')]]) { if (!w || !t) continue; const th = t.querySelector(`thead th[data-d="${add(today, -2)}"]`); if (!th || w.scrollWidth <= w.clientWidth) continue;
-      const t0 = t.getBoundingClientRect().left, st = [...t.querySelectorAll('thead tr:first-child :is(.c0,.c1,.lb)')].reduce((a, x) => a + x.getBoundingClientRect().width, 0) || 122;
-      const mx = w.scrollWidth - w.clientWidth, want = th.getBoundingClientRect().left - t0 - st;
-      const cand = [...t.querySelectorAll('thead tr:first-child th[data-d]')].map((x) => x.getBoundingClientRect().left - t0 - st).filter((v) => v <= Math.min(want, mx) + 0.5);   // 칸 경계에만 멈춤(끝까지 밀려 칸이 반쯤 가려지던 것)
-      w.scrollLeft = Math.max(0, Math.ceil(cand.length ? Math.max(...cand) : 0)); } };   // 고정 칸 폭만큼 정확히(날짜 칸이 반쯤 가려져 '깨져 보이던' 것, 10/21) — 글꼴·폭이 정해진 뒤 다시 맞춤
-    snap(); requestAnimationFrame(snap); setTimeout(snap, 400);
+    const snap = () => { for (const [w, t] of [[$('s-calw'), $('s-cal')], [$('s-shw'), $('s-ship')], [$('s-calw3'), $('s-cal3')], [$('s-calw2'), $('s-cal2')]]) { if (!w || !t || !w.offsetParent) continue; w.style.maxWidth = ''; const th = t.querySelector(`thead th[data-d="${add(today, -2)}"]`); if (!th || w.scrollWidth <= w.clientWidth) continue;
+      const r0 = t.querySelector('thead tr:first-child'), t0 = t.getBoundingClientRect().left;
+      const st = [...r0.querySelectorAll(':is(.c0,.c1,.lb)')].reduce((a, x) => a + x.getBoundingClientRect().width, 0) || 122, tw = (r0.querySelector('.tot') || { getBoundingClientRect: () => ({ width: 0 }) }).getBoundingClientRect().width;
+      const cols = [...r0.querySelectorAll('th[data-d]')].map((x) => { const r = x.getBoundingClientRect(); return [r.left - t0 - st, r.right - t0 - st]; });
+      const A = w.clientWidth - st - tw, want = th.getBoundingClientRect().left - t0 - st;   // 날짜 칸이 들어갈 폭
+      let i = cols.findIndex((c) => c[0] >= want - 0.5); if (i < 0) i = 0;
+      while (i > 0 && cols[cols.length - 1][1] - cols[i - 1][0] <= A + 0.5) i--;               // 끝까지 다 보이면 앞 칸을 더 보여 줌
+      let j = i; while (j + 1 < cols.length && cols[j + 1][1] - cols[i][0] <= A + 0.5) j++;
+      w.style.maxWidth = Math.floor(st + tw + cols[j][1] - cols[i][0]) + 'px';                 // 보이는 폭을 날짜 칸 경계에 맞춤 — 왼쪽(라인)·오른쪽(계) 고정 칸에 날짜가 반쯤 가려지지 않게(10/21 사용자: 겹친다)
+      w.scrollLeft = Math.max(0, Math.round(cols[i][0])); } };
+    if (!cal.snapR) { const ro = new ResizeObserver(() => { clearTimeout(cal.snapT); cal.snapT = setTimeout(() => cal.snap && cal.snap(), 120); }); ['s-calw', 's-shw', 's-calw3', 's-calw2'].forEach((id) => { const e = document.getElementById(id); if (e && e.parentElement) ro.observe(e.parentElement); }); document.querySelectorAll('details.tv').forEach((x) => x.addEventListener('toggle', () => setTimeout(() => cal.snap(), 30))); cal.snapR = true; }
+    cal.snap = snap; snap(); requestAnimationFrame(snap); setTimeout(snap, 400);
     const sync = (a, b) => a.addEventListener('scroll', () => { if (Math.abs(b.scrollLeft - a.scrollLeft) > 1) b.scrollLeft = a.scrollLeft; });   // 두 달력 가로 스크롤 함께
     if (!cal.synced) { const W3 = [$('s-calw'), $('s-calw3'), $('s-calw2')]; for (const x of W3) for (const y of W3) if (x !== y) sync(x, y); cal.synced = true; }
     charts(ds);

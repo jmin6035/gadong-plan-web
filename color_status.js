@@ -47,14 +47,6 @@
     $('d-empty').hidden = true; $('d-body').hidden = false;
     $('d-title').textContent = `'26.${MONTHS.map((m) => +m.slice(5)).join('·')}월 컬러 CCL 가동계획`;
     $('d-meta').textContent = [`확정 계획(계획재 = 운영안 반영)`, `계산 ${String(O.built).replace('T', ' ')}`, lastAct && `실적 ~${md(lastAct)}`, '계획 기간 2026-10-01 ~ 2026-12-31'].filter(Boolean).join(' · ');
-    const q = sum(MONTHS, (m) => monT(m)), pl = sum(O.color, (c) => c.g['계획재'] || 0);
-    let mx = 0, mxK = ''; for (const l of LINES) MONTHS.forEach((m) => { const v = load(m, l); if (v > mx) { mx = v; mxK = `${+m.slice(5)}월 ${l}`; } });
-    $('d-kpis').innerHTML = [
-      [`${fmt(q)}t`, '4분기 컬러 생산', MONTHS.map((m) => `${+m.slice(5)}월 ${fmt(monT(m))}`).join(' · ')],
-      [`${fmt(unT())}t`, '미편성(일정에 못 넣은 판매계획)', MONTHS.map((m) => `${+m.slice(5)}월 ${fmt(unT(m))}`).join(' · ') + ' — 라인 한도·가동시간 부족', unT() > 500],
-      [`${fmt(pl)}t`, '계획재', `4분기 생산의 ${fmt(pl / q * 100)}%`],
-      [`${fmt(mx * 100, 1)}%`, '최대 월 부하', `${mxK} (편성 ÷ MES 월차)`, mx > 0.995],
-    ].map(([v, l, sub, bad]) => `<div class="kpi ${bad ? 'bad' : ''}"><span class="kl">${l}</span><b>${v}</b><span class="ks">${sub}</span></div>`).join('');
     const kinds = new Set((O.colorDown || []).map((x) => x[2]));
     const leg = Object.keys(KN).filter((k) => kinds.has(k)).map((k) => `<span><i class="sw k-${k}"></i>${KN[k]}</span>`).join('')
       + '<span>· 휴지(h) 행 = 그날 휴지 시간(종류 색), 종일 정지는 블록</span><span><i class="sw" style="background:var(--sd)"></i>가동 없음</span>';
