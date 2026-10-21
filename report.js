@@ -201,12 +201,12 @@
       `<p class="hint">막대 = 실적 누계 · 세로선 = ${asOfS}까지 일정 · 10월 계획 ${n0(pG && pG.month)}t</p></div>`;
     if (pa) b += box('c-pl-plan', '4분기 누적 생산 — 확정 계획 vs 실적', 't');
     b += '</div>';
-    let d = '<div class="scroll"><table class="t"><thead><tr><th>라인</th><th>12주 평균 t/일</th><th>보고 주 t/일</th><th>증감</th><th>속도 t/hr</th><th>평균 두께 mm</th><th>휴지 h/일</th></tr></thead><tbody>' +
+    let d = '<div class="scroll"><table class="t"><thead><tr><th>라인</th><th>앞 ${(o.period && o.period.nW0) || 12}주 평균 t/일</th><th>보고 주 t/일</th><th>증감</th><th>속도 t/hr <span class="muted">정지 포함</span></th><th>평균 두께 mm</th><th>가동일당 휴지 h</th></tr></thead><tbody>' +
       pl.rows.map((r, k) => `<tr><td class="l"><span class="sw" style="background:var(${SER[k]})"></span>${r.line}</td><td>${n0(r.w0.tpd)}</td><td><b>${n0(r.w1.tpd)}</b></td><td>${delta(r.dTpd)}</td><td>${n1(r.w0.tph)} → ${n1(r.w1.tph)}</td><td>${n3(r.w0.thick)} → ${n3(r.w1.thick)}</td><td>${n1(r.w0.stopH)} → ${n1(r.w1.stopH)}</td></tr>`).join('') + '</tbody></table></div>';
     d += '<div class="grid2">' + box('c-pl-trend', '주별 생산량', 't/일') + '<div>';
     if (pa) d += '<p class="ttl">강종 전환(M/C) 일정</p><div class="scroll"><table class="t"><thead><tr><th>일자</th><th>라인</th><th>전환</th></tr></thead><tbody>' +
       pa.upcomingMC.map((m) => `<tr><td class="l">${md(m.day)}</td><td class="l">${m.line}</td><td class="l">${esc(m.from)} → ${esc(m.to)}</td></tr>`).join('') + '</tbody></table></div>' +
-      `<p class="hint">재계획: 지연 ${n0(pa.late)}t · 결품 ${pa.short.length ? pa.short.length + '건' : '0'} · 잔여 강종 전환 ${pa.remainMC}회</p>`;
+      `<p class="hint">재계획: 납기 지연 ${n0(pa.late)}톤·일 · 결품 ${pa.short.length ? pa.short.length + '건' : '0'} · 잔여 강종 전환 ${pa.remainMC}회</p>`;
     d += '</div></div>';
     if (pa) d += '<p class="ttl" style="margin-top:12px">4분기 부서별 계획 대비 실적</p><div class="scroll"><table class="t"><thead><tr><th>부서</th><th>계획 t</th><th>실적 t</th><th>달성률</th></tr></thead><tbody>' +
       pa.byDept.filter((x) => x[1] || x[2]).map((x) => `<tr><td class="l">${esc(x[0])}</td><td>${n0(x[1])}</td><td><b>${n0(x[2])}</b></td><td>${x[1] ? rate(x[2], x[1]) + '%' : '-'}</td></tr>`).join('') + '</tbody></table></div>';
@@ -223,7 +223,7 @@
       if (M) b += `<div><p class="ttl">10월 진도 <span class="muted">MES 월차계획 · ${asOfS} 기준</span></p>` +
         bullets(M.prod.filter((x) => x.plant === '컬러').map((x) => ({ name: x.line, v: x.actual, ref: x.sched, total: /계$/.test(x.line) })), { mode: 'prod' }) + '</div>';
       b += box('c-co-week', '주별 생산량 (라인 누적)', 't/일') + '</div>';
-      d = '<div class="scroll"><table class="t"><thead><tr><th>라인</th><th>12주 평균 t/일</th><th>보고 주 t/일</th><th>증감</th><th>가동일</th><th>속도 t/hr <span class="muted">휴지 포함</span></th><th>가동일당 휴지 h</th><th>주요 품목 (t)</th></tr></thead><tbody>' +
+      d = '<div class="scroll"><table class="t"><thead><tr><th>라인</th><th>앞 ${(o.period && (o.period.nW0c || o.period.nW0)) || 12}주 평균 t/일</th><th>보고 주 t/일</th><th>증감</th><th>가동일</th><th>속도 t/hr <span class="muted">정지 포함</span></th><th>가동일당 휴지 h</th><th>주요 품목 (t)</th></tr></thead><tbody>' +
         co.rows.map((r, k) => `<tr><td class="l"><span class="sw" style="background:var(${SER[k]})"></span>${r.line}</td><td>${n0(r.w0.tpd)}</td><td><b>${n0(r.w1.tpd)}</b></td><td>${delta(r.dTpd)}</td><td>${r.w1.days}/7</td><td>${n1(r.w0.tph)} → ${n1(r.w1.tph)}</td><td>${n1(r.w0.stopH)} → ${n1(r.w1.stopH)}</td><td class="l">${r.top.map((x) => `${esc(x[0])} ${n0(x[1])}`).join(' · ')}</td></tr>`).join('') + '</tbody></table></div>';
       d += '<div class="grid2">' + box('c-co-stop', '주별 휴지 구성 (4라인 합)', '시간/일') + '<div><p class="ttl">휴지 구성 (4라인 합, 시간/일)</p><div class="scroll"><table class="t"><thead><tr><th>구분</th><th>12주 평균</th><th>보고 주</th><th>증감</th></tr></thead><tbody>' +
         co.stops.map((s, k) => `<tr><td class="l"><span class="sw" style="background:var(${SER[k]})"></span>${esc(s.cat)}</td><td>${n1(s.w0)}</td><td><b>${n1(s.w1)}</b></td><td>${delta(pct(s.w1, s.w0), false)}</td></tr>`).join('') + '</tbody></table></div></div></div>';
