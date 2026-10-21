@@ -120,7 +120,7 @@
     const L = ((O.sr || {}).stock || []).filter((x) => x.target);
     if (!L.length) return '';
     const mx = Math.max(...L.map((x) => Math.max(x.current, x.target))) * 1.08;
-    return `<h2>재고 vs 목표 <small>판매생산속보</small><span class="unit">톤</span></h2>
+    return `<h2>재고 vs 목표 <small>현재 = 판매생산속보 · 목표 = 월말 최대('27 판생그룹 목표)</small><span class="unit">톤</span></h2>
       ${L.map((x, i) => { const r = x.current / x.target, c = r > 1.3 || r < 0.7 ? 'var(--bad)' : r > 1.15 || r < 0.85 ? 'var(--warn)' : 'var(--good)'; return `<div class="lrow" style="grid-template-columns:96px 1fr 50px"><span style="font-size:12.5px">${esc(x.name.replace('(판매재)', ''))}</span><div class="track" style="height:16px"><i class="seg" style="left:0;width:${x.current / mx * 100}%;background:${c};border-radius:4px;--i:${i}" data-tip="${esc(x.name)} 현재 ${n0(x.current)}t / 목표 ${n0(x.target)}t"></i><em style="position:absolute;top:-3px;bottom:-3px;width:2px;background:var(--ink);left:${x.target / mx * 100}%"></em></div><span class="pct" style="color:${c}">${Math.round(r * 100)}%</span></div>`; }).join('')}
       <p class="small" style="margin:4px 0 0">세로선 = 목표</p>`;
   }
