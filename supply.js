@@ -259,8 +259,9 @@
     // 2026-10-21 사용자: 가동 캘린더 = 가동 현황 캘린더를 라인별로만 — 라인마다 생산(t)·휴지(h), M/C 날 노랑, 종일 정지는 블록. 출하·재고는 아래 따로(s-ship)
     const W1 = ['일', '월', '화', '수', '목', '금', '토'], KN = { plan: '계획휴지', sd: 'S/D', repair: '수리', clean: '청소', test: 'Test', sample: '샘플', jr: '정기수리' }, HARD = ['plan', 'sd', 'repair', 'jr'];
     const headG = (lab) => `<colgroup><col class="cc0"><col class="cc1">${ds.map(() => '<col>').join('')}<col class="ctot"></colgroup><thead><tr><th class="c0" rowspan="2">${lab}</th><th class="c1" rowspan="2">구분</th>`
-      + ds.map((d) => `<th data-d="${d}" class="${d === today ? 'today' : ''}">${+d.slice(8)}</th>`).join('') + '<th class="tot" rowspan="2">계</th></tr><tr>'
-      + ds.map((d) => `<th class="wk ${wd(d) === 6 ? 'sat' : wd(d) === 0 ? 'sun' : ''}">${W1[wd(d)]}</th>`).join('') + '</tr></thead><tbody>';
+      + ds.map((d) => `<th data-d="${d}" class="${d === today ? 'today tb' : ''}">${+d.slice(8)}</th>`).join('') + '<th class="tot" rowspan="2">계</th></tr><tr>'
+      + ds.map((d) => `<th class="wk ${wd(d) === 6 ? 'sat' : wd(d) === 0 ? 'sun' : ''}${d === today ? ' tb' : ''}">${W1[wd(d)]}</th>`).join('') + '</tr></thead><tbody>';
+    const dayCls = (d) => (d < today ? ' past' : d === today ? ' today tb' : '');   // 지난 날(실적) 옅은 바탕 · 오늘 앞 파란 경계선 — 기울임 대신(사용자 10/21)
     const dn = {};                                                       // 라인|날짜 → [[종류, 분]]
     for (const [d, l, k, mn] of D.W.colorDown || []) if (d.slice(0, 7) === mon) (dn[`${l}|${d}`] = dn[`${l}|${d}`] || []).push([k, mn]);
     for (const l of ['1CGL', '2CGL']) for (const d of ds) { const x = D.pl[`${l}|${d}`]; if (!x) continue; const L_ = [];
@@ -273,7 +274,7 @@
       const fi = ds.map((d, i) => (full(l, d) ? i : -1)).filter((i) => i >= 0), runs = [];
       fi.forEach((i) => { const r = runs[runs.length - 1]; if (r && r[1] === i - 1) r[1] = i; else runs.push([i, i]); });
       rows.forEach((rk, ri) => {
-        G2 += `<tr class="${rk === 'p' ? 'r-fam' : 'r-hrs'}${ri === 0 ? ' first' : ''}">` + (ri === 0 ? `<th class="c0 line" rowspan="${rows.length}">${l}</th>` : '') + `<th class="c1">${rk === 'p' ? '생산(t)' : '휴지(h)'}</th>`;
+        G2 += `<tr class="${rk === 'p' ? 'r-p' : 'r-h'}${ri === 0 ? ' first' : ''}">` + (ri === 0 ? `<th class="c0 line ${pl}" rowspan="${rows.length}">${l}</th>` : '') + `<th class="c1">${rk === 'p' ? '생산(t)' : '휴지(h)'}</th>`;
         let tot = 0;
         ds.forEach((d, i) => {
           const run = runs.find((r) => r[0] <= i && i <= r[1]);
@@ -282,11 +283,10 @@
           const x = src[`${l}|${d}`], t = x ? x.t || 0 : 0, mc = pl === 'G' && x && /M\/C/.test(x.ev || ''), part = dn[`${l}|${d}`], cls = [], tip = [];
           if (x) tip.push(`${md(d)} ${l} 생산 ${n0(t)}t${x.act ? '(실적)' : '(계획)'}`); if (mc) tip.push(x.ev.split(' · ')[0]); if (part) tip.push('휴지: ' + dTxt(l, d));
           let txt = '';
-          if (rk === 'p') { tot += t; txt = t >= 0.5 ? String(Math.round(t)) : (mc ? 'M/C' : ''); if (t < 0.5 && !mc) cls.push('idle'); if (mc) cls.push('mc'); if (x && x.act) cls.push('act'); }
+          if (rk === 'p') { tot += t; txt = t >= 0.5 ? String(Math.round(t)) : (mc ? 'M/C' : ''); if (t < 0.5 && !mc) cls.push('idle'); else if (t >= 0.5) cls.push(pl === 'G' ? `f-${x.fam || 'AL'}` : 'f-CC'); if (mc) cls.push('mc'); }
           else { const m0 = (part || []).reduce((a, y) => a + y[1], 0); tot += m0; txt = m0 > 0 ? (m0 / 60).toFixed(m0 % 60 ? 1 : 0) : '';
             if (part) { const pk = part.slice().sort((a, b) => b[1] - a[1])[0][0]; cls.push(pk === 'mc' ? 'mc' : `k-${pk === 'jr' ? 'sd' : pk}`); } }
-          if (d === today) cls.push('today');
-          G2 += `<td class="${cls.join(' ')}" style="--ci:${i}" data-d="${d}"${tip.length ? ` title="${esc(tip.join(' · '))}"` : ''}>${txt}</td>`;
+          G2 += `<td class="${cls.join(' ')}${dayCls(d)}" style="--ci:${i}" data-d="${d}"${tip.length ? ` title="${esc(tip.join(' · '))}"` : ''}>${txt}</td>`;
         });
         G2 += `<td class="tot">${rk === 'p' ? n0(tot) : (tot ? n0(tot / 60) : '')}</td></tr>`;
       });
@@ -294,20 +294,22 @@
     if (UI.inScope('G')) for (const l of ['1CGL', '2CGL']) lineBlock('G', l);
     if (UI.inScope('C')) for (const l of ['1CCL', '2CCL', '3CCL', '4CCL']) lineBlock('C', l);
     const used = new Set(Object.values(dn).flat().map((x) => x[0]));
-    $('s-calleg').innerHTML = [['mc', 'M/C(강종 전환)'], ['sd', '정기수리·S/D'], ['plan', '계획휴지'], ['repair', '수리'], ['clean', '청소'], ['test', 'Test'], ['sample', '샘플']]
-      .filter(([k]) => k === 'mc' || k === 'sd' || used.has(k) || (k === 'sd' && used.has('jr'))).map(([k, t]) => `<span><i class="sw ${k === 'mc' ? 'mcsw' : 'k-' + k}"></i>${t}</span>`).join('') + '<span><i class="sw idsw"></i>생산 없음</span><span class="muted">기울임 = 실적 · 휴지(h) = 그날 휴지 시간(칸 색 = 가장 긴 종류) · 블록 = 종일 정지</span>';
+    const sw = (c, t) => `<span><i class="sw ${c}"></i>${t}</span>`, sep = '<i class="gsep"></i>';
+    $('s-calleg').innerHTML = (UI.inScope('G') ? sw('f-AL', 'AL') + sw('f-AZ', 'AZ') + sw('f-MAC', 'MAC') + sw('mcsw', 'M/C') + sep : '') + (UI.inScope('C') ? sw('f-CC', '컬러 생산') + sep : '')
+      + [['sd', '정기수리·S/D'], ['plan', '계획휴지'], ['repair', '수리'], ['clean', '청소'], ['test', 'Test'], ['sample', '샘플']].filter(([k]) => used.has(k) || (k === 'sd' && used.has('jr'))).map(([k, t]) => sw('k-' + k, t)).join('')
+      + sw('idsw', '생산 없음') + sep + sw('pastsw', '지난 날(실적)') + sw('tbsw', '오늘');
+    $('s-shipleg').innerHTML = sw('shsw', '출하') + sep + '<span class="muted">재고(목표 대비)</span>' + sw('okw', '목표 이하') + sw('hiw', '100~130%') + sw('hi2w', '130% 넘음') + sep + sw('pastsw', '지난 날(실적)') + sw('tbsw', '오늘');
     // 판매그룹 출하·재고(라인 구분 없는 자료 — 사용자 10/21: 밑으로 따로 하나 더)
     let S2 = headG('판매그룹');
     const shipBlock = (pl, gs) => gs.forEach((g, gi) => {
       [['s', '출하(t)'], ['k', '재고(천t)']].forEach(([rk, lb], ri) => {
-        S2 += `<tr class="${rk === 's' ? 'r-dep' : 'r-hrs'}${ri === 0 ? ' first' : ''}">` + (ri === 0 ? `<th class="c0 line" rowspan="2">${NM[g]}</th>` : '') + `<th class="c1">${lb}</th>`;
+        S2 += `<tr class="${rk === 's' ? 'r-s' : 'r-k'}${ri === 0 ? ' first' : ''}">` + (ri === 0 ? `<th class="c0 line ${pl}" rowspan="2">${NM[g]}</th>` : '') + `<th class="c1">${lb}</th>`;
         let tot = 0;
         ds.forEach((d, i) => {
           let txt = '', cls = [], tip = '';
-          if (rk === 's') { const x = gship(g, d); tot += x.t; if (x.t >= 0.5) { txt = String(Math.round(x.t)); tip = `${md(d)} ${NM[g]} 출하 ${n0(x.t)}t${x.act ? ' (MES 출하 실적)' : ' (계획 출고)'}`; } if (x.act) cls.push('act'); }
-          else { const x = D.sw[`${g}|${d}`]; if (x) { txt = (x.v / 1000).toFixed(1); tip = `${md(d)} ${NM[g]} 기말 재고 ${n0(x.v)}t / 목표 ${n0(x.tgt)}t (${x.tgt ? Math.round(x.v / x.tgt * 100) : '-'}%)`; if (x.tgt && x.v > x.tgt * 1.3) cls.push('hi'); if (x.v < 0) cls.push('neg'); if (x.act) cls.push('act'); } }
-          if (d === today) cls.push('today');
-          S2 += `<td class="${cls.join(' ')}" style="--ci:${i}" data-d="${d}"${tip ? ` title="${esc(tip)}"` : ''}>${txt}</td>`;
+          if (rk === 's') { const x = gship(g, d); tot += x.t; if (x.t >= 0.5) { txt = String(Math.round(x.t)); cls.push('sh'); tip = `${md(d)} ${NM[g]} 출하 ${n0(x.t)}t${x.act ? ' (MES 출하 실적)' : ' (계획 출고)'}`; } }
+          else { const x = D.sw[`${g}|${d}`]; if (x) { const r = x.tgt ? x.v / x.tgt : 0; txt = (x.v / 1000).toFixed(1); tip = `${md(d)} ${NM[g]} 기말 재고 ${n0(x.v)}t / 목표 ${n0(x.tgt)}t (${x.tgt ? Math.round(r * 100) : '-'}%)`; cls.push(x.v < 0 ? 'neg' : !x.tgt ? '' : r > 1.3 ? 'hi2' : r > 1 ? 'hi' : 'ok'); } }
+          S2 += `<td class="${cls.join(' ')}${dayCls(d)}" style="--ci:${i}" data-d="${d}"${tip ? ` title="${esc(tip)}"` : ''}>${txt}</td>`;
         });
         S2 += `<td class="tot">${rk === 's' ? n0(tot) : ''}</td></tr>`;
       });
