@@ -57,6 +57,33 @@ tr.ux > td > div { text-align: left; } table.t.sp td.l, table.t.sp th.l { text-a
 table.t.sp { width: auto; min-width: 640px; margin: 0 0 8px; background: var(--surface); } table.t.sp td, table.t.sp th { padding: 6px 12px; }
 table.t.sp tr.on td { background: var(--good-bg); } table.t.sp tr.tot td { border-top: 2px solid var(--line); font-weight: 800; }
 table.t.sp input { width: 96px; text-align: right; }
+:root { --du-e: #2563c9; --du-l: #d0453a; --du-0: #eceae6; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --du-e: #4f8ef0; --du-l: #e05a4f; --du-0: #383835; } }
+:root[data-theme="dark"] { --du-e: #4f8ef0; --du-l: #e05a4f; --du-0: #383835; }
+.du-lead { font-size: 15px; margin: 0 0 14px; color: var(--ink); } .du-lead small { color: var(--ink-3); }
+.du-tiles { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 18px; }
+.du-tile { border: 1px solid var(--line); border-top: 4px solid var(--du-0); border-radius: 10px; padding: 12px 16px; background: var(--surface); }
+.du-tile.e { border-top-color: var(--du-e); } .du-tile.l { border-top-color: var(--du-l); }
+.du-tl { font-size: 13px; font-weight: 700; color: var(--ink-2); } .du-big { font-size: 18px; font-weight: 700; margin: 4px 0 6px; color: var(--ink); } .du-big b { font-size: 34px; letter-spacing: -1px; margin-right: 2px; }
+.du-tile.e .du-big b { color: var(--du-e); } .du-tile.l .du-big b { color: var(--du-l); } .du-tile.z .du-big b { font-size: 24px; }
+.du-sub { font-size: 13px; color: var(--ink-2); } .du-sub b { color: var(--ink); }
+.du-lg { display: flex; align-items: center; gap: 8px; font-size: 12.5px; color: var(--ink-2); margin: 0 0 10px; flex-wrap: wrap; }
+.du-lg .bar { display: inline-block; width: 160px; height: 10px; border-radius: 5px; background: linear-gradient(90deg, var(--du-e), var(--du-0) 50%, var(--du-l)); } .du-lg small { color: var(--ink-3); margin-left: 8px; }
+.du-hms { display: grid; grid-template-columns: 1fr 1fr; gap: 18px 24px; } .du-hms.one { grid-template-columns: 1fr; margin-top: 18px; }
+.du-hm h3 { font-size: 14.5px; margin: 0 0 8px; }
+table.du-g { width: 100%; border-collapse: separate; border-spacing: 3px; table-layout: fixed; }
+table.du-g th { font-size: 12px; font-weight: 600; color: var(--ink-2); padding: 4px; background: none; } table.du-g th.c { width: 84px; text-align: right !important; }
+table.du-g td { height: 54px; border-radius: 6px; text-align: center; color: var(--ink); cursor: default; }
+table.du-g td b { display: block; font-size: 19px; font-weight: 800; line-height: 1.1; } table.du-g td small { display: block; font-size: 11px; opacity: .85; margin-top: 2px; }
+table.du-g td.na { background: repeating-linear-gradient(135deg, transparent 0 5px, color-mix(in srgb, var(--ink-3) 12%, transparent) 5px 6px); color: var(--ink-3); }
+.du-hms.one table.du-g { max-width: 640px; }
+.du-two { display: grid; grid-template-columns: 1fr 1fr; gap: 12px 24px; margin-top: 18px; }
+.du-list { border: 1px solid var(--line); border-left: 4px solid var(--du-e); border-radius: 8px; padding: 10px 14px; } .du-list.l { border-left-color: var(--du-l); }
+.du-list h3 { font-size: 14px; margin: 0 0 6px; } .du-list ul { margin: 0; padding-left: 16px; font-size: 13.5px; line-height: 1.8; } .du-list li span { font-weight: 800; margin-left: 6px; } .du-list.e li span { color: var(--du-e); } .du-list.l li span { color: var(--du-l); } .du-list em { font-style: normal; color: var(--bad); font-size: 12px; margin-left: 4px; }
+.du-det { margin-top: 16px; } .du-det summary { cursor: pointer; font-weight: 700; color: var(--ink-2); }
+.du-empty { display: flex; flex-direction: column; gap: 4px; padding: 14px 16px; border: 1px dashed var(--line); border-radius: 8px; background: var(--surface-2); } .du-empty span { font-size: 13px; color: var(--ink-2); }
+.du-chip { display: inline-block; font-size: 12px; font-weight: 700; padding: 1px 8px; border-radius: 999px; background: var(--du-0); } .du-chip.e { background: color-mix(in srgb, var(--du-e) 16%, var(--surface)); color: var(--du-e); } .du-chip.l { background: color-mix(in srgb, var(--du-l) 16%, var(--surface)); color: var(--du-l); }
+@media (max-width: 900px) { .du-tiles, .du-hms, .du-two { grid-template-columns: 1fr; } }
 table.t.due td, table.t.due th { padding: 6px 10px; } table.t.due tr.sum td { background: var(--surface-2); border-top: 2px solid var(--line); font-weight: 700; } table.t.due b.early, table.t b.early { color: var(--good); } table.t.due td.l, table.t.due th.l { text-align: left !important; }
 .dg2 { display: grid; grid-template-columns: 180px minmax(240px, 520px); gap: 8px 12px; margin: 6px 0 12px; } .dg2 label { display: flex; flex-direction: column; gap: 4px; font-size: 12.5px; color: var(--ink-3); font-weight: 700; } .dg2 select, .dg2 input { width: 100%; max-width: none !important; }
 @media (max-width: 640px) { .dg2 { grid-template-columns: 1fr; } table.t.sp { min-width: 0; } }
