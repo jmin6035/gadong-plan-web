@@ -269,7 +269,10 @@
     const sec = (t, dom) => { H[tg] += `<tr class="sec" data-dom="${dom}"><td class="lb">${t}</td><td colspan="${ds.length + 1}"></td></tr>`; };
     const row = (lb, cell, tot, cls = '') => { let s = 0, h = ''; h += `<tr class="${cls}"><td class="lb">${lb}</td>`; ds.forEach((d, i) => { const c = cell(d); s += c.n || 0; h += `<td data-d="${d}" data-l="${esc(lb.replace(/<[^>]+>/g, ' ').trim())}" class="${(c.c || '') + (String(c.x || '').length > 4 ? ' w4' : '') + dayC(d)}" style="--ci:${i}"${c.tip ? ` title="${esc(c.tip)}"` : ''}>${c.x == null ? '' : c.x}</td>`; }); h += `<td class="tot">${tot === false ? '' : n0(tot != null ? tot : s)}</td></tr>`; ci++;  H[tg] += h; };
     const SD = (D.PO || {}).shipDay, OD = D.V.outDay || {};
-    const gship = (g, d) => { if (SD && SD.asOf && d <= SD.asOf) return { t: ((SD.g || {})[g] || {})[d] || 0, act: true }; const i = diff(d, D.days[0]); const v = (OD[g] || [])[i]; return { t: v || 0, act: false }; };
+    const RO = ((D.PO || {}).stockRoll || {});                           // 계획 출고 = 재고 롤링과 같은 값(국내·컬러는 날마다 고르게, 이번 달은 속보 월차 − 실적 — 사용자 10/21: 월말 하루에 몰려 보이던 것)
+    const gship = (g, d) => { if (SD && SD.asOf && d <= SD.asOf) return { t: ((SD.g || {})[g] || {})[d] || 0, act: true };
+      if (RO.out && RO.out[g]) { const v = RO.out[g][diff(d, RO.d0)]; return { t: v || 0, act: false }; }
+      const i = diff(d, D.days[0]); const v = (OD[g] || [])[i]; return { t: v || 0, act: false }; };
     const NM = { G수출: '도금수출', G국내: '도금국내', G자동차: '자동차강판', G자가재: '자가재(→ 컬러 소재)', C수출: '컬러수출', C건재: '컬러건재', C수요: '수요개발' };
     // 2026-10-21 사용자: 가동 캘린더 = 가동 현황 캘린더를 라인별로만 — 라인마다 생산(t)·휴지(h), M/C 날 노랑, 종일 정지는 블록. 출하·재고는 아래 따로(s-ship)
     const W1 = ['일', '월', '화', '수', '목', '금', '토'], KN = { plan: '계획휴지', sd: 'S/D', repair: '수리', clean: '청소', test: 'Test', sample: '샘플', jr: '정기수리', color: '색상교체·청소', roll: '폭·롤 전환', etc: '기타 정지', gap: '기록 없는 정지(TEST 등)' }, HARD = ['plan', 'sd', 'repair', 'jr'];
@@ -327,7 +330,7 @@
     $('s-calleg').innerHTML = (UI.inScope('G') ? '<span class="muted">도금 강종</span>' + sw('f-AL', 'AL') + sw('f-AZ', 'AZ') + sw('f-MAC', 'MAC') + sw('mcsw', 'M/C(강종 교체)') + sep : '')
       + (UI.inScope('C') ? '<span class="muted">컬러 판매그룹</span>' + sw('f-C수출', '컬러수출') + sw('f-C건재', '컬러건재') + sw('f-C수요', '수요개발') + sep : '')
       + sw('sdsw', '종일 정지(수리·계획휴지 등)') + sw('idsw', '생산 없음') + sep + sw('tbsw', '오늘') + '<span class="muted">칸 숫자 = 생산(t) · 오늘 이전 = 실적 · 칸에 마우스를 올리면 강종·판매그룹·휴지</span>';
-    $('s-shipleg').innerHTML = sw('sumsw', '합계(진한 줄)') + sep + sw('shsw', '출하') + sep + '<span class="muted">재고(목표 대비)</span>' + sw('okw', '목표 이하') + sw('hiw', '100~130%') + sw('hi2w', '130% 넘음') + sep + sw('pastsw', '지난 날(실적)') + sw('tbsw', '오늘');
+    $('s-shipleg').innerHTML = '<span class="muted">재고 칸 색 = 목표 대비</span>' + sw('hiw', '100~130%') + sw('hi2w', '130% 넘음') + sep + sw('tbsw', '오늘') + '<span class="muted">출하(t) · 재고(천t) · 오늘 이전 = 실적</span>';
     // 판매그룹 출하·재고(라인 구분 없는 자료 — 사용자 10/21: 밑으로 따로 하나 더)
     let S2 = headG('판매그룹');
     const shipBlock = (pl, gs) => gs.forEach((g, gi) => {

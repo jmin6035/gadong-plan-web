@@ -129,108 +129,22 @@ html .gtable .c1 small { color: var(--ink-3); font-weight: 500; }
 :root { --pt-act: #f3f6fa; --pt-al: #dcebfb; --pt-az: #fde3d6; --pt-mac: #d6f2e6; --pt-cc: #e3f3ee; --pt-mc: #ffe48a; --pt-mcb: #e0a800; --pt-g: #2a78d6; --pt-c: #0f9d7a; --pt-sat: #fdebd0; --pt-sun: #fbdada; --pt-ok: #e2f3e6; --pt-hi: #ffe7b8; --pt-hi2: #ffcf87; --pt-ship: #e4f0fc; --pt-shipA: #cfe3f8; }
 @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --pt-act: #18202a; --pt-al: #1d3553; --pt-az: #4a2a1d; --pt-mac: #173f31; --pt-cc: #173a31; --pt-mc: #6b5600; --pt-mcb: #c99a00; --pt-sat: #3d3220; --pt-sun: #402629; --pt-ok: #1c3a24; --pt-hi: #4a3a14; --pt-hi2: #6a4a10; --pt-ship: #1b2c40; --pt-shipA: #23405e; } }
 :root[data-theme="dark"] { --pt-act: #18202a; --pt-al: #1d3553; --pt-az: #4a2a1d; --pt-mac: #173f31; --pt-cc: #173a31; --pt-mc: #6b5600; --pt-mcb: #c99a00; --pt-sat: #3d3220; --pt-sun: #402629; --pt-ok: #1c3a24; --pt-hi: #4a3a14; --pt-hi2: #6a4a10; --pt-ship: #1b2c40; --pt-shipA: #23405e; }
-#s-calw, #s-shw { overflow: auto; max-height: calc(100vh - 110px); border: 1px solid var(--line); border-radius: 10px; background: var(--surface); }
-:is(#s-cal, #s-ship) { border-collapse: separate; border-spacing: 0; width: 100%; table-layout: fixed; font-variant-numeric: tabular-nums; font-size: 13px; }
-:is(#s-cal, #s-ship) th, :is(#s-cal, #s-ship) td { border: 0; border-right: 1px solid var(--grid, #e8ebef); border-bottom: 1px solid var(--grid, #e8ebef); text-align: center; white-space: nowrap; padding: 7px 1px; font-style: normal; }
-:is(#s-cal, #s-ship) thead th { position: sticky; top: 0; z-index: 2; background: var(--th, #f1f4f8); color: var(--ink-2); font-weight: 700; font-size: 12.5px; padding: 6px 1px; border-bottom: 1px solid var(--line); }
-:is(#s-cal, #s-ship) thead tr:nth-child(2) th { top: var(--h1, 32px); font-weight: 600; font-size: 11.5px; }
-:is(#s-cal, #s-ship) thead th.sat { background: var(--pt-sat); color: #8a4b00; } :is(#s-cal, #s-ship) thead th.sun { background: var(--pt-sun); color: #a51d2d; }
-:is(#s-cal, #s-ship) thead th.today { background: var(--brand-2); color: #fff; }
-:is(#s-cal, #s-ship) .c0 { position: sticky; left: 0; z-index: 3; background: var(--surface); } :is(#s-cal, #s-ship) .c1 { position: sticky; z-index: 3; background: var(--surface); text-align: left; padding-left: 8px; color: var(--ink-2); font-weight: 600; font-size: 12px; }
-:is(#s-cal, #s-ship) thead .c0, :is(#s-cal, #s-ship) thead .c1 { z-index: 4; background: var(--th, #f1f4f8); }
-:is(#s-cal, #s-ship) th.line { font-size: 14.5px; font-weight: 800; color: var(--ink); line-height: 1.25; white-space: normal; word-break: keep-all; box-shadow: inset 4px 0 0 var(--pt-c); }
-:is(#s-cal, #s-ship) th.line.G { box-shadow: inset 4px 0 0 var(--pt-g); }
-:is(#s-cal, #s-ship) tr.first > * { border-top: 2px solid var(--line); }
-:is(#s-cal, #s-ship) tbody td.past { background: var(--pt-act); }
-:is(#s-cal, #s-ship) tbody td.tb, :is(#s-cal, #s-ship) thead th.tb { border-left: 2px solid var(--brand-2); }
-#s-cal tr.r-p td { font-weight: 700; color: var(--ink); font-size: 12px; }
-#s-cal tr.r-p td.idle { background: repeating-linear-gradient(135deg, transparent 0 4px, color-mix(in srgb, var(--ink-3) 16%, transparent) 4px 5px); color: var(--ink-3); font-weight: 500; }
-#s-cal td.mc { background: var(--pt-mc) !important; box-shadow: inset 0 0 0 2px var(--pt-mcb); color: #3d2e00; font-weight: 800; }
-#s-cal tr.r-h td { font-size: 11.5px; color: var(--ink); font-weight: 700; padding: 4px 1px; }
-#s-cal tr.r-h .c1 { font-size: 11.5px; font-weight: 500; color: var(--ink-3); }
-#s-cal td.sdblock { white-space: normal; word-break: keep-all; font-size: 12.5px; font-weight: 800; line-height: 1.3; padding: 3px 2px; color: var(--ink); letter-spacing: -0.2px; }
-#s-cal td.sdblock small { display: block; font-size: 11px; font-weight: 600; opacity: .85; }
-#s-cal td.sdblock.one { writing-mode: vertical-rl; letter-spacing: 1px; } #s-cal td.sdblock.one small { display: none; }
-:is(#s-cal, #s-ship) .tot { font-weight: 800; color: var(--ink); background: var(--sub) !important; font-size: 13px; }
-:is(#s-cal, #s-ship) td[data-d] { cursor: pointer; } :is(#s-cal, #s-ship) tbody tr:hover td:not(.sdblock) { filter: brightness(.97); }
-#s-ship tr.r-s td { font-weight: 700; color: var(--ink); } #s-ship tr.r-s td.sh { background: var(--pt-ship); } #s-ship tr.r-s td.sh.past { background: var(--pt-shipA); }
-#s-ship tr.r-k td { font-size: 12px; color: var(--ink-2); font-weight: 600; } #s-ship tr.r-k td.ok { background: var(--pt-ok); } #s-ship tr.r-k td.hi { background: var(--pt-hi); color: var(--pt-hiT); } #s-ship tr.r-k td.hi2 { background: var(--pt-hi2); color: var(--pt-hi2T); font-weight: 800; } #s-ship tr.r-k td.neg { color: var(--bad); font-weight: 800; background: color-mix(in srgb, var(--bad) 12%, var(--surface)); }
-#s-ship tr.r-k .c1 { font-size: 11.5px; }
 .glegend { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 16px; font-size: 12.5px; color: var(--ink-2); margin: 0 0 10px; }
 .glegend .sw { display: inline-block; width: 14px; height: 14px; border-radius: 4px; margin-right: 6px; vertical-align: -3px; box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--ink) 10%, transparent); }
 .glegend .sw.mcsw { background: var(--pt-mc); box-shadow: inset 0 0 0 2px var(--pt-mcb); } .glegend .sw.idsw { background: repeating-linear-gradient(135deg, transparent 0 3px, color-mix(in srgb, var(--ink-3) 30%, transparent) 3px 4px); }
 .glegend .sw.pastsw { background: var(--pt-act); } .glegend .sw.tbsw { background: none; box-shadow: inset 2px 0 0 var(--brand-2); width: 8px; }
 .glegend .sw.shsw { background: var(--pt-ship); } .glegend .sw.okw { background: var(--pt-ok); } .glegend .sw.hiw { background: var(--pt-hi); } .glegend .sw.hi2w { background: var(--pt-hi2); }
 .glegend .gsep { width: 1px; height: 14px; background: var(--line); }
-html :is(#s-cal, #s-ship) col.cc0 { width: 64px; } html :is(#s-cal, #s-ship) col.cc1 { width: 58px; } html :is(#s-cal, #s-ship) col.ctot { width: 62px; } html #s-ship col.cc0 { width: 74px; }
-html :is(#s-cal, #s-ship) .c1 { left: 64px; } html #s-ship .c1 { left: 74px; }
-html :is(#s-cal, #s-ship) tbody td { font-size: 12px; letter-spacing: -0.3px; padding-left: 0; padding-right: 0; }
-html :is(#s-cal, #s-ship) tbody td.tot { font-size: 12.5px; letter-spacing: 0; }
-html :is(#s-cal, #s-ship) th.line { font-size: 13.5px; padding: 0 2px 0 7px; }
-html #s-ship th.line { font-size: 12.5px; }
 /* 가동 캘린더 2차(2026-10-21 사용자: 도금/컬러 구분, 색 줄이기 — 강종 막대·M/C·종일 정지만 색) */
 :root { --pt-AL: #2a78d6; --pt-AZ: #e2672c; --pt-MAC: #14a06e; --pt-MC: #f5b700; --pt-gG: #1f3b5c; --pt-gC: #1c5a50; --pt-sd: #dfe3e9; --pt-sdT: #3a4350; --pt-mcT: #8a5a00; --pt-gA: #333a45; --pt-Cx: #6a4fc4; --pt-Cb: #0b8793; --pt-Cd: #b4467c; --pt-hiT: #6b4300; --pt-hi2T: #5a3000; }
 @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --pt-gG: #2a4d75; --pt-gC: #24695e; --pt-sd: #2c3440; --pt-sdT: #c9d1db; --pt-mcT: #f0c45a; --pt-gA: #46505e; --pt-hiT: #ffd58a; --pt-hi2T: #ffe2b0; } }
 :root[data-theme="dark"] { --pt-gG: #2a4d75; --pt-gC: #24695e; --pt-sd: #2c3440; --pt-sdT: #c9d1db; --pt-mcT: #f0c45a; --pt-gA: #46505e; --pt-hiT: #ffd58a; --pt-hi2T: #ffe2b0; }
-#s-cal tr.r-p td { background: transparent; }
-#s-cal tr.r-p td.past, #s-cal tr.r-h td.past { background: var(--pt-act); }
-#s-cal tr.r-p td.idle { background: repeating-linear-gradient(135deg, transparent 0 4px, color-mix(in srgb, var(--ink-3) 14%, transparent) 4px 5px); }
-#s-cal tr.r-h td { color: var(--ink-3); font-weight: 600; }
-#s-cal tr.r-h td.hm { color: var(--pt-mcT); font-weight: 800; }
-#s-cal tr.r-a td { padding: 3px 1px; border-right-color: transparent; }
-#s-cal tr.r-a td.fbar { color: #fff; font-weight: 800; font-size: 12.5px; letter-spacing: .02em; background-clip: padding-box; box-shadow: inset 0 3px 0 var(--surface), inset 0 -3px 0 var(--surface); }
-#s-cal tr.r-a td.fbar small { font-size: 11px; font-weight: 600; opacity: .9; margin-left: 6px; letter-spacing: 0; }
-#s-cal tr.r-a td.fbar.one { font-size: 10.5px; letter-spacing: -0.4px; }
-#s-cal tr.r-a td.f-AL { background: var(--pt-AL); } #s-cal tr.r-a td.f-AZ { background: var(--pt-AZ); } #s-cal tr.r-a td.f-MAC { background: var(--pt-MAC); }
-#s-cal tr.r-a td.mcbar { background: var(--pt-MC); color: #3d2e00; font-weight: 900; font-size: 11px; letter-spacing: -0.5px; box-shadow: inset 0 3px 0 var(--surface), inset 0 -3px 0 var(--surface); }
-#s-cal tr.r-a td.idle { background: transparent; }
-#s-cal tr.r-a .c1 { color: var(--ink); font-weight: 700; }
-#s-cal td.tot.mcn { font-size: 11.5px; color: var(--pt-mcT); }
-#s-cal td.sdblock { background: var(--pt-sd); color: var(--pt-sdT); }
-#s-cal td.sdblock small { color: var(--pt-sdT); }
-:is(#s-cal, #s-ship) tr.grp > * { background: var(--pt-gG); color: #fff; border-right-color: rgba(255,255,255,.12); border-bottom-color: rgba(255,255,255,.12); font-weight: 800; }
-:is(#s-cal, #s-ship) tr.grp.C > * { background: var(--pt-gC); } :is(#s-cal, #s-ship) tr.grp.A > * { background: var(--pt-gA); }
-:is(#s-cal, #s-ship) tr.grp .gh { font-size: 13.5px; letter-spacing: .02em; text-align: left; padding-left: 10px; line-height: 1.2; }
-:is(#s-cal, #s-ship) tr.grp .gh small { display: block; font-size: 10.5px; font-weight: 600; opacity: .8; letter-spacing: 0; }
-:is(#s-cal, #s-ship) tr.grp .gh2 { color: rgba(255,255,255,.85); font-weight: 600; font-size: 11.5px; }
-:is(#s-cal, #s-ship) tr.grp td.tot.gt { background: color-mix(in srgb, #000 22%, var(--pt-gG)) !important; color: #fff; }
-:is(#s-cal, #s-ship) tr.grp.C td.tot.gt { background: color-mix(in srgb, #000 22%, var(--pt-gC)) !important; } :is(#s-cal, #s-ship) tr.grp.A td.tot.gt { background: color-mix(in srgb, #000 22%, var(--pt-gA)) !important; }
-:is(#s-cal, #s-ship) tr.grp td.tb { border-left: 2px solid #8fc1ff; }
-#s-ship tr.grp.A + tr.grp.A > * { border-bottom: 2px solid var(--surface); }
-#s-cal tr.r-a td.f-C수출 { background: var(--pt-Cx); } #s-cal tr.r-a td.f-C건재 { background: var(--pt-Cb); } #s-cal tr.r-a td.f-C수요 { background: var(--pt-Cd); }
 .glegend .sw.f-C수출 { background: var(--pt-Cx); } .glegend .sw.f-C건재 { background: var(--pt-Cb); } .glegend .sw.f-C수요 { background: var(--pt-Cd); } .glegend .sw.sumsw { background: var(--pt-gG); }
-#s-cal tr.gap td { height: 12px; padding: 0; border: 0; background: var(--surface); }
-#s-cal tr.grp + tr.first > * { border-top: 0; }
-:is(#s-cal) th.line.G { box-shadow: inset 4px 0 0 var(--pt-gG); } :is(#s-cal) th.line.C { box-shadow: inset 4px 0 0 var(--pt-gC); }
-#s-cal tbody tr:hover td.fbar, #s-cal tbody tr:hover td.mcbar { filter: none; }
 .glegend .sw.f-AL { background: var(--pt-AL); } .glegend .sw.f-AZ { background: var(--pt-AZ); } .glegend .sw.f-MAC { background: var(--pt-MAC); }
 .glegend .sw.mcsw { background: var(--pt-MC); box-shadow: none; } .glegend .sw.sdsw { background: var(--pt-sd); }
 .glegend .muted { color: var(--ink-3); }
-html :is(#s-cal, #s-ship) tbody td.w4 { font-size: 10.5px; letter-spacing: -0.7px; }
-html :is(#s-cal, #s-ship) tbody td.w5 { font-size: 9.5px; letter-spacing: -0.9px; }
 
 /* 가동 캘린더 3차(2026-10-21 사용자: 깨짐·칸·색감·글자 아마추어, 종일 정지 색 안 보임) — 진한 채움 대신 옅은 색 + 진한 글자, 한 달이 한 화면에 */
-html body main :is(#s-cal, #s-ship) { min-width: 1500px !important; }
-:is(#s-cal, #s-ship) .c1 { box-shadow: 2px 0 0 var(--line); }
-:is(#s-cal, #s-ship) tbody td { color: var(--ink); }
-:is(#s-cal, #s-ship) tr.grp > * { background: var(--pt-gbg) !important; color: var(--ink) !important; border-bottom: 1px solid var(--line) !important; border-right-color: var(--grid) !important; }
-:is(#s-cal, #s-ship) tr.grp .gh { box-shadow: inset 4px 0 0 var(--pt-g); } :is(#s-cal, #s-ship) tr.grp.C .gh { box-shadow: inset 4px 0 0 var(--pt-c); }
-:is(#s-cal, #s-ship) tr.grp .gh small, :is(#s-cal, #s-ship) tr.grp .gh2 { color: var(--ink-3) !important; opacity: 1; }
-:is(#s-cal, #s-ship) tr.grp td.tot.gt, :is(#s-cal, #s-ship) tr.grp.C td.tot.gt, :is(#s-cal, #s-ship) tr.grp.A td.tot.gt { background: var(--pt-gbg2) !important; color: var(--ink) !important; }
-:is(#s-cal, #s-ship) tr.grp td.tb { border-left: 2px solid var(--brand-2); }
-#s-cal tr.r-a td { padding: 4px 1px; }
-#s-cal tr.r-a td.fbar { color: var(--fc); background: color-mix(in srgb, var(--fc) 15%, var(--surface)) !important; box-shadow: inset 0 3px 0 var(--surface), inset 0 -3px 0 var(--surface), inset 3px 0 0 var(--fc); font-weight: 800; font-size: 12.5px; }
-#s-cal tr.r-a td.fbar small { color: var(--ink-2); opacity: 1; font-weight: 600; }
-#s-cal tr.r-a td.f-AL { --fc: var(--pt-AL); } #s-cal tr.r-a td.f-AZ { --fc: var(--pt-AZ); } #s-cal tr.r-a td.f-MAC { --fc: var(--pt-MAC); }
-#s-cal tr.r-a td.f-C수출 { --fc: var(--pt-Cx); } #s-cal tr.r-a td.f-C건재 { --fc: var(--pt-Cb); } #s-cal tr.r-a td.f-C수요 { --fc: var(--pt-Cd); }
-#s-cal tr.r-a td.mcbar { background: var(--pt-mcbg) !important; color: var(--pt-mcT); box-shadow: inset 0 3px 0 var(--surface), inset 0 -3px 0 var(--surface); font-size: 11.5px; font-weight: 800; letter-spacing: 0; }
-#s-cal td.mc { background: var(--pt-mcbg) !important; box-shadow: none; color: var(--pt-mcT); }
-#s-cal td.sdblock { background: var(--pt-sd2) !important; color: #fff !important; font-weight: 800; }
-#s-cal td.sdblock small { color: #fff !important; opacity: .9; }
-#s-cal tr.r-p td.idle, #s-cal tr.r-a td.idle { background: repeating-linear-gradient(135deg, transparent 0 4px, color-mix(in srgb, var(--ink-3) 28%, transparent) 4px 5px) !important; }
-#s-cal tr.r-h td { font-size: 12px; }
-#s-cal tr.r-p td { font-size: 12.5px; }
-:is(#s-cal, #s-ship) tbody td.past { background: var(--pt-act); }
 .glegend .sw.sdsw { background: var(--pt-sd2) !important; }
 .glegend .sw.idsw { background: repeating-linear-gradient(135deg, transparent 0 3px, color-mix(in srgb, var(--ink-3) 45%, transparent) 3px 4px) !important; }
 .glegend .sw.mcsw { background: var(--pt-mcbg) !important; box-shadow: inset 0 0 0 1px var(--pt-mcT) !important; }
@@ -239,41 +153,60 @@ html body main :is(#s-cal, #s-ship) { min-width: 1500px !important; }
 :root[data-theme="dark"] { --pt-gbg: #1f2833; --pt-gbg2: #26313e; --pt-sd2: #5d6878; --pt-mcbg: #4a3a12; --pt-mcT: #f3cf74; --pt-AL: #6ba6ff; --pt-AZ: #ff9a66; --pt-MAC: #4fd1a0; --pt-Cx: #a896ff; --pt-Cb: #4cc3d1; --pt-Cd: #ee8ab8; }
 
 /* 가동 캘린더 4차(10/21 사용자: 가동 현황 표와 같은 모양 — 라인당 한 줄, 생산량만, 강종·판매그룹은 칸 색) */
-#s-cal tr.r-p td { font-size: 13px; font-weight: 600; color: var(--ink); padding: 9px 1px; background: transparent; }
-#s-cal tr.r-p td.fc { background: color-mix(in srgb, var(--fc) 17%, var(--surface)) !important; }
-#s-cal tr.r-p td.f-AL { --fc: var(--pt-AL); } #s-cal tr.r-p td.f-AZ { --fc: var(--pt-AZ); } #s-cal tr.r-p td.f-MAC { --fc: var(--pt-MAC); }
-#s-cal tr.r-p td.f-C수출 { --fc: var(--pt-Cx); } #s-cal tr.r-p td.f-C건재 { --fc: var(--pt-Cb); } #s-cal tr.r-p td.f-C수요 { --fc: var(--pt-Cd); }
-#s-cal tr.r-p td.mcc { background: var(--pt-mcbg) !important; color: var(--pt-mcT); font-weight: 800; }
-#s-cal tr.r-p th.c0.line { text-align: left; padding-left: 12px; font-size: 14px; }
-#s-cal tr.r-p td.tot small { display: block; font-size: 11px; color: var(--pt-mcT); font-weight: 700; }
-#s-cal td.sdblock.one { writing-mode: horizontal-tb !important; font-size: 11px; }
 .glegend .sw.f-AL { background: color-mix(in srgb, var(--pt-AL) 30%, var(--surface)); } .glegend .sw.f-AZ { background: color-mix(in srgb, var(--pt-AZ) 30%, var(--surface)); } .glegend .sw.f-MAC { background: color-mix(in srgb, var(--pt-MAC) 30%, var(--surface)); }
 .glegend .sw.f-C수출 { background: color-mix(in srgb, var(--pt-Cx) 30%, var(--surface)); } .glegend .sw.f-C건재 { background: color-mix(in srgb, var(--pt-Cb) 30%, var(--surface)); } .glegend .sw.f-C수요 { background: color-mix(in srgb, var(--pt-Cd) 30%, var(--surface)); }
 
 /* 가동 캘린더 5차(10/21 사용자: 계획휴지 글자 잘림 · 생산 없음 색 안 보임 · 1,000t 쉼표) */
-html body main #s-cal { min-width: 1180px !important; }
-html :is(#s-cal, #s-ship) tbody td.w4, html :is(#s-cal, #s-ship) tbody td.w5 { font-size: 12.5px !important; letter-spacing: -0.2px !important; }
-#s-cal tr.r-p td.idle, #s-cal tr.grp td.idle { background: repeating-linear-gradient(135deg, var(--pt-idle1) 0 4px, var(--pt-idle2) 4px 8px) !important; }
 .glegend .sw.idsw { background: repeating-linear-gradient(135deg, var(--pt-idle1) 0 3px, var(--pt-idle2) 3px 6px) !important; box-shadow: inset 0 0 0 1px var(--line) !important; }
-#s-cal td.sdblock.one { font-size: 12px !important; padding: 2px 0 !important; }
-#s-cal td.sdblock.one small { display: none !important; }
 :root { --pt-idle1: #c9d0d9; --pt-idle2: #eef1f4; }
 @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --pt-idle1: #46505d; --pt-idle2: #252c35; } }
 :root[data-theme="dark"] { --pt-idle1: #46505d; --pt-idle2: #252c35; }
 
 /* 계 칸은 오른쪽에 고정(스크롤해도 늘 보이게, 10/21) */
-:is(#s-cal, #s-ship) .tot { position: sticky; right: 0; z-index: 3; box-shadow: -2px 0 0 var(--line); }
-:is(#s-cal, #s-ship) thead .tot { z-index: 4; }
 
 /* 한 달이 넓은 화면에 스크롤 없이 들어가게(칸이 가려지지 않게, 10/21): 라인 칸 96px, 숫자 12.5px */
-html #s-cal col.cc0 { width: 52px !important; } html #s-cal col.cc1 { width: 44px !important; } html #s-cal col.ctot { width: 64px !important; }
-html #s-cal .c1 { left: 52px !important; }
-html #s-cal tbody td { font-size: 12.5px !important; letter-spacing: -0.3px !important; }
-html #s-cal tbody td.tot { font-size: 12.5px !important; letter-spacing: 0 !important; }
 
-html #s-cal tr.grp td { font-size: 12px !important; font-weight: 700 !important; letter-spacing: -0.4px !important; padding-left: 0 !important; padding-right: 0 !important; }
-html #s-cal tr.grp td.tot { font-size: 13px !important; letter-spacing: 0 !important; }
-html #s-cal tr.r-p td { font-size: 12px !important; letter-spacing: -0.35px !important; }
+
+/* 가동 캘린더·판매그룹 출하 재고 = 가동 현황 표(gtable)와 같은 서식(2026-10-21 사용자: 따로 덧댄 서식 전부 걷어냄) */
+:is(#s-cal, #s-ship) { table-layout: fixed; width: 100%; min-width: 1180px !important; border-collapse: separate; border-spacing: 0; font-variant-numeric: tabular-nums; }
+:is(#s-cal, #s-ship) th, :is(#s-cal, #s-ship) td { text-align: center; white-space: nowrap; padding: 6px 1px !important; font-size: 12.5px !important; letter-spacing: -0.3px !important; border-right: 1px solid var(--grid); border-bottom: 1px solid var(--grid); }
+:is(#s-cal, #s-ship) col.cc0 { width: 52px; } :is(#s-cal, #s-ship) col.cc1 { width: 52px; } :is(#s-cal, #s-ship) col.ctot { width: 66px; }
+:is(#s-cal, #s-ship) .c0 { position: sticky; left: 0; z-index: 3; background: var(--surface); font-weight: 800; color: var(--ink); }
+:is(#s-cal, #s-ship) .c1 { position: sticky; left: 52px; z-index: 3; background: var(--surface); color: var(--ink-3); font-weight: 600; font-size: 12px !important; }
+:is(#s-cal, #s-ship) thead th { background: var(--th); color: var(--ink-2); font-weight: 700; }
+:is(#s-cal, #s-ship) thead th.sat { color: #b35c00; } :is(#s-cal, #s-ship) thead th.sun { color: #c0262d; }
+:is(#s-cal, #s-ship) thead th.today { background: var(--brand-2); color: #fff; }
+:is(#s-cal, #s-ship) tbody td.tb { background-color: color-mix(in srgb, var(--brand-2) 7%, var(--surface)); }
+:is(#s-cal, #s-ship) .tot { position: sticky; right: 0; z-index: 3; background: var(--th) !important; font-weight: 800; color: var(--ink); }
+:is(#s-cal, #s-ship) tr.first > * { border-top: 1px solid var(--line); }
+:is(#s-cal, #s-ship) tr.grp > * { background: var(--surface-2); font-weight: 800; color: var(--ink); }
+:is(#s-cal, #s-ship) tr.grp .gh { text-align: left; padding-left: 8px !important; line-height: 1.2; } :is(#s-cal, #s-ship) tr.grp .gh small { display: block; font-size: 11px; font-weight: 600; color: var(--ink-3); }
+:is(#s-cal, #s-ship) tr.gap td { border: 0; height: 8px; padding: 0 !important; background: transparent; }
+:is(#s-cal, #s-ship) th.line { text-align: left; padding-left: 8px !important; font-size: 13px !important; }
+:is(#s-cal, #s-ship) td[data-d] { cursor: pointer; }
+#s-cal td.fc { background: color-mix(in srgb, var(--fc) 15%, var(--surface)); }
+#s-cal td.f-AL { --fc: #1f6fd1; } #s-cal td.f-AZ { --fc: #d35a1f; } #s-cal td.f-MAC { --fc: #0f8f62; } #s-cal td.f-C수출 { --fc: #5b45b5; } #s-cal td.f-C건재 { --fc: #08798a; } #s-cal td.f-C수요 { --fc: #a63d70; }
+#s-cal td.mcc { background: color-mix(in srgb, #f2b705 24%, var(--surface)); color: #6b4700; font-weight: 800; }
+#s-cal td.idle { background: repeating-linear-gradient(135deg, #cfd5dd 0 3px, var(--surface) 3px 7px); }
+#s-cal td.sdblock { background: #7b8796; color: #fff; font-weight: 800; white-space: normal; word-break: keep-all; line-height: 1.3; }
+#s-cal td.sdblock small { display: block; font-size: 11px; font-weight: 600; opacity: .9; } #s-cal td.sdblock.one small { display: none; }
+#s-ship tr.r-k td { color: var(--ink-2); }
+#s-ship tr.r-k td.hi { background: color-mix(in srgb, #f2b705 16%, var(--surface)); color: #6b4700; }
+#s-ship tr.r-k td.hi2 { background: color-mix(in srgb, #e8590c 18%, var(--surface)); color: #8a3000; font-weight: 700; }
+#s-ship tr.r-k td.neg { color: var(--bad); font-weight: 800; }
+#s-ship tr.grp.A > * { background: var(--surface-2); }
+.glegend .sw.f-AL { background: color-mix(in srgb, #1f6fd1 30%, var(--surface)); } .glegend .sw.f-AZ { background: color-mix(in srgb, #d35a1f 30%, var(--surface)); } .glegend .sw.f-MAC { background: color-mix(in srgb, #0f8f62 30%, var(--surface)); }
+.glegend .sw.f-C수출 { background: color-mix(in srgb, #5b45b5 30%, var(--surface)); } .glegend .sw.f-C건재 { background: color-mix(in srgb, #08798a 30%, var(--surface)); } .glegend .sw.f-C수요 { background: color-mix(in srgb, #a63d70 30%, var(--surface)); }
+.glegend .sw.mcsw { background: color-mix(in srgb, #f2b705 35%, var(--surface)); } .glegend .sw.sdsw { background: #7b8796; } .glegend .sw.idsw { background: repeating-linear-gradient(135deg, #cfd5dd 0 3px, var(--surface) 3px 6px); box-shadow: inset 0 0 0 1px var(--line); }
+.glegend .sw.hiw { background: color-mix(in srgb, #f2b705 30%, var(--surface)); } .glegend .sw.hi2w { background: color-mix(in srgb, #e8590c 30%, var(--surface)); }
+.glegend .sw.tbsw { background: color-mix(in srgb, var(--brand-2) 25%, var(--surface)); }
+
+:is(#s-cal, #s-ship) tr.grp td { font-weight: 600 !important; font-size: 12px !important; letter-spacing: -0.45px !important; }
+:is(#s-cal, #s-ship) td.tb, :is(#s-cal, #s-ship) th.tb { border-left: 0 !important; box-shadow: none !important; }
+#s-ship col.cc0 { width: 78px; } #s-ship .c1 { left: 78px; }
+#s-ship th.line { white-space: normal; word-break: keep-all; line-height: 1.2; font-size: 12.5px !important; }
+
+:is(#s-cal, #s-ship) td.w5 { font-size: 10.5px !important; letter-spacing: -0.6px !important; }
 </style>
 </head>
 <body>

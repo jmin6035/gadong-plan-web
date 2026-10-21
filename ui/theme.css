@@ -909,12 +909,12 @@ html body main :is(.strip span, .calc .more) { font-size: 13px !important; }
 html body main .flw .fs small { font-size: 13.5px !important; }
 html body main :is(ul, ol) > li { font-size: max(14px, 1em); }
 /* 31일 캘린더: 하루 칸을 48px 이상으로 — 글자를 줄이지 않고 표를 넓혀 가로 스크롤(왼쪽 라인·구분 열은 고정) */
-html body main :is(#s-cal, #s-ship, table.sc) { min-width: 1760px !important; }
+html body main table.sc { min-width: 1760px !important; }
 html body main :is(table.gtable td.w4, table.gtable td.w5, table.sc td.w4) { font-size: 13.5px !important; }
 /* 가동 상세: 흐름(소재 → 생산 → 납기)은 칸이 모자라면 다음 줄로 */
 html body main .flw { flex-wrap: wrap; white-space: normal; row-gap: 5px; }
 html body main .det table.dt td { white-space: normal; }
-html body main :is(#s-cal, #s-ship, #g-table) :is(.c0, .c1) { z-index: 6; }
+html body main #g-table :is(.c0, .c1) { z-index: 6; }
 html body main :is(.k .v, .kpi .v, .sum-v, .st-v) small { font-size: 15px !important; }   /* 큰 숫자 옆 단위는 작게 유지 */
 html body main table.t.wo th { white-space: normal !important; line-height: 1.3; }
 
