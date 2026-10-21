@@ -62,7 +62,6 @@
     renderNow(); renderReplan();
     const mcT = GP.sum(L, (l) => A.mc[l]), maxLoad = Math.max(...Object.values(A.load));
     const maxKey = Object.keys(A.load).find((k) => A.load[k] === maxLoad), [ml, mi] = maxKey.split('|');
-    renderExec();
     $('d-kpis').innerHTML = [
       [`${mcT}회`, 'M/C(강종 전환)', `${L.map((l) => `${l} ${A.mc[l]}회`).join(' · ')}`],
       [`${GP.fmt(A.short + A.lateT)}t`, '결품·지연', `결품 ${GP.fmt(A.short)}t · 지연 ${GP.fmt(A.lateT)}t`, A.short + A.lateT > 0.5],
@@ -108,34 +107,28 @@
     }).join('');
   }
   $('d-date').onchange = () => R && renderNow();
+  // 계획 대비 실적(사용자 10/21: '실적 반영 재계획' 설명 삭제, 칸이 애매 → 라인마다 계획·실적·차이를 줄로 나눠 칸마다 숫자 하나)
   function renderReplan() {
     const rp = R.replan, el = $('d-replan');
-    if (!rp) { el.hidden = true; return; }
-    const ev = (x) => { const [d, l, e] = x.split('|'); return `${GP.md(d)} ${l} ${esc(e)}`; };
+    if (!rp || !rp.vsPlan || !rp.vsPlan.length) { el.hidden = true; return; }
     el.hidden = false;
-    el.innerHTML = `<h2>실적 반영 재계획 <small class="muted">— ${GP.md(rp.t0)}까지 실적, ${rp.freezeUntil ? GP.md(rp.freezeUntil) + '까지 강종 동결' : '동결 없음'}</small></h2>
-      <ul class="changes">${rp.notes.concat(GP.lockLines ? GP.lockLines(rp) : []).map((n) => `<li>${esc(n)}</li>`).join('')}
-      ${(() => { const a = rp.actualWinT != null ? rp.actualWinT : rp.actualT; return rp.vsFrom && !(rp.vsPlan || []).length ? '' : `<li>실적 ${GP.fmt(a)}t / 같은 기간 계획 ${GP.fmt(rp.planToDateT)}t (${a >= rp.planToDateT ? '+' : ''}${GP.fmt(a - rp.planToDateT)}t)${rp.vsFrom ? ` — ${GP.md(rp.vsFrom)} 다음 날부터` : ''}</li>`; })()}
-      <li>전환 일정: ${rp.removed.length || rp.added.length ? `<b>취소</b> ${rp.removed.map(ev).join(', ') || '-'} · <b>신규</b> ${rp.added.map(ev).join(', ') || '-'}` : '변경 없음'}</li>
-      <li>납기 지연 ${GP.fmt(GP.dueLate ? GP.dueLate(R) : rp.late)}톤·일 · 결품 ${rp.shortBy.length ? rp.shortBy.map(esc).join(', ') : '없음'}</li></ul>` + vsPlanHtml(rp);
-  }
-  // 계획 대비 실적: 라인별 누계 달성률 + 최근 7일 + 부서 누계
-  function vsPlanHtml(rp) {
-    if (!rp.vsPlan || !rp.vsPlan.length) return '';
-    const L = R.P.lines, pct = (a, p) => (p > 0 ? `${GP.fmt(a / p * 100, 1)}%` : '-');
-    const cum = L.map((l) => { const x = rp.vsPlan.filter((r) => r[1] === l); return [l, GP.sum(x, (r) => r[2]), GP.sum(x, (r) => r[3])]; });
-    const days = [...new Set(rp.vsPlan.map((r) => r[0]))].slice(-7);
-    const cell = (d, l) => { const r = rp.vsPlan.find((x) => x[0] === d && x[1] === l) || [d, l, 0, 0], g = r[3] - r[2];
-      return `<td class="n ${g < -1 ? 'neg' : ''}">${GP.fmt(r[3])}<small>/${GP.fmt(r[2])}</small></td>`; };
-    // 한 표로(사용자 10/21: 카드·표가 넓게 흩어져 칸도 안 맞음) — 라인 줄: 최근 날짜별 실적/계획 + 누계·달성, 부서 표는 옆에 좁게
-    const tone = (a, p) => (p > 0 && a < p - 1 ? 'neg' : '');
-    const tot = [GP.sum(cum, (x) => x[1]), GP.sum(cum, (x) => x[2])];
-    const lineT = `<table class="data vs vs2"><thead><tr><th class="l">라인</th>${days.map((d) => `<th>${GP.md(d)}</th>`).join('')}<th>누계 실적</th><th>누계 계획</th><th>차이</th><th>달성</th></tr></thead><tbody>
-      ${cum.map(([l, p, a]) => `<tr><td class="l">${l}</td>${days.map((d) => cell(d, l)).join('')}<td class="n"><b>${GP.fmt(a)}</b></td><td class="n">${GP.fmt(p)}</td><td class="n ${tone(a, p)}">${a >= p ? '+' : ''}${GP.fmt(a - p)}</td><td class="n ${tone(a, p)}"><b>${pct(a, p)}</b></td></tr>`).join('')}
-      <tr class="tot"><td class="l">합계</td>${days.map(() => '<td></td>').join('')}<td class="n"><b>${GP.fmt(tot[1])}</b></td><td class="n">${GP.fmt(tot[0])}</td><td class="n ${tone(tot[1], tot[0])}">${tot[1] >= tot[0] ? '+' : ''}${GP.fmt(tot[1] - tot[0])}</td><td class="n"><b>${pct(tot[1], tot[0])}</b></td></tr></tbody></table>`;
-    const deptT = rp.byDept ? `<table class="data vs vs2"><thead><tr><th class="l">부서</th><th>계획</th><th>실적</th><th>차이</th><th>달성</th></tr></thead><tbody>${rp.byDept.filter((r) => r[1] || r[2]).map(([c, p, a]) => `<tr><td class="l">${c}</td><td class="n">${GP.fmt(p)}</td><td class="n">${GP.fmt(a)}</td><td class="n ${tone(a, p)}">${a >= p ? '+' : ''}${GP.fmt(a - p)}</td><td class="n">${p ? pct(a, p) : '<span class="muted">계획 없음</span>'}</td></tr>`).join('')}</tbody></table>` : '';
-    return `<h3>계획 대비 실적 <small class="muted">${rp.vsFrom ? GP.md(rp.vsFrom) + ' 다음 날부터 · ' : ''}실적 / 계획(t) · 빨강 = 계획 미달</small></h3>
-      <div class="vs-wrap"><div class="scroll">${lineT}</div>${deptT ? `<div class="scroll">${deptT}</div>` : ''}</div>`;
+    const L = R.P.lines, days = [...new Set(rp.vsPlan.map((r) => r[0]))].slice(-7);
+    const get = (d, l) => rp.vsPlan.find((x) => x[0] === d && x[1] === l) || [d, l, 0, 0];
+    const cum = (l) => { const x = rp.vsPlan.filter((r) => r[1] === l); return [GP.sum(x, (r) => r[2]), GP.sum(x, (r) => r[3])]; };
+    const sg = (v) => `${v > 0.5 ? '+' : v < -0.5 ? '−' : ''}${GP.fmt(Math.abs(v))}`;
+    const pc = (a, p) => (p > 0 ? `${GP.fmt(a / p * 100, 1)}%` : '-');
+    const body = L.concat(['합계']).map((l) => {
+      const P = (d) => (l === '합계' ? GP.sum(L, (x) => get(d, x)[2]) : get(d, l)[2]), A_ = (d) => (l === '합계' ? GP.sum(L, (x) => get(d, x)[3]) : get(d, l)[3]);
+      const [cp, ca] = l === '합계' ? L.reduce((s, x) => { const c = cum(x); return [s[0] + c[0], s[1] + c[1]]; }, [0, 0]) : cum(l);
+      const tr = (lab, f, cls, tot, last) => `<tr class="${cls}">${lab}${days.map((d) => { const v = f(d); return `<td class="n${cls === 'df' && v < -0.5 ? ' neg' : cls === 'df' && v > 0.5 ? ' pos' : ''}">${cls === 'df' ? sg(v) : GP.fmt(v)}</td>`; }).join('')}${tot}</tr>`;
+      return tr(`<th class="ln" rowspan="3">${l}</th><th class="k">계획</th>`, P, 'pl', `<td class="n s">${GP.fmt(cp)}</td><td class="n s" rowspan="3"><b class="${ca < cp - 1 ? 'neg' : ''}">${pc(ca, cp)}</b></td>`)
+        + tr('<th class="k">실적</th>', A_, 'ac', `<td class="n s"><b>${GP.fmt(ca)}</b></td>`)
+        + tr('<th class="k">차이</th>', (d) => A_(d) - P(d), 'df', `<td class="n s ${ca - cp < -0.5 ? 'neg' : ca - cp > 0.5 ? 'pos' : ''}">${sg(ca - cp)}</td>`);
+    }).join('');
+    const dep = rp.byDept ? `<table class="vs3 dep"><thead><tr><th>부서</th><th>계획</th><th>실적</th><th>차이</th><th>달성</th></tr></thead><tbody>${rp.byDept.filter((r) => r[1] || r[2]).map(([c, p, a]) => `<tr><th class="ln">${c}</th><td class="n">${GP.fmt(p)}</td><td class="n"><b>${GP.fmt(a)}</b></td><td class="n ${a < p - 0.5 ? 'neg' : a > p + 0.5 ? 'pos' : ''}">${sg(a - p)}</td><td class="n">${p ? pc(a, p) : '-'}</td></tr>`).join('')}</tbody></table>` : '';
+    el.innerHTML = `<h2>계획 대비 실적 <small class="muted">${rp.vsFrom ? `${GP.md(rp.vsFrom)} 다음 날부터 · ` : ''}단위 톤 · 차이 = 실적 − 계획(빨강 = 미달)</small></h2>
+      <div class="vs3-wrap"><div class="scroll"><table class="vs3"><thead><tr><th colspan="2">라인</th>${days.map((d) => `<th>${GP.md(d)}</th>`).join('')}<th>누계</th><th>달성</th></tr></thead><tbody>${body}</tbody></table></div>
+      ${dep ? `<div class="scroll"><h3 class="vs3-h">부서별 누계</h3>${dep}</div>` : ''}</div>`;
   }
   // ---------------- 일별 차트 (라인별 작은 배수, 같은 y축) ----------------
   function renderDaily() {
@@ -205,16 +198,6 @@
       `<tr class="evrow ${r.cls}" data-i="${i}">${r.cells.map((c) => `<td>${c}</td>`).join('')}</tr>` + (r.why ? `<tr class="why-row" data-w="${i}" hidden><td colspan="4">${esc(r.why)}</td></tr>` : '')).join('');
   }
   $('d-events').addEventListener('click', (ev) => { const tr = ev.target.closest('.evrow'); if (!tr) return; const w = $('d-events').querySelector(`[data-w="${tr.dataset.i}"]`); if (w) { w.hidden = !w.hidden; tr.classList.toggle('open', !w.hidden); } });
-
-  function renderExec() {
-    const P = R.P, L = P.lines, H = A.H, mcT = GP.sum(L, (l) => A.mc[l]);
-    const risks = [];
-    for (const l of L) H.ym.forEach(([, m], i) => { const v = A.load[`${l}|${i}`] || 0; if (v >= 0.995) risks.push(`${m}월 ${l} 부하 ${GP.fmt(v * 100)}% — 여유 없음, 설비 고장 시 바로 지연`); });
-    if (A.short + A.lateT > 0.5) risks.unshift(`결품·지연 ${GP.fmt(A.short + A.lateT)}t 발생`);
-    const sd = P.shutdowns.map((x) => `${x.line} 정기수리 ${GP.md(x.start)}~${GP.md(x.end)}`).join(', ');
-    $('d-exec').innerHTML = `<p class="headline">M/C <b>${mcT}회</b> · 결품·지연 <b>${GP.fmt(A.short + A.lateT)}t</b> · 전월 선생산 <b>${GP.fmt(A.earlyT)}t</b>${sd ? ` · ${sd}` : ''}</p>`
-      + (risks.length ? risks.map((t) => `<p class="risk">⚠ ${esc(t)}</p>`).join('') : '<p class="ok">✓ 결품·지연 없음, 모든 월 여유 있음</p>');
-  }
 
   // ---------------- HTML 간트: 라인별 강종 행 + 부서 행 + 가동시간 ----------------
   let gMonth = null;

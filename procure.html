@@ -111,6 +111,32 @@ table.fd-kv td small { display: block; font-size: 12.5px; color: var(--ink-3); }
 .fd-ax b { position: absolute; top: 4px; margin-left: -5px; }
 .fd-ax em { position: absolute; top: 2px; transform: translateX(-50%); font-style: normal; white-space: nowrap; }
 .fd-gh { font-size: 14px; font-weight: 800; padding: 10px 0 4px; color: var(--ink); }
+
+/* F/H 납기 비교 3차(10/21) — 발주 후 일수 한 줄 */
+.ft-lg { display: flex; flex-wrap: wrap; gap: 6px 18px; font-size: 14px; color: var(--ink-2); margin: 10px 0 14px; align-items: center; } .ft-lg small { color: var(--ink-3); }
+.ft-lg i, .ft-m i { display: inline-block; width: 12px; height: 12px; border-radius: 50%; margin-right: 6px; vertical-align: -1px; }
+.ft-lg i.ar, .ft-m.ar i { background: var(--good); } .ft-lg i.tf, .ft-m.tf i { background: var(--brand-2); } .ft-lg i.du, .ft-m.du i { background: var(--bad); }
+.ft-ks { display: grid; grid-template-columns: repeat(auto-fit, minmax(420px, 1fr)); gap: 16px; margin-bottom: 8px; }
+.ft-k { border: 1px solid var(--line); border-radius: 10px; padding: 14px 18px 12px; }
+.ft-kh { font-size: 16px; font-weight: 800; margin-bottom: 34px; } .ft-kh small { font-size: 13px; color: var(--ink-3); font-weight: 500; margin-left: 6px; }
+.ft-line { position: relative; height: 12px; background: var(--grid); border-radius: 6px; }
+.ft-line.big { height: 14px; }
+.ft-span { position: absolute; top: 3px; height: 8px; background: color-mix(in srgb, var(--ink) 18%, transparent); border-radius: 4px; }
+.ft-m { position: absolute; top: 50%; transform: translate(-50%, -50%); z-index: 2; }
+.ft-m i { width: 14px; height: 14px; margin: 0; box-shadow: 0 0 0 2px var(--surface); }
+.ft-line:not(.big) .ft-m i { width: 11px; height: 11px; }
+.ft-m em { position: absolute; bottom: 16px; left: 50%; transform: translateX(-50%); white-space: nowrap; font-style: normal; font-size: 13px; color: var(--ink-2); }
+.ft-m.du em { bottom: -30px; } .ft-m em b { color: var(--ink); font-size: 15px; }
+.ft-ax { position: relative; height: 18px; margin-top: 22px; } .ft-ax span { position: absolute; transform: translateX(-50%); font-size: 12px; color: var(--ink-3); } .ft-ax span:first-child { transform: none; }
+.ft-say { font-size: 14px; margin: 6px 0 0; color: var(--ink-2); }
+table.ft-t td.ar b, table.ft-t td.ar { color: var(--good); } table.ft-t td.du { color: var(--bad); } table.ft-t td.gap { color: var(--bad); font-weight: 700; }
+table.ft-t td.ft-cell, table.ft-t th.ft-cell { min-width: 220px; width: 30%; }
+
+.ft-line.big .ft-m.ar em { transform: translateX(calc(-100% + 8px)); text-align: right; }
+.ft-line.big .ft-m.tf em { transform: translateX(-8px); }
+.ft-line.big .ft-m.du em { bottom: auto; top: 16px; transform: translateX(-8px); }
+.ft-k .ft-ax { margin-top: 30px; } .ft-ax span { white-space: nowrap; }
+.ft-kh { margin-bottom: 30px; }
 </style>
 </head>
 <body>

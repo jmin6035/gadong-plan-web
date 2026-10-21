@@ -122,34 +122,33 @@
     }
     return out.join('');
   }
-  // 월말·분기말 전망: 도금 생산(실적 + 매일 재계획) vs 확정 계획 · 컬러 편성 vs 월차 · 제품 재고(롤링) vs 월말 최대
+  // 월말·4분기 전망(사용자 10/21: 표 → 한눈에) — 왼쪽 = 달마다 생산 예상 vs 계획 막대, 오른쪽 = 제품 재고 지금 → 월말 기둥 + 월말 최대 선
   function fcCard(O) {
     const M = O.months || [], pm = O.planMonth, pl = O.plating || {}, cl = (O.color || {}).lines || {};
     const ends = M.map((m) => `${m}-${String(dim(m)).padStart(2, '0')}`);
-    const cell = (v, ref, tone, sub) => `<td class="${tone || ''}"><b>${v == null ? '-' : n0(v)}</b>${sub ? `<small>${sub}</small>` : ''}</td>`;
-    const rows = [];
-    const cur0 = (pl_, i, v, ref, lb) => (i === 0 && FC[pl_] ? [FC[pl_].fc, FC[pl_].m, '속보 월차'] : [v, ref, lb]);
-    if (pm && UI.inScope('G')) {
-      const C = M.map((m, i) => cur0('G', i, pm.g1[i] + pm.g2[i], (pl.g1 || [])[i] + (pl.g2 || [])[i], '확정 계획'));
-      rows.push(`<tr><td class="l">도금 생산<small>실적 + 남은 계획</small></td>${C.map(([v, ref, lb]) => cell(v, ref, ref ? toneP(v / ref) : '', ref ? `${lb} ${n0(ref)}` : '')).join('')}<td><b>${n0(C.reduce((a, x) => a + x[0], 0))}</b><small>계획 ${n0(C.reduce((a, x) => a + (x[1] || 0), 0))}</small></td></tr>`);
-    }
-    if (UI.inScope('C') && Object.keys(cl).length) {
-      const tot = (m, k) => Object.values(cl[m] || {}).reduce((a, x) => a + (x[k] || 0), 0);
-      const C = M.map((m, i) => cur0('C', i, tot(m, 'placed'), tot(m, 'plan'), '월차'));
-      rows.push(`<tr><td class="l">컬러 생산<small>이번 달 = 실적 + 남은 편성</small></td>${C.map(([v, ref, lb]) => cell(v, ref, ref ? toneP(v / ref) : '', `${lb} ${n0(ref)}`)).join('')}<td><b>${n0(C.reduce((a, x) => a + x[0], 0))}</b><small>월차 ${n0(C.reduce((a, x) => a + (x[1] || 0), 0))}</small></td></tr>`);
-    }
+    const prod = [];
+    if (pm && UI.inScope('G')) prod.push(['도금', 'G', M.map((m, i) => (i === 0 && FC.G ? [FC.G.fc, FC.G.m, '속보 월차'] : [pm.g1[i] + pm.g2[i], (pl.g1 || [])[i] + (pl.g2 || [])[i], '확정 계획']))]);
+    if (UI.inScope('C') && Object.keys(cl).length) { const tot = (m, k) => Object.values(cl[m] || {}).reduce((a, x) => a + (x[k] || 0), 0);
+      prod.push(['컬러', 'C', M.map((m, i) => (i === 0 && FC.C ? [FC.C.fc, FC.C.m, '속보 월차'] : [tot(m, 'placed'), tot(m, 'plan'), '월차']))]); }
+    const pbar = ([nm, pl_, R]) => `<div class="fp-g"><div class="fp-gh">${nm} 생산 <small>4분기 ${n0(R.reduce((a, r) => a + r[0], 0))}t / 계획 ${n0(R.reduce((a, r) => a + (r[1] || 0), 0))}t</small></div>`
+      + R.map(([v, ref, lb], i) => { const r = ref ? v / ref : 0, t = toneP(r), mx = Math.max(v, ref, 1) * 1.04;
+        return `<div class="fp-r ${t}" title="${+M[i].slice(5)}월 ${nm} 예상 ${n0(v)}t / ${lb} ${n0(ref)}t"><span class="fp-m">${+M[i].slice(5)}월</span><span class="fp-b"><i style="width:${v / mx * 100}%"></i><u style="left:${ref / mx * 100}%"></u></span><span class="fp-v"><b>${Math.round(r * 100)}%</b> ${n0(v)}t</span></div>`; }).join('') + '</div>';
     const st = {}; ((O.sr || {}).stock || []).forEach((x) => { st[x.name] = x; });
-    for (const [keys, nm, k, pl_] of [[CK, '컬러 제품 재고', 'c', 'C'], [GK, '도금 판매재 재고', 'g', 'G']]) {
+    const stk = [];
+    for (const [keys, nm, k, pl_] of [[CK, '컬러 제품', 'c', 'C'], [GK, '도금 판매재', 'g', 'G']]) {
       if (!UI.inScope(pl_)) continue;
-      const mx = (st[MAXN[k]] || {}).target; const v = ends.map((d) => rollAt(O, keys, d));
-      if (v.every((x) => x == null)) continue;
-      rows.push(`<tr><td class="l">${nm}<small>월말 최대 ${mx ? n0(mx) : '-'}t</small></td>${v.map((x) => cell(x, mx, mx && x != null ? toneK(x / mx) : '', mx && x != null ? `${Math.round(x / mx * 100)}%` : '')).join('')}<td></td></tr>`);
+      const S = st[MAXN[k]] || {}, mx = S.target, cur = S.current;
+      const pts = [['지금', cur]].concat(ends.map((d, i) => [`${+M[i].slice(5)}월 말`, rollAt(O, keys, d)])).filter((p) => p[1] != null);
+      if (!pts.length || !mx) continue;
+      const top = Math.max(mx, ...pts.map((p) => p[1])) * 1.12;
+      stk.push(`<div class="fs-g"><div class="fp-gh">${nm} 재고 <small>월말 최대 ${n0(mx)}t</small></div><div class="fs-c"><em class="fs-max" style="bottom:${mx / top * 100}%"><span>최대 ${n0(mx)}</span></em>`
+        + pts.map(([lb, v]) => { const r = v / mx, t = toneK(r); return `<div class="fs-col ${t}" title="${nm} ${lb} ${n0(v)}t · 월말 최대의 ${Math.round(r * 100)}%"><div class="fs-bar" style="height:${Math.max(0, v) / top * 100}%"><b>${(v / 1000).toFixed(1)}천</b></div><span>${lb}</span></div>`; }).join('') + '</div></div>');
     }
     const now = pl.now || {};
-    if (UI.inScope('G')) rows.push(`<tr><td class="l">도금 납기<small>오늘 재계획</small></td><td colspan="3" class="${now.short ? 'bad' : now.late ? 'warn' : 'good'}" style="text-align:left"><b>결품 ${n0(now.short || 0)}t · 지연 ${n0(now.late || 0)}톤·일</b><small>${(now.shortBy || []).length ? '결품: ' + now.shortBy.map(esc).join(', ') : '지연 = 늦는 톤 × 늦는 일수 합'}</small></td><td></td></tr>`);
-    if (!rows.length) return '';
-    return `<h2>월말·4분기 전망 <small>이번 달 = 속보 실적 + 남은 계획 · 재고 = 어제 실제 재고에서 계획대로 굴린 값(재고 추이와 같음), 이번 달 남은 출고 = 속보 월차 − 실적</small><span class="unit">톤</span></h2>
-      <div class="scroll"><table class="fc"><thead><tr><th class="l"></th>${M.map((m) => `<th>${+m.slice(5)}월</th>`).join('')}<th>4분기</th></tr></thead><tbody>${rows.join('')}</tbody></table></div>`;
+    const due = UI.inScope('G') ? `<p class="fp-due ${now.short ? 'bad' : now.late ? 'warn' : 'good'}">도금 납기 — 결품 <b>${n0(now.short || 0)}t</b> · 지연 <b>${n0(now.late || 0)}톤·일</b>${(now.shortBy || []).length ? ` · 결품: ${now.shortBy.map(esc).join(', ')}` : ''}</p>` : '';
+    if (!prod.length && !stk.length) return '';
+    return `<h2>월말·4분기 전망 <small>생산 = 이번 달 실적 + 남은 계획(막대 = 예상, 세로선 = 계획) · 재고 = 어제 실제에서 계획대로 굴린 월말 값</small></h2>
+      <div class="fp-wrap"><div class="fp-l">${prod.map(pbar).join('')}</div><div class="fp-rgt">${stk.join('')}</div></div>${due}`;
   }
   function loadCard(O) {
     const p = O.planMonth || O.plating, mx = Math.max(...O.months.map((m, i) => p.g1[i] + p.g2[i])) * 1.04;

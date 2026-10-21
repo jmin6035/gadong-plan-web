@@ -962,3 +962,17 @@ html body .gtable-wrap { overflow-x: auto !important; }
 html body .card:has(.gtable-wrap) { overflow: hidden !important; }
 html body main table.gtable { min-width: 1500px !important; font-size: 12.5px !important; }
 html body main .gtable th, html body main .gtable td { letter-spacing: -0.2px !important; padding: 5px 1px !important; }
+
+/* 도금 가동 현황 계획 대비 실적 3차(10/21): 라인마다 계획·실적·차이 줄, 칸마다 숫자 하나 */
+.vs3-wrap { display: flex; flex-wrap: wrap; gap: 28px; align-items: flex-start; }
+table.vs3 { border-collapse: collapse; font-variant-numeric: tabular-nums; }
+table.vs3 th, table.vs3 td { padding: 7px 12px; border-bottom: 1px solid var(--grid); white-space: nowrap; font-size: 14px; text-align: right; }
+table.vs3 thead th { background: var(--th); color: var(--ink-2); font-weight: 700; text-align: center; border-bottom: 1px solid var(--line); }
+table.vs3 th.ln { text-align: left; font-weight: 800; color: var(--ink); border-right: 1px solid var(--grid); vertical-align: middle; }
+table.vs3 th.k { text-align: left; font-weight: 600; color: var(--ink-3); font-size: 13px; }
+table.vs3 tr.pl td { color: var(--ink-2); } table.vs3 tr.ac td { color: var(--ink); font-weight: 700; }
+table.vs3 tr.df td { font-size: 13px; } table.vs3 tr.df td, table.vs3 tr.df th { border-bottom: 1px solid var(--line); }
+table.vs3 td.neg, table.vs3 b.neg { color: var(--bad); font-weight: 700; } table.vs3 td.pos { color: var(--good); }
+table.vs3 td.s { background: var(--surface-2); border-left: 1px solid var(--grid); } table.vs3 td[rowspan] { vertical-align: middle; font-size: 16px; }
+table.vs3.dep th.ln { border-right: 0; }
+.vs3-h { font-size: 14px; margin: 0 0 6px; color: var(--ink-2); }

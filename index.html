@@ -46,6 +46,27 @@ details.more-d[open] { padding-bottom: 14px; }
 table.gt tr.tot td { font-weight: 800; border-top: 1px solid var(--line); background: var(--hover); }
 @media (max-width: 1100px) { .own { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 @media (max-width: 560px) { .own { grid-template-columns: 1fr; } .ot .big { font-size: 34px; } }
+/* 월말·4분기 전망(10/21 재작성) */
+.fp-wrap { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 28px; }
+@media (max-width: 900px) { .fp-wrap { grid-template-columns: 1fr; } }
+.fp-g { margin-bottom: 14px; } .fp-gh { font-size: 15px; font-weight: 800; margin-bottom: 8px; } .fp-gh small { font-weight: 500; color: var(--ink-3); font-size: 13px; margin-left: 6px; }
+.fp-r { display: grid; grid-template-columns: 44px 1fr 150px; align-items: center; gap: 10px; margin: 7px 0; font-variant-numeric: tabular-nums; }
+.fp-m { font-size: 14px; color: var(--ink-2); font-weight: 700; }
+.fp-b { position: relative; height: 18px; background: var(--grid); border-radius: 4px; }
+.fp-b i { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 4px; background: var(--tc, var(--good)); transform-origin: left; animation: grow .9s var(--ease) both .15s; }
+.fp-b u { position: absolute; top: -4px; bottom: -4px; width: 2px; background: var(--ink); }
+.fp-r.good { --tc: var(--good); } .fp-r.warn { --tc: var(--warn); } .fp-r.bad { --tc: var(--bad); }
+.fp-v { font-size: 14px; color: var(--ink-2); white-space: nowrap; } .fp-v b { color: var(--tc); font-size: 15px; margin-right: 4px; }
+.fs-g { margin-bottom: 16px; }
+.fs-c { position: relative; height: 150px; display: flex; gap: 14px; align-items: flex-end; padding: 0 84px 22px 4px; border-bottom: 1px solid var(--line); }
+.fs-col { flex: 1; height: 100%; display: flex; flex-direction: column; justify-content: flex-end; align-items: center; position: relative; }
+.fs-col > span { position: absolute; bottom: -20px; font-size: 13px; color: var(--ink-2); white-space: nowrap; }
+.fs-bar { width: min(56px, 70%); background: var(--tc, var(--good)); border-radius: 4px 4px 0 0; position: relative; animation: grow .9s var(--ease) both; transform-origin: bottom; }
+.fs-bar b { position: absolute; top: -20px; left: 50%; transform: translateX(-50%); font-size: 13px; color: var(--ink); white-space: nowrap; }
+.fs-col.good { --tc: color-mix(in srgb, var(--good) 75%, var(--surface)); } .fs-col.warn { --tc: color-mix(in srgb, var(--warn) 80%, var(--surface)); } .fs-col.bad { --tc: color-mix(in srgb, var(--bad) 80%, var(--surface)); }
+.fs-max { position: absolute; left: 0; right: 0; height: 0; border-top: 2px dashed var(--ink); z-index: 2; pointer-events: none; }
+.fs-max span { position: absolute; right: 0; top: -9px; font-size: 12px; font-style: normal; color: var(--ink); background: var(--surface); padding: 0 4px; }
+.fp-due { margin: 6px 0 0; font-size: 14px; color: var(--ink-2); } .fp-due.bad b { color: var(--bad); } .fp-due.warn b { color: var(--warn); }
 /* KPI 띠 */
 .kstrip { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 10px; }
 .k { position: relative; background: var(--surface); border: 1px solid var(--line); border-top: 3px solid var(--gc, var(--brand-2)); border-radius: 8px; padding: 10px 12px 9px; text-decoration: none; color: var(--ink); overflow: hidden; }

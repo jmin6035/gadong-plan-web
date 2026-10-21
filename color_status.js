@@ -79,9 +79,7 @@
       risks.push(cr ? `${+m.slice(5)}월에 못 만든 ${fmt(u)}t → ${+cr.carry.slice(5)}월 1일부터 먼저 만듦(그 달 판매계획 대비 늦음, ${gs})`
         : `${+m.slice(5)}월 미편성 ${fmt(u)}t — 만들 수 있는 라인이 가동시간을 다 써서 일정에 못 넣음, 이대로면 판매계획 미달(${gs})`);
     });
-    const q = sum(MONTHS, (m) => monT(m));
-    $('d-exec').innerHTML = `<p class="headline">4분기 <b>${fmt(q)}t</b> · 미편성 <b>${fmt(unT())}t</b> · 계획재 <b>${fmt(sum(O.color, (c) => c.g['계획재'] || 0))}t</b> · 실적 ~${md(lastAct)}</p>`
-      + (risks.length ? risks.map((t) => `<p class="risk">⚠ ${esc(t)}</p>`).join('') : '<p class="ok">✓ 미편성 없음, 모든 라인 월차 한도까지 편성</p>');
+    $('d-exec').innerHTML = (risks.length ? risks.map((t) => `<p class="risk">⚠ ${esc(t)}</p>`).join('') : '<p class="ok">✓ 미편성 없음, 모든 라인 월차 한도까지 편성</p>');
   }
 
   // ---------------- 월별 가동계획 표: 라인 합계 행 + 그룹 행 + 가동시간 (도금 표와 같은 클래스) ----------------
