@@ -982,3 +982,6 @@ html body main :is(table.gtable, table.sc, #s-cal, #s-ship) thead th.today { bac
 html body main table.vs3 { width: 100%; table-layout: fixed; }
 html body main table.vs3 th, html body main table.vs3 td { font-size: 15px; padding: 9px 10px; }
 html body main table.vs3 th.ln { font-size: 16px; }
+/* 기준일 라인 현황 카드: 긴 휴지 사유 칸은 카드 안에서 줄바꿈(10/22 사용자: 칸 튀어나옴) */
+html body main .ln-card .tag { white-space: normal; max-width: 100%; box-sizing: border-box; border-radius: 10px; line-height: 1.45; word-break: keep-all; overflow-wrap: anywhere; }
+html body main .ln-card { min-width: 0; overflow: hidden; }
