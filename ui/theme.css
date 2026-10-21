@@ -840,6 +840,11 @@ html body .gtable tr.r-stop .c1 { font-weight: 500; color: var(--muted); }
 html body .gtable td.kt-plan { background: color-mix(in srgb, var(--k-plan) 35%, transparent); } html body .gtable td.kt-sd { background: color-mix(in srgb, var(--k-sd) 35%, transparent); }
 html body .gtable td.kt-repair { background: color-mix(in srgb, var(--k-repair) 35%, transparent); } html body .gtable td.kt-clean { background: color-mix(in srgb, var(--k-clean) 35%, transparent); }
 html body .gtable td.kt-test { background: color-mix(in srgb, var(--k-test) 35%, transparent); } html body .gtable td.kt-sample { background: color-mix(in srgb, var(--k-sample) 35%, transparent); }
+/* 실적 휴지 종류(2026-10-21: 지난 날 = MES 실제 휴지 — 색상교체·청소 / 폭·롤 전환 / 기타 / 기록 없는 정지) */
+.sw.k-color, html body .gtable td.k-color, html body .gtable td.kt-color { background: color-mix(in srgb, var(--k-clean) 60%, transparent); }
+.sw.k-roll, html body .gtable td.k-roll, html body .gtable td.kt-roll { background: color-mix(in srgb, var(--k-sd) 45%, transparent); }
+.sw.k-etc, html body .gtable td.k-etc, html body .gtable td.kt-etc { background: color-mix(in srgb, var(--k-plan) 55%, transparent); }
+.sw.k-gap, html body .gtable td.k-gap, html body .gtable td.kt-gap { background: repeating-linear-gradient(135deg, color-mix(in srgb, var(--k-sample) 70%, transparent) 0 4px, color-mix(in srgb, var(--k-sample) 35%, transparent) 4px 8px); }
 
 /* ---- 차트 공통(가동·소재 캘린더, 2026-10-21): 한 색조 단계(실적·입고 = 진한 파랑, 발주·남은 계획 = 옅은 파랑, 아직 안 된 몫 = 회색 트랙), 2px 칸 사이, 4px 둥근 끝, 가는 격자 ---- */
 :root { --vz-1: #256abf; --vz-2: #86b6ef; --vz-track: #e6e9ee; --vz-grid: #eceef1; --vz-c1: #2a78d6; --vz-c2: #eb6834; --vz-c3: #1baf7a; --vz-c4: #eda100; --vz-c5: #e87ba4; --vz-c6: #6250d6; --vz-other: #b4bac2; }

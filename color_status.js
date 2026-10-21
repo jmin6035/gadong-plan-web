@@ -17,8 +17,8 @@
   const MONTHS = ['2026-10', '2026-11', '2026-12'];
   const sum = (a, f = (x) => x) => a.reduce((s, x) => s + (f(x) || 0), 0);
   let O = null, by = {}, gMonth = null, lastAct = '', dn = {};
-  const KN = { plan: '계획휴지', sd: 'S/D', repair: '수리', clean: '청소', test: 'Test', sample: '샘플' };
-  const HARD = ['plan', 'sd', 'repair'];
+  const KN = { plan: '계획휴지', sd: 'S/D', repair: '수리', clean: '청소', test: 'Test', sample: '샘플', color: '색상교체·청소', roll: '폭·롤 전환', etc: '기타 정지', gap: '기록 없는 정지(TEST 등)' };
+  const HARD = ['plan', 'sd', 'repair', 'gap'];
   const fullDay = (l, d) => sum((dn[`${l}|${d}`] || []).filter((x) => HARD.includes(x[0])), (x) => x[1]) >= 1439;
   const dnTxt = (l, d) => (dn[`${l}|${d}`] || []).map((x) => `${KN[x[0]]} ${fmt(x[1])}분`).join(', ');
 
@@ -34,6 +34,14 @@
   function render() {
     by = {}; for (const c of O.color) by[`${c.l}|${c.d}`] = c;
     dn = {}; for (const [d, l, k, mn] of O.colorDown || []) (dn[`${l}|${d}`] = dn[`${l}|${d}`] || []).push([k, mn]);
+    // 2026-10-21 사용자: 지난 날도 휴지 '계획'(휴지계획 파일)을 보여 주고 있었음 → 실적 날은 MES 실제 휴지(코일·휴지 기록, 기록 없는 시간 = 기록 없는 정지)로. 하루 종일 기록이 없고 계획이 S/D·수리면 계획 이름 유지
+    const DA = O.downAct;
+    if (DA && DA.days) for (const d of Object.keys(by).map((k) => k.split('|')[1]).concat(Object.keys(DA.days)).filter((x, i, a) => a.indexOf(x) === i)) {
+      if (d > DA.asOf || d < '2026-10-01') continue;
+      for (const l of LINES) { const k = `${l}|${d}`, act = (DA.days[d] || {})[l] || [], gap = sum(act.filter((x) => x[0] === 'gap'), (x) => x[1]), plan = (dn[k] || []).filter((x) => HARD.includes(x[0]));
+        if (gap >= 1439 && plan.length) dn[k] = plan; else if (act.length) dn[k] = act.map((x) => [x[0], x[1]]); else delete dn[k];
+        if (by[k] && by[k].act) by[k] = Object.assign({}, by[k], { min: Math.max(0, 1440 - sum(act, (x) => x[1])) }); }   // 가동시간 = 24h − 실제 휴지(코일 작업 시간) — 휴지와 합이 24h
+    }
     lastAct = O.color.filter((c) => c.act).reduce((a, c) => (c.d > a ? c.d : a), '');
     $('d-empty').hidden = true; $('d-body').hidden = false;
     $('d-title').textContent = `'26.${MONTHS.map((m) => +m.slice(5)).join('·')}월 컬러 CCL 가동계획`;
@@ -47,7 +55,7 @@
       [`${fmt(pl)}t`, '계획재', `4분기 생산의 ${fmt(pl / q * 100)}%`],
       [`${fmt(mx * 100, 1)}%`, '최대 월 부하', `${mxK} (편성 ÷ MES 월차)`, mx > 0.995],
     ].map(([v, l, sub, bad]) => `<div class="kpi ${bad ? 'bad' : ''}"><span class="kl">${l}</span><b>${v}</b><span class="ks">${sub}</span></div>`).join('');
-    const kinds = new Set((O.colorDown || []).map((x) => x[2]));
+    const kinds = new Set(Object.values(dn).flat().map((x) => x[0]));
     const leg = Object.keys(KN).filter((k) => kinds.has(k)).map((k) => `<span><i class="sw k-${k}"></i>${KN[k]}</span>`).join('')
       + '<span>· 휴지(h) 행 = 그날 휴지 시간(종류 색), 종일 정지는 블록</span><span><i class="sw" style="background:var(--sd)"></i>가동 없음</span>';
     $('g-legend').innerHTML = leg;
@@ -192,7 +200,7 @@
   async function overlayActual(pw) {
     try {
       const e = await GP.latest('color_actual.enc.json'); if (!e) return;
-      const A = (await GP.decryptJSON(e, pw)).byGroup; if (!A || !A.days) return;
+      const AA = await GP.decryptJSON(e, pw), A = AA.byGroup; O.downAct = AA.downAct || null; if (!A || !A.days) return;
       const idx = {}; O.color.forEach((c, i) => { idx[`${c.l}|${c.d}`] = i; });
       for (const [d, L] of Object.entries(A.days)) {
         if (d < '2026-10-01' || d > '2026-12-31') continue;
