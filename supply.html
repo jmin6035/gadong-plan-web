@@ -207,6 +207,16 @@ html .gtable .c1 small { color: var(--ink-3); font-weight: 500; }
 #s-ship th.line { white-space: normal; word-break: keep-all; line-height: 1.2; font-size: 12.5px !important; }
 
 :is(#s-cal, #s-ship) td.w5 { font-size: 10.5px !important; letter-spacing: -0.6px !important; }
+
+/* 생산 없음 = 진한 빗금(10/21 사용자: 확실하게) · 합계 줄 아래 */
+#s-cal td.idle { background: repeating-linear-gradient(135deg, #8d97a4 0 3px, #dde2e8 3px 7px) !important; }
+.glegend .sw.idsw { background: repeating-linear-gradient(135deg, #8d97a4 0 3px, #dde2e8 3px 6px) !important; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) #s-cal td.idle { background: repeating-linear-gradient(135deg, #6b7684 0 3px, #2a313b 3px 7px) !important; } }
+:root[data-theme="dark"] #s-cal td.idle { background: repeating-linear-gradient(135deg, #6b7684 0 3px, #2a313b 3px 7px) !important; }
+#s-ship tr.grp .gh { text-align: left; padding-left: 8px !important; }
+#s-ship tr.grp.A > * { background: var(--th) !important; }
+
+:is(#s-cal, #s-ship) tr td.w5, :is(#s-cal, #s-ship) tr.grp td.w5 { font-size: 10px !important; letter-spacing: -0.8px !important; padding: 0 !important; }
 </style>
 </head>
 <body>

@@ -356,9 +356,10 @@
       S2 += `<td class="tot gt">${rk === 's' ? n0(tot) : ''}</td></tr>`;
     });
     const GG = ['G수출', 'G국내', 'G자동차'], CC = ['C수출', 'C건재'];
-    if (UI.inScope('G') && UI.inScope('C')) shipSum('A', '도금+컬러', [...GG, ...CC]);
-    if (UI.inScope('G')) { shipSum('G', '도금 합', GG); shipBlock('G', GG); }
-    if (UI.inScope('C')) { shipSum('C', '컬러 합', CC); shipBlock('C', CC); }
+    // 합계 줄은 각 묶음 맨 아래, 전체(도금+컬러)는 표 맨 아래(사용자 10/21)
+    if (UI.inScope('G')) { shipBlock('G', GG); shipSum('G', '도금 합', GG); }
+    if (UI.inScope('C')) { if (UI.inScope('G')) S2 += `<tr class="gap"><td colspan="${ds.length + 3}"></td></tr>`; shipBlock('C', CC); shipSum('C', '컬러 합', CC); }
+    if (UI.inScope('G') && UI.inScope('C')) { S2 += `<tr class="gap"><td colspan="${ds.length + 3}"></td></tr>`; shipSum('A', '도금+컬러', [...GG, ...CC]); }
     tg = 'b';
     sec('자가재 재고 (도금 → 컬러 소재, 기말)', 'C');
     for (const a of ['AZ', 'MAC', 'AL']) row(`자가재 ${a}`, (d) => { const x = D.self[`${a}|${d}`]; if (!x) return {}; const nx = useNext(a, d, 3); return { x: kt(x.stock), c: (x.stock < 0 ? 'neg' : nx > 0 && x.stock < nx ? 'lo' : '') + (d >= D.selfEst ? ' est' : ''), tip: `${d >= D.selfEst ? '[추정: 1월 초 컬러 출고 = 12월 일평균] ' : ''}${md(d)} 자가재 ${a}: 도금 입고 +${n0(x.prod)} · 컬러 출고 −${n0(x.use)} → 기말 재고 ${n0(x.stock)}t (향후 3일 소요 ${n0(nx)}t)` }; }, false, 'sub');
