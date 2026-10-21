@@ -271,35 +271,58 @@
     const full = (l, d) => (dn[`${l}|${d}`] || []).filter((x) => HARD.includes(x[0])).reduce((a, x) => a + x[1], 0) >= 1439;
     const dTxt = (l, d) => (dn[`${l}|${d}`] || []).map((x) => `${x[0] === 'mc' ? 'M/C' : KN[x[0]]} ${n0(x[1])}분`).join(', ');
     let G2 = headG('라인');
+    // 2026-10-21 사용자: 도금/컬러 구분 + 색 줄이기 — 색은 강종(AL·AZ·MAC 막대)·M/C·종일 정지만, 숫자 칸은 무채색
+    const runsOf = (l) => { const fi = ds.map((d, i) => (full(l, d) ? i : -1)).filter((i) => i >= 0), rs = [];
+      fi.forEach((i) => { const r = rs[rs.length - 1]; if (r && r[1] === i - 1) r[1] = i; else rs.push([i, i]); }); return rs; };
+    const sdCell = (l, run, span) => { const d = ds[run[0]], k0 = (dn[`${l}|${d}`] || []).find((x) => HARD.includes(x[0])), kk = k0 ? k0[0] : 'plan', n = run[1] - run[0] + 1;
+      return `<td class="sdblock${n === 1 ? ' one' : ''}" colspan="${n}" rowspan="${span}" title="${esc(dTxt(l, d))}" data-d="${d}">${KN[kk]}<small>${md(ds[run[0]])}${n > 1 ? '~' + md(ds[run[1]]) : ''}</small></td>`; };
+    const isMC = (x) => x && /M\/C/.test(x.ev || '');
     const lineBlock = (pl, l) => {
-      const src = pl === 'G' ? D.pl : D.co, hasDn = ds.some((d) => dn[`${l}|${d}`]), rows = hasDn ? ['p', 'h'] : ['p'];
-      const fi = ds.map((d, i) => (full(l, d) ? i : -1)).filter((i) => i >= 0), runs = [];
-      fi.forEach((i) => { const r = runs[runs.length - 1]; if (r && r[1] === i - 1) r[1] = i; else runs.push([i, i]); });
+      const src = pl === 'G' ? D.pl : D.co, hasDn = ds.some((d) => (dn[`${l}|${d}`] || []).some((x) => x[0] !== 'mc' || pl === 'G')), runs = runsOf(l);
+      const rows = [...(pl === 'G' ? ['a'] : []), 'p', ...(hasDn ? ['h'] : [])], RL = { a: '강종', p: '생산(t)', h: '휴지(h)' };
       rows.forEach((rk, ri) => {
-        G2 += `<tr class="${rk === 'p' ? 'r-p' : 'r-h'}${ri === 0 ? ' first' : ''}">` + (ri === 0 ? `<th class="c0 line ${pl}" rowspan="${rows.length}">${l}</th>` : '') + `<th class="c1">${rk === 'p' ? '생산(t)' : '휴지(h)'}</th>`;
+        G2 += `<tr class="r-${rk}${ri === 0 ? ' first' : ''}">` + (ri === 0 ? `<th class="c0 line ${pl}" rowspan="${rows.length}">${l}</th>` : '') + `<th class="c1">${RL[rk]}</th>`;
         let tot = 0;
+        if (rk === 'a') {                                                // 강종 막대: 같은 강종 연속일 = 한 칸, M/C 날 = 노란 칸
+          let nmc = 0;
+          for (let i = 0; i < ds.length;) {
+            const run = runs.find((r) => r[0] === i);
+            if (run) { G2 += sdCell(l, run, rows.length); i = run[1] + 1; continue; }
+            const x = src[`${l}|${ds[i]}`];
+            if (isMC(x)) { nmc++; G2 += `<td class="mcbar" data-d="${ds[i]}" title="${esc(`${md(ds[i])} ${l} ${x.ev.split(' · ')[0]} · 생산 ${n0(x.t || 0)}t`)}">M/C</td>`; i++; continue; }
+            const key = x && (x.t || 0) >= 0.5 ? x.fam || 'AL' : '';
+            let j = i, t = 0;
+            while (j < ds.length && !runs.some((r) => r[0] <= j && j <= r[1])) { const y = src[`${l}|${ds[j]}`]; if (isMC(y) || (y && (y.t || 0) >= 0.5 ? y.fam || 'AL' : '') !== key) break; t += y ? y.t || 0 : 0; j++; }
+            const n = j - i;
+            G2 += key ? `<td class="fbar f-${key}${n === 1 ? ' one' : ''}" colspan="${n}" data-d="${ds[i]}" title="${esc(`${l} ${key} ${md(ds[i])}~${md(ds[j - 1])} · ${n}일 ${n0(t)}t`)}">${key}${n >= 5 ? `<small>${md(ds[i])}~${md(ds[j - 1])}</small>` : ''}</td>`
+              : `<td class="idle" colspan="${n}"></td>`;
+            i = j;
+          }
+          G2 += `<td class="tot mcn">${nmc ? `M/C ${nmc}회` : ''}</td></tr>`;
+          return;
+        }
         ds.forEach((d, i) => {
           const run = runs.find((r) => r[0] <= i && i <= r[1]);
-          if (run) { if (ri === 0 && i === run[0]) { const k0 = (dn[`${l}|${d}`] || []).find((x) => HARD.includes(x[0])), kk = k0 ? k0[0] : 'plan', n = run[1] - run[0] + 1;
-            G2 += `<td class="sdblock k-${kk === 'jr' ? 'sd' : kk}${n === 1 ? ' one' : ''}" colspan="${n}" rowspan="${rows.length}" title="${esc(dTxt(l, d))}" data-d="${d}">${KN[kk]}<small>${md(ds[run[0]])}${n > 1 ? '~' + md(ds[run[1]]) : ''}</small></td>`; } return; }
-          const x = src[`${l}|${d}`], t = x ? x.t || 0 : 0, mc = pl === 'G' && x && /M\/C/.test(x.ev || ''), part = dn[`${l}|${d}`], cls = [], tip = [];
+          if (run) { if (ri === 0 && i === run[0]) G2 += sdCell(l, run, rows.length); return; }
+          const x = src[`${l}|${d}`], t = x ? x.t || 0 : 0, mc = pl === 'G' && isMC(x), part = dn[`${l}|${d}`], cls = [], tip = [];
           if (x) tip.push(`${md(d)} ${l} 생산 ${n0(t)}t${x.act ? '(실적)' : '(계획)'}`); if (mc) tip.push(x.ev.split(' · ')[0]); if (part) tip.push('휴지: ' + dTxt(l, d));
           let txt = '';
-          if (rk === 'p') { tot += t; txt = t >= 0.5 ? String(Math.round(t)) : (mc ? 'M/C' : ''); if (t < 0.5 && !mc) cls.push('idle'); else if (t >= 0.5) cls.push(pl === 'G' ? `f-${x.fam || 'AL'}` : 'f-CC'); if (mc) cls.push('mc'); }
-          else { const m0 = (part || []).reduce((a, y) => a + y[1], 0); tot += m0; txt = m0 > 0 ? (m0 / 60).toFixed(m0 % 60 ? 1 : 0) : '';
-            if (part) { const pk = part.slice().sort((a, b) => b[1] - a[1])[0][0]; cls.push(pk === 'mc' ? 'mc' : `k-${pk === 'jr' ? 'sd' : pk}`); } }
+          if (rk === 'p') { tot += t; txt = t >= 0.5 ? String(Math.round(t)) : ''; if (t < 0.5) cls.push('idle'); if (t >= 999.5) cls.push('w4'); }
+          else { const m0 = (part || []).reduce((a, y) => a + y[1], 0); tot += m0; txt = m0 > 0 ? (m0 / 60).toFixed(m0 % 60 ? 1 : 0) : ''; if (part && part.some((y) => y[0] === 'mc')) cls.push('hm'); }
           G2 += `<td class="${cls.join(' ')}${dayCls(d)}" style="--ci:${i}" data-d="${d}"${tip.length ? ` title="${esc(tip.join(' · '))}"` : ''}>${txt}</td>`;
         });
         G2 += `<td class="tot">${rk === 'p' ? n0(tot) : (tot ? n0(tot / 60) : '')}</td></tr>`;
       });
     };
-    if (UI.inScope('G')) for (const l of ['1CGL', '2CGL']) lineBlock('G', l);
-    if (UI.inScope('C')) for (const l of ['1CCL', '2CCL', '3CCL', '4CCL']) lineBlock('C', l);
-    const used = new Set(Object.values(dn).flat().map((x) => x[0]));
+    const grpRow = (pl, lines) => { const src = pl === 'G' ? D.pl : D.co; let t = 0, nmc = 0;
+      for (const l of lines) for (const d of ds) { const x = src[`${l}|${d}`]; if (x) { t += x.t || 0; if (pl === 'G' && isMC(x)) nmc++; } }
+      G2 += `<tr class="grp ${pl}"><th class="c0 gh" colspan="2">${pl === 'G' ? '도금' : '컬러'}</th><td class="gs" colspan="${ds.length + 1}"><b>${pl === 'G' ? '1·2CGL' : '1~4CCL'}</b> · ${+mon.slice(5)}월 생산 ${n0(t)}t${pl === 'G' ? ` · M/C ${nmc}회` : ''}</td></tr>`; };
+    if (UI.inScope('G')) { grpRow('G', ['1CGL', '2CGL']); for (const l of ['1CGL', '2CGL']) lineBlock('G', l); }
+    if (UI.inScope('C')) { if (UI.inScope('G')) G2 += `<tr class="gap"><td colspan="${ds.length + 3}"></td></tr>`; grpRow('C', ['1CCL', '2CCL', '3CCL', '4CCL']); for (const l of ['1CCL', '2CCL', '3CCL', '4CCL']) lineBlock('C', l); }
     const sw = (c, t) => `<span><i class="sw ${c}"></i>${t}</span>`, sep = '<i class="gsep"></i>';
-    $('s-calleg').innerHTML = (UI.inScope('G') ? sw('f-AL', 'AL') + sw('f-AZ', 'AZ') + sw('f-MAC', 'MAC') + sw('mcsw', 'M/C') + sep : '') + (UI.inScope('C') ? sw('f-CC', '컬러 생산') + sep : '')
-      + [['sd', '정기수리·S/D'], ['plan', '계획휴지'], ['repair', '수리'], ['clean', '청소'], ['test', 'Test'], ['sample', '샘플']].filter(([k]) => used.has(k) || (k === 'sd' && used.has('jr'))).map(([k, t]) => sw('k-' + k, t)).join('')
-      + sw('idsw', '생산 없음') + sep + sw('pastsw', '지난 날(실적)') + sw('tbsw', '오늘');
+    $('s-calleg').innerHTML = (UI.inScope('G') ? '<span class="muted">도금 강종</span>' + sw('f-AL', 'AL') + sw('f-AZ', 'AZ') + sw('f-MAC', 'MAC') + sw('mcsw', 'M/C(강종 교체)') + sep : '')
+      + sw('sdsw', '종일 정지(수리·계획휴지 등)') + sw('idsw', '생산 없음') + sep + sw('pastsw', '지난 날(실적)') + sw('tbsw', '오늘')
+      + '<span class="muted">휴지(h) = 그날 멈춘 시간, 칸에 마우스를 올리면 사유</span>';
     $('s-shipleg').innerHTML = sw('shsw', '출하') + sep + '<span class="muted">재고(목표 대비)</span>' + sw('okw', '목표 이하') + sw('hiw', '100~130%') + sw('hi2w', '130% 넘음') + sep + sw('pastsw', '지난 날(실적)') + sw('tbsw', '오늘');
     // 판매그룹 출하·재고(라인 구분 없는 자료 — 사용자 10/21: 밑으로 따로 하나 더)
     let S2 = headG('판매그룹');
@@ -309,7 +332,7 @@
         let tot = 0;
         ds.forEach((d, i) => {
           let txt = '', cls = [], tip = '';
-          if (rk === 's') { const x = gship(g, d); tot += x.t; if (x.t >= 0.5) { txt = String(Math.round(x.t)); cls.push('sh'); tip = `${md(d)} ${NM[g]} 출하 ${n0(x.t)}t${x.act ? ' (MES 출하 실적)' : ' (계획 출고)'}`; } }
+          if (rk === 's') { const x = gship(g, d); tot += x.t; if (x.t >= 0.5) { txt = String(Math.round(x.t)); cls.push('sh'); if (x.t >= 999.5) cls.push('w4'); tip = `${md(d)} ${NM[g]} 출하 ${n0(x.t)}t${x.act ? ' (MES 출하 실적)' : ' (계획 출고)'}`; } }
           else { const x = D.sw[`${g}|${d}`]; if (x) { const r = x.tgt ? x.v / x.tgt : 0; txt = (x.v / 1000).toFixed(1); tip = `${md(d)} ${NM[g]} 기말 재고 ${n0(x.v)}t / 목표 ${n0(x.tgt)}t (${x.tgt ? Math.round(r * 100) : '-'}%)`; cls.push(x.v < 0 ? 'neg' : !x.tgt ? '' : r > 1.3 ? 'hi2' : r > 1 ? 'hi' : 'ok'); } }
           S2 += `<td class="${cls.join(' ')}${dayCls(d)}" style="--ci:${i}" data-d="${d}"${tip ? ` title="${esc(tip)}"` : ''}>${txt}</td>`;
         });

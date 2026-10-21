@@ -144,12 +144,10 @@ html .gtable .c1 small { color: var(--ink-3); font-weight: 500; }
 :is(#s-cal, #s-ship) tbody td.past { background: var(--pt-act); }
 :is(#s-cal, #s-ship) tbody td.tb, :is(#s-cal, #s-ship) thead th.tb { border-left: 2px solid var(--brand-2); }
 #s-cal tr.r-p td { font-weight: 700; color: var(--ink); font-size: 12px; }
-#s-cal tr.r-p td.f-AL { background: var(--pt-al); } #s-cal tr.r-p td.f-AZ { background: var(--pt-az); } #s-cal tr.r-p td.f-MAC { background: var(--pt-mac); } #s-cal tr.r-p td.f-CC { background: var(--pt-cc); }
 #s-cal tr.r-p td.idle { background: repeating-linear-gradient(135deg, transparent 0 4px, color-mix(in srgb, var(--ink-3) 16%, transparent) 4px 5px); color: var(--ink-3); font-weight: 500; }
 #s-cal td.mc { background: var(--pt-mc) !important; box-shadow: inset 0 0 0 2px var(--pt-mcb); color: #3d2e00; font-weight: 800; }
 #s-cal tr.r-h td { font-size: 11.5px; color: var(--ink); font-weight: 700; padding: 4px 1px; }
 #s-cal tr.r-h .c1 { font-size: 11.5px; font-weight: 500; color: var(--ink-3); }
-#s-cal td.k-plan { background: var(--k-plan); } #s-cal td.k-sd { background: var(--k-sd); } #s-cal td.k-repair { background: var(--k-repair); } #s-cal td.k-clean { background: var(--k-clean); } #s-cal td.k-test { background: var(--k-test); } #s-cal td.k-sample { background: var(--k-sample); }
 #s-cal td.sdblock { white-space: normal; word-break: keep-all; font-size: 12.5px; font-weight: 800; line-height: 1.3; padding: 3px 2px; color: var(--ink); letter-spacing: -0.2px; }
 #s-cal td.sdblock small { display: block; font-size: 11px; font-weight: 600; opacity: .85; }
 #s-cal td.sdblock.one { writing-mode: vertical-rl; letter-spacing: 1px; } #s-cal td.sdblock.one small { display: none; }
@@ -160,10 +158,8 @@ html .gtable .c1 small { color: var(--ink-3); font-weight: 500; }
 #s-ship tr.r-k .c1 { font-size: 11.5px; }
 .glegend { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 16px; font-size: 12.5px; color: var(--ink-2); margin: 0 0 10px; }
 .glegend .sw { display: inline-block; width: 14px; height: 14px; border-radius: 4px; margin-right: 6px; vertical-align: -3px; box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--ink) 10%, transparent); }
-.glegend .sw.f-AL { background: var(--pt-al); } .glegend .sw.f-AZ { background: var(--pt-az); } .glegend .sw.f-MAC { background: var(--pt-mac); } .glegend .sw.f-CC { background: var(--pt-cc); }
 .glegend .sw.mcsw { background: var(--pt-mc); box-shadow: inset 0 0 0 2px var(--pt-mcb); } .glegend .sw.idsw { background: repeating-linear-gradient(135deg, transparent 0 3px, color-mix(in srgb, var(--ink-3) 30%, transparent) 3px 4px); }
 .glegend .sw.pastsw { background: var(--pt-act); } .glegend .sw.tbsw { background: none; box-shadow: inset 2px 0 0 var(--brand-2); width: 8px; }
-.glegend .sw.k-plan { background: var(--k-plan); } .glegend .sw.k-sd { background: var(--k-sd); } .glegend .sw.k-repair { background: var(--k-repair); } .glegend .sw.k-clean { background: var(--k-clean); } .glegend .sw.k-test { background: var(--k-test); } .glegend .sw.k-sample { background: var(--k-sample); }
 .glegend .sw.shsw { background: var(--pt-ship); } .glegend .sw.okw { background: var(--pt-ok); } .glegend .sw.hiw { background: var(--pt-hi); } .glegend .sw.hi2w { background: var(--pt-hi2); }
 .glegend .gsep { width: 1px; height: 14px; background: var(--line); }
 html :is(#s-cal, #s-ship) col.cc0 { width: 64px; } html :is(#s-cal, #s-ship) col.cc1 { width: 58px; } html :is(#s-cal, #s-ship) col.ctot { width: 62px; } html #s-ship col.cc0 { width: 74px; }
@@ -172,6 +168,39 @@ html :is(#s-cal, #s-ship) tbody td { font-size: 12px; letter-spacing: -0.3px; pa
 html :is(#s-cal, #s-ship) tbody td.tot { font-size: 12.5px; letter-spacing: 0; }
 html :is(#s-cal, #s-ship) th.line { font-size: 13.5px; padding: 0 2px 0 7px; }
 html #s-ship th.line { font-size: 12.5px; }
+/* 가동 캘린더 2차(2026-10-21 사용자: 도금/컬러 구분, 색 줄이기 — 강종 막대·M/C·종일 정지만 색) */
+:root { --pt-AL: #2a78d6; --pt-AZ: #e2672c; --pt-MAC: #14a06e; --pt-MC: #f5b700; --pt-gG: #1f3b5c; --pt-gC: #1c5a50; --pt-sd: #dfe3e9; --pt-sdT: #3a4350; --pt-mcT: #8a5a00; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --pt-gG: #2a4d75; --pt-gC: #24695e; --pt-sd: #2c3440; --pt-sdT: #c9d1db; --pt-mcT: #f0c45a; } }
+:root[data-theme="dark"] { --pt-gG: #2a4d75; --pt-gC: #24695e; --pt-sd: #2c3440; --pt-sdT: #c9d1db; --pt-mcT: #f0c45a; }
+#s-cal tr.r-p td { background: transparent; }
+#s-cal tr.r-p td.past, #s-cal tr.r-h td.past { background: var(--pt-act); }
+#s-cal tr.r-p td.idle { background: repeating-linear-gradient(135deg, transparent 0 4px, color-mix(in srgb, var(--ink-3) 14%, transparent) 4px 5px); }
+#s-cal tr.r-h td { color: var(--ink-3); font-weight: 600; }
+#s-cal tr.r-h td.hm { color: var(--pt-mcT); font-weight: 800; }
+#s-cal tr.r-a td { padding: 3px 1px; border-right-color: transparent; }
+#s-cal tr.r-a td.fbar { color: #fff; font-weight: 800; font-size: 12.5px; letter-spacing: .02em; background-clip: padding-box; box-shadow: inset 0 3px 0 var(--surface), inset 0 -3px 0 var(--surface); }
+#s-cal tr.r-a td.fbar small { font-size: 11px; font-weight: 600; opacity: .9; margin-left: 6px; letter-spacing: 0; }
+#s-cal tr.r-a td.fbar.one { font-size: 10.5px; letter-spacing: -0.4px; }
+#s-cal tr.r-a td.f-AL { background: var(--pt-AL); } #s-cal tr.r-a td.f-AZ { background: var(--pt-AZ); } #s-cal tr.r-a td.f-MAC { background: var(--pt-MAC); }
+#s-cal tr.r-a td.mcbar { background: var(--pt-MC); color: #3d2e00; font-weight: 900; font-size: 11px; letter-spacing: -0.5px; box-shadow: inset 0 3px 0 var(--surface), inset 0 -3px 0 var(--surface); }
+#s-cal tr.r-a td.idle { background: transparent; }
+#s-cal tr.r-a .c1 { color: var(--ink); font-weight: 700; }
+#s-cal td.tot.mcn { font-size: 11.5px; color: var(--pt-mcT); }
+#s-cal td.sdblock { background: var(--pt-sd); color: var(--pt-sdT); }
+#s-cal td.sdblock small { color: var(--pt-sdT); }
+#s-cal tr.grp > * { position: static; background: var(--pt-gG); color: #fff; border: 0; padding: 7px 10px; text-align: left; font-size: 13px; }
+#s-cal tr.grp .gh { position: sticky; left: 0; z-index: 3; font-size: 14px; font-weight: 800; letter-spacing: .08em; }
+#s-cal tr.grp .gs { font-weight: 500; color: rgba(255,255,255,.88); } #s-cal tr.grp .gs b { color: #fff; font-weight: 800; }
+#s-cal tr.grp.C > * { background: var(--pt-gC); }
+#s-cal tr.gap td { height: 12px; padding: 0; border: 0; background: var(--surface); }
+#s-cal tr.grp + tr.first > * { border-top: 0; }
+:is(#s-cal) th.line.G { box-shadow: inset 4px 0 0 var(--pt-gG); } :is(#s-cal) th.line.C { box-shadow: inset 4px 0 0 var(--pt-gC); }
+#s-cal tbody tr:hover td.fbar, #s-cal tbody tr:hover td.mcbar { filter: none; }
+.glegend .sw.f-AL { background: var(--pt-AL); } .glegend .sw.f-AZ { background: var(--pt-AZ); } .glegend .sw.f-MAC { background: var(--pt-MAC); }
+.glegend .sw.mcsw { background: var(--pt-MC); box-shadow: none; } .glegend .sw.sdsw { background: var(--pt-sd); }
+.glegend .muted { color: var(--ink-3); }
+html #s-cal tr.grp td.gs { text-align: left !important; padding-left: 14px; }
+html :is(#s-cal, #s-ship) tbody td.w4 { font-size: 10.5px; letter-spacing: -0.7px; }
 </style>
 </head>
 <body>
