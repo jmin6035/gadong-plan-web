@@ -39,12 +39,6 @@ table.fc td { padding: 9px 8px; text-align: right; border-bottom: 1px solid var(
 table.fc th.l, table.fc td.l { text-align: left; } table.fc td.l { font-weight: 700; }
 table.fc td small { display: block; font-size: 13px; color: var(--ink-3); font-weight: 500; }
 table.fc td.bad b { color: var(--bad); } table.fc td.warn b { color: var(--warn); } table.fc td.good b { color: var(--good); }
-ul.iss { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
-ul.iss li { display: grid; grid-template-columns: auto 1fr; gap: 4px 10px; align-items: start; border-left: 4px solid var(--warn); background: var(--warn-bg); border-radius: 0 8px 8px 0; padding: 8px 12px; }
-ul.iss li.bad { border-left-color: var(--bad); background: var(--bad-bg, var(--warn-bg)); }
-ul.iss .ar { font-size: 13px; font-weight: 800; color: var(--ink-2); white-space: nowrap; padding-top: 1px; }
-ul.iss a { color: var(--ink); text-decoration: none; font-size: 15px; } ul.iss a:hover { text-decoration: underline; }
-ul.iss small { grid-column: 2; font-size: 13px; color: var(--ink-3); }
 details.more-d { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 0 16px; }
 details.more-d > summary { cursor: pointer; padding: 13px 0; font-size: 16px; font-weight: 800; }
 details.more-d > summary small { font-weight: 500; color: var(--ink-3); margin-left: 8px; font-size: 14px; }
@@ -159,7 +153,7 @@ table.mini td.r { text-align: right; font-variant-numeric: tabular-nums; }
   </section>
   <div class="dash" id="h-dash">
     <div class="own" id="h-own"><div class="skel" style="grid-column:1/-1"><i style="width:30%"></i><i></i></div></div>
-    <div class="row3"><section class="card" id="h-fc" hidden></section><section class="card" id="h-iss" hidden></section></div>
+    <section class="card" id="h-fc" hidden></section>
     <section class="card" id="h-grp" hidden></section>
     <details class="more-d" id="h-more">
       <summary>실무 상세 <small>라인별 진도 · 2주 일정 · 현장 작업지시 · 월별 도금 계획 · 발주 마감</small></summary>

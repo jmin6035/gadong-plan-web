@@ -152,47 +152,49 @@
       <p class="small">저장 위치 = 이 브라우저. 다른 사람과 맞추려면 내보낸 파일을 보내 가져오기. 자료 계산 ${String(D.built).replace('T', ' ')}</p>`);
   }
 
-  // POSCO F/H 인도납기일 대비 실제 입고(사양별) + 인도납기 변경 이력(2026-10-21 사용자: 인도납기일은 포스코 자동 입력·러프 — 사양별로 빠르고 늦은 것, 변경 이력 매일 쌓기. 입고 예정일 계산에 반영은 보류)
+  // F/H 납기 비교(2026-10-21 사용자: 처음부터 다시 — TF 기준 납기 vs 인도납기일 기준 납기를 종류·사양별로 얼마나 다른지 한눈에, 실제 입고와 함께)
   function dueTab() {
     const F = D.fhDue, K = D.dueTrack;
-    if (!F) return card('p-due', 'F/H 인도납기 대비 입고', '', '<p class="muted">자료 없음 — 사내 PC 다음 자동 실행 뒤 표시</p>');
-    const TH = ['~0.39', '0.40~0.59', '0.60~0.79', '0.80~1.19', '1.20~'], WD = ['~999', '1,000~1,219', '1,220~1,249', '1,250~'];
-    const dtxt = (v) => (v == null ? '-' : v === 0 ? '같은 날' : v < 0 ? `${-v}일 먼저` : `${v}일 늦게`);
-    // 칸 색: 파랑 = 인도납기보다 먼저(진할수록 일찍), 회색 = 거의 같음, 빨강 = 늦게 — 발산 색(가운데 회색)
-    const heat = (v) => { if (v == null) return ''; const k = Math.min(1, Math.abs(v) / 25), pct = Math.round(12 + k * 70);
-      return v <= -2 ? `background:color-mix(in srgb,var(--du-e) ${pct}%,var(--surface));${pct > 55 ? 'color:#fff' : ''}` : v >= 2 ? `background:color-mix(in srgb,var(--du-l) ${pct}%,var(--surface));${pct > 55 ? 'color:#fff' : ''}` : 'background:var(--du-0)'; };
-    const tip = (r) => `${r.grp} · 두께 ${r.thk} · 폭 ${r.wdt}\n인도납기 대비 ${dtxt(r.med)} (빠른 쪽 ${dtxt(r.q1)} ~ 늦은 쪽 ${dtxt(r.q3)})\n늦게 온 비율 ${r.lateP}% · 입고 ${n0(r.t)}t ${r.n}건\n발주→입고 ${r.lt}일 · 발주→인도납기 ${r.dl}일`;
-    const tiles = F.byGrp.map((g) => `<div class="du-tile ${g.med <= -2 ? 'e' : g.med >= 2 ? 'l' : 'z'}"><div class="du-tl">${esc(g.grp)}</div>
-      <div class="du-big">${g.med <= -2 ? `<b>${-g.med}</b>일 먼저` : g.med >= 2 ? `<b>${g.med}</b>일 늦게` : '<b>거의 같은 날</b>'}</div>
-      <div class="du-sub">발주 → 실제 입고 <b>${g.lt}일</b> · 발주 → 인도납기 <b>${g.dl}일</b></div>
-      <div class="du-sub">늦게 온 비율 <b class="${g.lateP >= 30 ? 'late' : ''}">${g.lateP}%</b> · 입고 ${n0(g.t)}t</div></div>`).join('');
-    const grid = (grp) => { const R = F.rows.filter((r) => r.grp === grp); if (!R.length) return '';
-      const at = (t, w) => R.find((r) => r.thk === t && r.wdt === w);
-      return `<div class="du-hm"><h3>${esc(grp)}</h3><table class="du-g"><thead><tr><th class="c">두께 \\ 폭</th>${WD.map((w) => `<th>${w}</th>`).join('')}</tr></thead><tbody>${TH.map((t) => `<tr><th class="c">${t}</th>${WD.map((w) => { const r = at(t, w);
-        return r ? `<td style="${heat(r.med)}" title="${esc(tip(r))}"><b>${r.med > 0 ? '+' : ''}${r.med}</b><small>${r.t >= 1000 ? (r.t / 1000).toFixed(1) + '천t' : n0(r.t) + 't'}${r.lateP >= 30 ? ` · 늦음 ${r.lateP}%` : ''}</small></td>` : '<td class="na">-</td>'; }).join('')}</tr>`).join('')}</tbody></table></div>`; };
-    const big = F.rows.filter((r) => r.t >= 500 && r.grp !== 'AL-STS 임가공');
-    const fast = big.slice().sort((a, b) => a.med - b.med).slice(0, 4), slow = big.slice().sort((a, b) => b.med - a.med).slice(0, 4);
-    const li = (r) => `<li><b>${esc(r.grp.replace('F/H', ''))}</b> ${r.thk}mm × ${r.wdt}폭 <span>${dtxt(r.med)}</span>${r.lateP >= 15 ? ` <em>늦음 ${r.lateP}%</em>` : ''}</li>`;
-    const head = '<tr><th class="l">소재</th><th>두께(mm)</th><th>폭(mm)</th><th>입고 건</th><th>입고(t)</th><th>인도납기 대비</th><th>빠른 쪽 25%</th><th>늦은 쪽 75%</th><th>늦게 온 비율</th><th>발주→입고</th><th>발주→인도납기</th></tr>';
-    const tr = (r, sub) => `<tr${sub ? ' class="sum"' : ''}><td class="l"><b>${esc(r.grp)}</b></td><td>${esc(r.thk || '전체')}</td><td>${esc(r.wdt || '전체')}</td><td>${n0(r.n)}</td><td>${n0(r.t)}</td><td>${dtxt(r.med)}</td><td>${dtxt(r.q1)}</td><td>${dtxt(r.q3)}</td><td class="${r.lateP >= 30 ? 'late' : ''}">${r.lateP}%</td><td>${r.lt == null ? '-' : r.lt + '일'}</td><td>${r.dl == null ? '-' : r.dl + '일'}</td></tr>`;
-    const detail = F.byGrp.map((g) => tr(g, true) + F.rows.filter((r) => r.grp === g.grp).map((r) => tr(r)).join('')).join('');
-    const ymd = (v) => String(v).replace(/(\d{4})(\d\d)(\d\d)/, (m, y, a, b) => `${+a}/${+b}`);
-    const chg = K && K.recent && K.recent.length
-      ? `<div class="scroll"><table class="t due"><thead><tr><th>바뀐 날</th><th>발주 행번</th><th class="l">소재</th><th>두께</th><th>폭</th><th>인도납기</th><th>이동</th></tr></thead><tbody>${K.recent.map((c) => `<tr><td>${md(c.d)}</td><td>${esc(c.po)}</td><td class="l">${esc(c.grp || '-')}</td><td>${c.thk || '-'}</td><td>${c.wdt ? n0(c.wdt) : '-'}</td><td>${ymd(c.from)} → <b>${ymd(c.to)}</b></td><td><span class="du-chip ${c.shift < 0 ? 'e' : c.shift > 0 ? 'l' : ''}">${c.shift == null ? '-' : c.shift < 0 ? `${-c.shift}일 당김` : c.shift > 0 ? `${c.shift}일 미룸` : '0'}</span></td></tr>`).join('')}</tbody></table></div>`
-      : `<div class="du-empty"><b>${K ? `${md(K.start)}부터 매일 비교 중` : '사내 PC 다음 자동 실행부터 시작'}</b><span>${K ? `발주 ${n0(K.nPo)}개 행번의 인도납기를 매일 전날 값과 비교 — 아직 바뀐 것 없음. 바뀌면 여기에 날짜·당김/미룸이 쌓입니다.` : ''}</span></div>`;
-    return card('p-due', 'POSCO F/H — 인도납기일보다 언제 들어오나', `입고 ${md(F.from)}~${md(F.to)} · 발주 ${n0(F.nPo)}행번 · ${n0(F.t)}t`,
-      `<p class="du-lead">F/H는 MES <b>인도납기일보다 보통 2주쯤 먼저</b> 들어옵니다. 지금 입고 예정일 계산(발주 + 35일)도 실제(발주 후 약 28일)보다 1주쯤 늦게 잡혀 있습니다. <small>(계산 변경은 회의 후 결정 — 보류)</small></p>
-      <div class="du-tiles">${tiles}</div>
-      <div class="du-lg"><span>먼저</span><i class="bar"></i><span>늦게</span><small>칸 숫자 = 인도납기 대비 일수(중앙값, −는 먼저) · 작은 글씨 = 입고 톤 · 칸에 마우스를 올리면 범위·건수</small></div>
-      <div class="du-hms">${grid('F/H(AZ·MAC용)')}${grid('F/H(AL용)')}</div>
-      <div class="du-two"><div class="du-list e"><h3>빨리 오는 사양</h3><ul>${fast.map(li).join('')}</ul></div><div class="du-list l"><h3>인도납기에 가깝게 오는 사양</h3><ul>${slow.map(li).join('')}</ul></div></div>
-      <div class="du-hms one">${grid('AL-STS 임가공')}<p class="small">AL-STS 임가공은 포스코 지급 소재라 인도납기일 = 발주일, 입고는 그날 또는 며칠 뒤(절반 이상 늦게).</p></div>
-      <details class="du-det"><summary>사양별 전체 표</summary><div class="scroll"><table class="t due"><thead>${head}</thead><tbody>${detail}</tbody></table></div></details>
-      <p class="small">인도납기 = MES 발주(MO_GC_ORD_ASK) 인도납기일(포스코 자동 입력, 현재 값). 입고 = MES 입고 실적(실제 입고일, 예정분 제외). 톤 가중 중앙값. 사양 = 소재 · 두께 · 폭 구간(입고 100t 이상만).</p>`)
-      + card('p-duechg', '인도납기 변경 이력', K ? `${md(K.start)}부터 · 누적 ${n0(K.nChg)}건 · 최근 60일` : '', chg);
+    if (!F || !F.byKind) return card('p-due', 'F/H 납기 비교', '', '<p class="muted">자료 없음 — 사내 PC 다음 자동 실행 뒤 표시</p>');
+    const sd = (v) => (v == null ? '-' : v === 0 ? '0일' : `${v > 0 ? '+' : '−'}${Math.abs(v)}일`);
+    const words = (v, a, b) => (v == null ? '-' : Math.abs(v) <= 1 ? `${a}와 거의 같음` : `${a}보다 ${Math.abs(v)}일 ${v > 0 ? '늦음' : '빠름'}`);
+    const better = (r) => (r.maeTf == null || r.maeDue == null ? null : r.maeTf <= r.maeDue ? 'TF 기준' : '인도납기');
+    const P = F.byKind.filter((r) => r.kind !== '수입 FH');
+    const lead = P.length ? (() => { const t = P.reduce((x, r) => x + r.t, 0), av = (k) => Math.round(P.reduce((x, r) => x + (r[k] || 0) * r.t, 0) / t);
+      return `POSCO F/H는 <b>인도납기일이 TF 기준(발주 + 35일)보다 약 ${av('dueTf')}일 늦게</b> 잡혀 있고, <b>실제 입고는 TF 기준보다 약 ${-av('arrTf')}일 빨리</b> 들어옵니다 — 실제에 더 가까운 건 <b>TF 기준</b>.`; })() : '';
+    const tiles = F.byKind.map((r) => `<div class="fd-tile"><div class="fd-k">${esc(r.kind)} <small>발주 ${n0(r.n)}행번 · ${n0(r.t)}t</small></div>
+      <table class="fd-kv"><tr><th>인도납기 − TF 기준</th><td class="${r.dueTf > 1 ? 'l' : r.dueTf < -1 ? 'e' : ''}"><b>${sd(r.dueTf)}</b><small>가운데 50% ${sd(r.dueTfQ1)} ~ ${sd(r.dueTfQ3)}</small></td></tr>
+      <tr><th>실제 입고 − TF 기준</th><td class="${r.arrTf > 1 ? 'l' : r.arrTf < -1 ? 'e' : ''}"><b>${sd(r.arrTf)}</b><small>평균 오차 ${r.maeTf == null ? '-' : r.maeTf + '일'}</small></td></tr>
+      <tr><th>실제 입고 − 인도납기</th><td class="${r.arrDue > 1 ? 'l' : r.arrDue < -1 ? 'e' : ''}"><b>${sd(r.arrDue)}</b><small>평균 오차 ${r.maeDue == null ? '-' : r.maeDue + '일'}</small></td></tr></table>
+      <div class="fd-b">실제에 더 가까운 기준 <b>${better(r) || '-'}</b>${r.openDiffT ? ` · 남은 발주 중 두 기준이 1주 넘게 다른 양 <b>${n0(r.openDiffT)}t</b>` : ''}</div></div>`).join('');
+    // 종류·사양별 한 줄 = 같은 날짜 축(가운데 0 = TF 기준 납기) 위에 ◆ 인도납기 · ● 실제 입고(가로 막대 = 인도납기 가운데 50%)
+    const R = F.rows, lim = 30, X = (v) => (50 + Math.max(-lim, Math.min(lim, v)) / lim * 50).toFixed(2);
+    const ax = [-30, -20, -10, 0, 10, 20, 30];
+    let last = '';
+    const lines = R.map((r) => { const hd = r.kind !== last ? `<div class="fd-gh">${esc(r.kind)}</div>` : ''; last = r.kind;
+      return hd + `<div class="fd-row" title="${esc(`${r.kind} · 두께 ${r.thk} · 폭 ${r.wdt}\n인도납기 − TF ${sd(r.dueTf)} (가운데 50% ${sd(r.dueTfQ1)}~${sd(r.dueTfQ3)}) · 실제 − TF ${sd(r.arrTf)} · 실제 − 인도납기 ${sd(r.arrDue)}\n발주 ${r.n}행번 ${n0(r.t)}t · 입고 ${n0(r.arrT)}t`)}">
+        <span class="fd-sp">${esc(r.thk)}mm · ${esc(r.wdt)}</span>
+        <span class="fd-ax">${ax.map((v) => `<i class="g${v === 0 ? ' z' : ''}" style="left:${X(v)}%"></i>`).join('')}
+          ${r.dueTfQ1 != null ? `<u style="left:${X(r.dueTfQ1)}%;width:${Math.max(0.6, X(r.dueTfQ3) - X(r.dueTfQ1))}%"></u>` : ''}
+          ${r.dueTf != null ? `<b class="du" style="left:${X(r.dueTf)}%"></b>` : ''}${r.arrTf != null ? `<b class="ar" style="left:${X(r.arrTf)}%"></b>` : ''}</span>
+        <span class="fd-n">${sd(r.dueTf)}</span><span class="fd-n a">${sd(r.arrTf)}</span><span class="fd-t">${n0(r.t)}t</span></div>`; }).join('');
+    const axis = `<div class="fd-row fd-axr"><span class="fd-sp"></span><span class="fd-ax">${ax.map((v) => `<em style="left:${X(v)}%">${v === 0 ? 'TF 기준' : (v > 0 ? '+' : '') + v + '일'}</em>`).join('')}</span><span class="fd-n">인도납기</span><span class="fd-n a">실제 입고</span><span class="fd-t">발주량</span></div>`;
+    const O = F.open || [], ymd = (v) => `${+v.slice(5, 7)}/${+v.slice(8, 10)}`;
+    const otbl = O.length ? `<div class="scroll"><table class="t due"><thead><tr><th>발주 행번</th><th class="l">종류</th><th>두께 × 폭</th><th>발주일</th><th>TF 기준 납기</th><th>인도납기</th><th>차이</th><th>남은 양</th></tr></thead><tbody>${O.slice(0, 60).map((x) => `<tr><td>${esc(x.po)}</td><td class="l">${esc(x.kind)}</td><td>${x.thk} × ${n0(x.wdt)}</td><td>${ymd(x.od)}</td><td>${ymd(x.tf)}</td><td><b>${ymd(x.due)}</b></td><td><span class="du-chip ${x.diff > 0 ? 'l' : 'e'}">${x.diff > 0 ? `${x.diff}일 늦게` : `${-x.diff}일 빨리`}</span></td><td>${n0(x.t)}t</td></tr>`).join('')}</tbody></table></div>${O.length > 60 ? `<p class="small">TF 기준 납기가 빠른 순 60건 표시 · 전체 ${n0(O.length)}건</p>` : ''}` : '<p class="muted">없음</p>';
+    const ch = (K && K.recent && K.recent.length)
+      ? `<div class="scroll"><table class="t due"><thead><tr><th>바뀐 날</th><th>발주 행번</th><th class="l">소재</th><th>두께</th><th>폭</th><th>인도납기</th><th>이동</th></tr></thead><tbody>${K.recent.map((c) => `<tr><td>${md(c.d)}</td><td>${esc(c.po)}</td><td class="l">${esc(c.grp || '-')}</td><td>${c.thk || '-'}</td><td>${c.wdt ? n0(c.wdt) : '-'}</td><td>${String(c.from).replace(/(\d{4})(\d\d)(\d\d)/, (m, y, a2, b2) => `${+a2}/${+b2}`)} → <b>${String(c.to).replace(/(\d{4})(\d\d)(\d\d)/, (m, y, a2, b2) => `${+a2}/${+b2}`)}</b></td><td><span class="du-chip ${c.shift < 0 ? 'e' : c.shift > 0 ? 'l' : ''}">${c.shift == null ? '-' : c.shift < 0 ? `${-c.shift}일 당김` : c.shift > 0 ? `${c.shift}일 미룸` : '0'}</span></td></tr>`).join('')}</tbody></table></div>`
+      : `<div class="du-empty"><b>${K ? `${md(K.start)}부터 매일 비교 중` : '사내 PC 다음 자동 실행부터 시작'}</b><span>${K ? `발주 ${n0(K.nPo)}개 행번의 인도납기를 매일 전날 값과 비교 — 아직 바뀐 것 없음` : ''}</span></div>`;
+    return card('p-due', 'F/H 납기 비교 — TF 기준 vs 인도납기일 vs 실제 입고', `발주 ${md(F.from)}~${md(F.to)} · ${n0(F.nPo)}행번`,
+      `<p class="du-lead">${lead}</p>
+      <div class="fd-tiles">${tiles}</div>
+      <h3 class="fd-h">종류 · 사양별 <small>가운데 세로선 = TF 기준 납기(POSCO = ${esc(F.basis.P)}, 수입 = ${esc(F.basis.V)}) · <b class="fd-ldu"></b> 인도납기 <b class="fd-lar"></b> 실제 입고 · 옅은 막대 = 인도납기 가운데 50% · 왼쪽 = 빠름, 오른쪽 = 늦음(±30일 넘으면 끝에 표시)</small></h3>
+      <div class="fd-chart">${axis}${lines}</div>
+      <h3 class="fd-h">남은 발주 중 두 기준이 1주 넘게 다른 것 <small>입고 예정일을 어느 기준으로 잡느냐에 따라 소재 캘린더·발주 판단이 달라지는 발주</small></h3>${otbl}
+      <p class="small">인도납기 = MES 발주(MO_GC_ORD_ASK) 인도납기일(현재 값). 실제 입고 = MES 입고 실적(실입고일). 차이 = 발주량(실제 입고는 입고량) 가중 중앙값, 평균 오차 = 실제 입고와의 날짜 차이 평균. 사양은 발주량 100t 이상만.</p>`)
+      + card('p-duechg', '인도납기 변경 이력', K ? `${md(K.start)}부터 · 누적 ${n0(K.nChg)}건 · 최근 60일` : '', ch);
   }
 
-  const TABS = [['cal', '발주 캘린더'], ['board', '판단 목록·구매 요청'], ['arr', '입고예정'], ['due', 'F/H 인도납기 대비 입고'], ['ord', '주문재 목록'], ['sup', '업체 기준정보'], ['basis', '계산 기준·설정']];
+  const TABS = [['cal', '발주 캘린더'], ['board', '판단 목록·구매 요청'], ['arr', '입고예정'], ['due', 'F/H 납기 비교'], ['ord', '주문재 목록'], ['sup', '업체 기준정보'], ['basis', '계산 기준·설정']];
 
   /* ---------- 발주 캘린더: 이 날 무엇을 발주하고, 무엇이 들어와야 하나 ---------- */
   const CK = { order: { name: '발주 마감', color: 'var(--bad)' }, need: { name: '입고 필요', color: 'var(--s3)' }, arr: { name: '입고 예정(기발주)', color: 'var(--s1)' } };

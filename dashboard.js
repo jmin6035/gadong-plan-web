@@ -71,7 +71,8 @@
     ].map(([v, l, sub, bad]) => `<div class="kpi ${bad ? 'bad' : ''}"><span class="kl">${l}</span><b>${v}</b><span class="ks">${sub}</span></div>`).join('');
     const fams = [...new Set(L.flatMap((l) => P.lineFamilies[l]))];
     const leg = fams.map((f) => `<span><i class="sw" style="background:${famVar(f)}"></i>${f}</span>`).join('') + '<span><i class="sw" style="background:var(--mc)"></i>M/C·재가동</span><span><i class="sw" style="background:var(--down)"></i>설비정지·실적 미달</span><span><i class="sw" style="background:var(--sd)"></i>정기수리</span>';
-    $('d-legend').innerHTML = leg; $('g-legend').innerHTML = leg;
+    $('d-legend').innerHTML = leg;
+    $('g-legend').innerHTML = '<span><i class="sw" style="background:var(--mc)"></i>M/C·재가동</span><span><i class="sw" style="background:var(--down)"></i>설비정지·실적 미달</span><span><i class="sw" style="background:var(--sd)"></i>정기수리</span>';   // 표에는 강종 색을 안 씀(사용자 10/21) — 강종은 줄 이름 글자로
     $('g-tabs').innerHTML = H.ym.map(([, m], i) => `<button type="button" data-g="${i}">${m}월</button>`).join('');
     const today = localToday(), ti = A.mIdx(today);
     renderGantt(gMonth == null ? (ti >= 0 ? ti : 0) : Math.min(gMonth, H.ym.length - 1));
@@ -126,10 +127,15 @@
     const days = [...new Set(rp.vsPlan.map((r) => r[0]))].slice(-7);
     const cell = (d, l) => { const r = rp.vsPlan.find((x) => x[0] === d && x[1] === l) || [d, l, 0, 0], g = r[3] - r[2];
       return `<td class="n ${g < -1 ? 'neg' : ''}">${GP.fmt(r[3])}<small>/${GP.fmt(r[2])}</small></td>`; };
-    return `<h3>계획 대비 실적 <small class="muted">(실적/계획, t)</small></h3>
-      <div class="vs-cards">${cum.map(([l, p, a]) => `<div class="vs-card"><b>${l}</b><span class="hero ${a < p - 1 ? 'neg' : ''}">${pct(a, p)}</span><small>누계 ${GP.fmt(a)} / ${GP.fmt(p)}t (${a >= p ? '+' : ''}${GP.fmt(a - p)})</small></div>`).join('')}</div>
-      <div class="scroll"><table class="data vs"><tr><th>라인</th>${days.map((d) => `<th>${GP.md(d)}</th>`).join('')}</tr>${L.map((l) => `<tr><td>${l}</td>${days.map((d) => cell(d, l)).join('')}</tr>`).join('')}</table></div>
-      ${rp.byDept ? `<div class="scroll"><table class="data vs"><tr><th>부서</th><th>계획</th><th>실적</th><th>차이</th><th>달성</th></tr>${rp.byDept.filter((r) => r[1] || r[2]).map(([c, p, a]) => `<tr><td>${c}</td><td class="n">${GP.fmt(p)}</td><td class="n">${GP.fmt(a)}</td><td class="n ${a < p - 1 ? 'neg' : ''}">${a >= p ? '+' : ''}${GP.fmt(a - p)}</td><td class="n">${pct(a, p)}</td></tr>`).join('')}</table></div>` : ''}`;
+    // 한 표로(사용자 10/21: 카드·표가 넓게 흩어져 칸도 안 맞음) — 라인 줄: 최근 날짜별 실적/계획 + 누계·달성, 부서 표는 옆에 좁게
+    const tone = (a, p) => (p > 0 && a < p - 1 ? 'neg' : '');
+    const tot = [GP.sum(cum, (x) => x[1]), GP.sum(cum, (x) => x[2])];
+    const lineT = `<table class="data vs vs2"><thead><tr><th class="l">라인</th>${days.map((d) => `<th>${GP.md(d)}</th>`).join('')}<th>누계 실적</th><th>누계 계획</th><th>차이</th><th>달성</th></tr></thead><tbody>
+      ${cum.map(([l, p, a]) => `<tr><td class="l">${l}</td>${days.map((d) => cell(d, l)).join('')}<td class="n"><b>${GP.fmt(a)}</b></td><td class="n">${GP.fmt(p)}</td><td class="n ${tone(a, p)}">${a >= p ? '+' : ''}${GP.fmt(a - p)}</td><td class="n ${tone(a, p)}"><b>${pct(a, p)}</b></td></tr>`).join('')}
+      <tr class="tot"><td class="l">합계</td>${days.map(() => '<td></td>').join('')}<td class="n"><b>${GP.fmt(tot[1])}</b></td><td class="n">${GP.fmt(tot[0])}</td><td class="n ${tone(tot[1], tot[0])}">${tot[1] >= tot[0] ? '+' : ''}${GP.fmt(tot[1] - tot[0])}</td><td class="n"><b>${pct(tot[1], tot[0])}</b></td></tr></tbody></table>`;
+    const deptT = rp.byDept ? `<table class="data vs vs2"><thead><tr><th class="l">부서</th><th>계획</th><th>실적</th><th>차이</th><th>달성</th></tr></thead><tbody>${rp.byDept.filter((r) => r[1] || r[2]).map(([c, p, a]) => `<tr><td class="l">${c}</td><td class="n">${GP.fmt(p)}</td><td class="n">${GP.fmt(a)}</td><td class="n ${tone(a, p)}">${a >= p ? '+' : ''}${GP.fmt(a - p)}</td><td class="n">${p ? pct(a, p) : '<span class="muted">계획 없음</span>'}</td></tr>`).join('')}</tbody></table>` : '';
+    return `<h3>계획 대비 실적 <small class="muted">${rp.vsFrom ? GP.md(rp.vsFrom) + ' 다음 날부터 · ' : ''}실적 / 계획(t) · 빨강 = 계획 미달</small></h3>
+      <div class="vs-wrap"><div class="scroll">${lineT}</div>${deptT ? `<div class="scroll">${deptT}</div>` : ''}</div>`;
   }
   // ---------------- 일별 차트 (라인별 작은 배수, 같은 y축) ----------------
   function renderDaily() {
@@ -231,7 +237,7 @@
       rows.forEach((r, ri) => {
         h += `<tr class="r-${r.kind}${ri === 0 ? ' first' : ''}">`;
         if (ri === 0) h += `<th class="c0 line" rowspan="${rows.length}">${l}</th>`;
-        h += `<th class="c1">${r.kind === 'fam' ? `<i class="sw" style="background:${famVar(r.f)}"></i>${r.f}` : r.kind === 'dep' ? DSHORT[r.c] : '가동시간(h)'}</th>`;
+        h += `<th class="c1">${r.kind === 'fam' ? r.f : r.kind === 'dep' ? DSHORT[r.c] : '가동시간(h)'}</th>`;
         let tot = 0;
         ds.forEach((d, i) => {
           if (sdIdx.includes(i)) {

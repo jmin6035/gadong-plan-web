@@ -45,16 +45,19 @@
   }
   const HEAD = '<thead><tr><th>순서</th><th>시간</th><th class="l">품명 · 그룹</th><th class="l">두께 × 폭 · 색</th><th>톤 · 생산</th><th class="l">앞 작업과 바뀌는 것</th><th class="l">생기는 휴지 (MES 코드·분)</th><th class="l">준비 (도료·PF·부자재)</th></tr></thead>';
   const NC = 8;
+  const LEG = '<div class="strip-lg"><span>날짜 줄 아래 막대 = 그날 0~24시 라인 사용:</span><span><i class="sr"></i>생산(숫자 = 순서)</span><span><i class="sd"></i>전환 휴지</span><span><i class="sp"></i>휴지계획</span><span><i class="sw"></i>기다림(도료·PF 준비 전)</span><span><i class="sc"></i>이미 확정된 지시 작업</span></div>';
   // 하루 띠: 0~24시 위에 생산(파랑)·휴지(주황)·휴지계획(회색)·기다림(빨강)
   const mins = (s, d) => { if (!s) return 0; const sd = s.slice(0, 5), dd = d.slice(5); if (sd < dd) return 0; if (sd > dd) return 1440; return (+s.slice(6, 8)) * 60 + (+s.slice(9, 11)); };
-  function strip(v, ph, d, byS) {
-    const seg = [];
-    const add = (a, b, cls, tip) => { const x0 = mins(a, d), x1 = mins(b, d); if (x1 > x0) seg.push(`<i class="${cls}" style="left:${(x0 / 14.4).toFixed(2)}%;width:${((x1 - x0) / 14.4).toFixed(2)}%" title="${esc(tip)}"></i>`); };
+  function strip(v, ph, d, byS, first) {
+    const seg = []; let x0min = null;
+    const add = (a, b, cls, tip, lab) => { const x0 = mins(a, d), x1 = mins(b, d); if (x1 <= x0) return; if (x0min == null || x0 < x0min) x0min = x0;
+      seg.push(`<i class="${cls}" style="left:${(x0 / 14.4).toFixed(2)}%;width:${((x1 - x0) / 14.4).toFixed(2)}%" title="${esc(tip)}">${lab && x1 - x0 >= 40 ? `<b>${lab}</b>` : ''}</i>`); };
     (v.events || []).forEach((e) => {
-      if (e.kind === 'job') { const x = byS[e.seq]; if (!x) return; if (x.downMin > 0.5) add(x.downStart, x.start, 'sd', `${x.seq} 앞 휴지 ${n0(x.downMin)}분`); add(x.start, x.end, 'sr', `${x.seq} ${x.item} ${x.color} ${x.t}t`); }
-      else if (e.ph === ph) add(e.start, e.end, e.kind === 'plan' ? 'sp' : 'sw', `${e.kind === 'plan' ? '휴지계획' : '기다림'} ${n0(e.min)}분`);
+      if (e.kind === 'job') { const x = byS[e.seq]; if (!x) return; if (x.downMin > 0.5) add(x.downStart, x.start, 'sd', `${x.seq} 앞 전환 휴지 ${n0(x.downMin)}분`); add(x.start, x.end, 'sr', `${x.seq}번 ${x.item} ${x.color} ${x.t}t · ${tm(x.start, d)}~${tm(x.end, d)}`, x.seq); }
+      else if (e.ph === ph) add(e.start, e.end, e.kind === 'plan' ? 'sp' : 'sw', `${e.kind === 'plan' ? '휴지계획' : '기다림(준비 안 된 지시)'} ${n0(e.min)}분`, e.kind === 'plan' ? '휴지' : '대기');
     });
-    return `<div class="strip">${seg.join('')}<span class="h0">0시</span><span class="h6">6</span><span class="h12">12</span><span class="h18">18</span><span class="h24">24시</span></div>`;
+    if (first && x0min > 0) seg.unshift(`<i class="sc" style="left:0;width:${(x0min / 14.4).toFixed(2)}%" title="이미 확정된 지시 작업(제안 대상 아님)">${x0min >= 90 ? '<b>확정분 작업</b>' : ''}</i>`);
+    return `<div class="strip">${seg.join('')}<span class="h0">0시</span><span class="h6">6시</span><span class="h12">12시</span><span class="h18">18시</span><span class="h24">24시</span></div>`;
   }
 
   function table(v, items, ph) {
@@ -64,9 +67,10 @@
       if (e.kind === 'job' ? !byS[e.seq] : e.ph !== ph) return;
       const d = e.kind === 'job' ? byS[e.seq].day : e.day;
       if (d !== curDay) {
+        const first = curDay == null;
         curDay = d;
         const s = ((v.days || {})[ph] || {})[d] || {};
-        h += `<tr class="day"><td colspan="${NC}"><div class="dayh"><b>${dayNm(d)}</b><span>${n0(s.n)}건 · ${n0(s.t)}t · 생산 ${hm(s.run || 0)} · <em>휴지 ${n0(s.down)}분</em>${s.plan ? ` · 휴지계획 ${hm(s.plan)}` : ''}${s.wait ? ` · 기다림 ${hm(s.wait)}` : ''}</span></div>${strip(v, ph, d, byS)}</td></tr>`;
+        h += `<tr class="day"><td colspan="${NC}"><div class="dayh"><b>${dayNm(d)}</b><span>${n0(s.n)}건 · ${n0(s.t)}t · 생산 ${hm(s.run || 0)} · <em>휴지 ${n0(s.down)}분</em>${s.plan ? ` · 휴지계획 ${hm(s.plan)}` : ''}${s.wait ? ` · 기다림 ${hm(s.wait)}` : ''}</span></div>${strip(v, ph, d, byS, first)}</td></tr>`;
       }
       if (e.kind === 'job') { h += row(byS[e.seq], curDay); return; }
       h += `<tr class="ev ${e.kind}"><td class="c">—</td><td class="tm">${tm(e.start, curDay)} – ${tm(e.end, curDay)}</td><td colspan="${NC - 2}"><b>${e.kind === 'plan' ? '휴지계획' : '라인 멈춤(기다림)'} ${hm(e.min)}</b> · ${esc(e.why)}</td></tr>`;
@@ -157,7 +161,7 @@
       + '</div>'
       + (v.nFree ? `<div class="wo-cmp${gain < 0 ? ' bad' : ''}"><b>MES 순서와 비교</b> — 같은 ${v.nFree}건을 MES 에 지금 들어가 있는 작업예정일·순번대로 돌리면 휴지 ${n0(v.mes.down)}분${v.mes.wait ? ` + 도료 기다림 ${n0(v.mes.wait)}분` : ''} → 제안이 <b>${gain >= 0 ? `${n0(gain)}분 짧음` : `${n0(-gain)}분 김`}</b> <span class="bk">(같은 출발점, 같은 휴지 규칙)</span></div>` : '')
       + '</section>'
-      + (v.nFree ? `<section class="card"><h2>제안 순서 <small class="bk">날짜별 · 줄마다 그 지시 앞에 생기는 휴지와 생산</small></h2>${table(v, free, 'free')}</section>` : '')
+      + (v.nFree ? `<section class="card"><h2>제안 순서 <small class="bk">날짜별 · 줄마다 그 지시 앞에 생기는 휴지와 생산</small></h2>${LEG}${table(v, free, 'free')}</section>` : '')
       + (fx.length ? `<section class="card"><details class="fx"><summary>이미 확정된 대기열 ${fx.length}건 ${n0(v.tFixed)}t — MES 순서 그대로 (${esc(tm(v.from))} → ${esc(tm(v.fixedUntil))})</summary>${table(v, fx, 'fixed')}</details></section>` : '');
     $('wo-lines').querySelectorAll('button').forEach((b) => b.onclick = () => { line = b.dataset.l; render(); });
     bindTabs();

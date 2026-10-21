@@ -87,6 +87,30 @@ table.du-g td.na { background: repeating-linear-gradient(135deg, transparent 0 5
 table.t.due td, table.t.due th { padding: 6px 10px; } table.t.due tr.sum td { background: var(--surface-2); border-top: 2px solid var(--line); font-weight: 700; } table.t.due b.early, table.t b.early { color: var(--good); } table.t.due td.l, table.t.due th.l { text-align: left !important; }
 .dg2 { display: grid; grid-template-columns: 180px minmax(240px, 520px); gap: 8px 12px; margin: 6px 0 12px; } .dg2 label { display: flex; flex-direction: column; gap: 4px; font-size: 12.5px; color: var(--ink-3); font-weight: 700; } .dg2 select, .dg2 input { width: 100%; max-width: none !important; }
 @media (max-width: 640px) { .dg2 { grid-template-columns: 1fr; } table.t.sp { min-width: 0; } }
+
+/* F/H 납기 비교(10/21 재작성) */
+.fd-tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 12px; margin: 12px 0 18px; }
+.fd-tile { border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; background: var(--surface); }
+.fd-k { font-size: 16px; font-weight: 800; margin-bottom: 8px; } .fd-k small { font-size: 13px; font-weight: 500; color: var(--ink-3); margin-left: 6px; }
+table.fd-kv { width: 100%; border-collapse: collapse; } table.fd-kv th { text-align: left; font-size: 14px; font-weight: 600; color: var(--ink-2); padding: 6px 0; border-bottom: 1px solid var(--grid); }
+table.fd-kv td { text-align: right; padding: 6px 0; border-bottom: 1px solid var(--grid); font-variant-numeric: tabular-nums; } table.fd-kv td b { font-size: 18px; }
+table.fd-kv td small { display: block; font-size: 12.5px; color: var(--ink-3); } table.fd-kv td.l b { color: var(--bad); } table.fd-kv td.e b { color: var(--brand-2); }
+.fd-b { font-size: 14px; color: var(--ink-2); margin-top: 8px; }
+.fd-h { font-size: 15px; margin: 18px 0 8px; } .fd-h small { font-weight: 500; color: var(--ink-3); font-size: 13px; margin-left: 6px; }
+.fd-ldu, .fd-lar, .fd-ax b { display: inline-block; width: 11px; height: 11px; }
+.fd-ldu, .fd-ax b.du { background: var(--bad); transform: rotate(45deg); border-radius: 1px; }
+.fd-lar, .fd-ax b.ar { background: var(--brand-2); border-radius: 50%; }
+.fd-chart { border: 1px solid var(--line); border-radius: 10px; padding: 6px 12px 10px; }
+.fd-row { display: grid; grid-template-columns: 210px 1fr 74px 74px 70px; align-items: center; gap: 8px; padding: 4px 0; border-bottom: 1px solid var(--grid); font-size: 14px; font-variant-numeric: tabular-nums; }
+.fd-axr { border-bottom: 1px solid var(--line); font-size: 12.5px; color: var(--ink-3); font-weight: 700; padding-bottom: 18px; }
+.fd-sp { color: var(--ink-2); white-space: nowrap; } .fd-n, .fd-t { text-align: right; white-space: nowrap; } .fd-n { color: var(--bad); font-weight: 700; } .fd-n.a { color: var(--brand-2); } .fd-t { color: var(--ink-3); }
+.fd-axr .fd-n { color: var(--ink-3); font-weight: 700; }
+.fd-ax { position: relative; height: 20px; }
+.fd-ax i.g { position: absolute; top: 0; bottom: 0; width: 1px; background: var(--grid); } .fd-ax i.z { background: var(--ink); width: 2px; }
+.fd-ax u { position: absolute; top: 6px; height: 8px; background: color-mix(in srgb, var(--bad) 20%, transparent); border-radius: 4px; }
+.fd-ax b { position: absolute; top: 4px; margin-left: -5px; }
+.fd-ax em { position: absolute; top: 2px; transform: translateX(-50%); font-style: normal; white-space: nowrap; }
+.fd-gh { font-size: 14px; font-weight: 800; padding: 10px 0 4px; color: var(--ink); }
 </style>
 </head>
 <body>

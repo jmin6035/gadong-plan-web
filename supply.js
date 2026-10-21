@@ -173,6 +173,12 @@
       if (a.plant === 'G' && a.code === 'N') continue;                     // 임가공(포스코 지급)
       push(get(a.plant, clsOf(a.plant, a.code, a.sup)).inb, a.date, { a, t: a.t, kind: 'arr' });
     }
+    const act = (D && D.PO || {}).matAct || {};                            // 지난 날 = MES 실적(발주 원장 발주일 · 입고 원장 실입고일), 사용자 10/21
+    for (const k of ['ord', 'inb']) for (const [key, t] of Object.entries(act[k] || {})) {
+      const [pl, code, sup, d] = key.split('|');
+      if (d >= today || (pl === 'G' && code === 'N') || t < 0.05) continue;
+      push(get(pl, clsOf(pl, code, sup))[k], d, { t, kind: 'act', a: { code, sup, date: d, t } });
+    }
     return { T, J, P, arrs, codeNm: (c) => (P.matCode || {})[c] || c, supNm: (s_) => (s_ ? ((P.supNames || {})[s_.sup] || s_.name || s_.sup) : '-') };
   }
   const sumT = (L) => (L || []).reduce((x, e) => x + e.t, 0);
@@ -201,8 +207,9 @@
           const mon_ = wd(d) === 1 ? ' wk' : '';
           if (t < 0.5) return `<td class="e${mon_}${dayC(d)}" style="--ci:${i}"></td>`;
           const late = L.some((e) => e.late), nw = L.some((e) => e.kind === 'new');
-          const tip = k === 'ord' ? `${md(d)} ${c} 발주 ${n0(t)}t${late ? ' — 마감 지난 몫 포함' : ''}` : k === 'inb' ? `${md(d)} ${c} 입고 ${n0(t)}t (기발주 ${n0(sumT(L.filter((e) => e.kind === 'arr')))}t · 새 발주분 ${n0(sumT(L.filter((e) => e.kind === 'new')))}t)` : `${md(d)} ${c} 생산 투입 ${n0(t)}t`;
-          return `<td data-c="${esc(c)}" data-k="${k}" data-d="${d}" class="v${mon_}${late ? ' late' : ''}${k === 'inb' && nw ? ' nw' : ''}${t >= 999.5 ? ' w4' : ''}${dayC(d)}" style="--ci:${i}" title="${esc(tip)}">${n0(t)}</td>`;
+          const isAct = L.every((e) => e.kind === 'act');
+          const tip = isAct ? `${md(d)} ${c} ${k === 'ord' ? '발주' : '입고'} 실적 ${n0(t)}t (MES)` : k === 'ord' ? `${md(d)} ${c} 발주 ${n0(t)}t${late ? ' — 마감 지난 몫 포함' : ''}` : k === 'inb' ? `${md(d)} ${c} 입고 ${n0(t)}t (기발주 ${n0(sumT(L.filter((e) => e.kind === 'arr')))}t · 새 발주분 ${n0(sumT(L.filter((e) => e.kind === 'new')))}t)` : `${md(d)} ${c} 생산 투입 ${n0(t)}t`;
+          return `<td data-c="${esc(c)}" data-k="${k}" data-d="${d}" class="v${mon_}${late ? ' late' : ''}${isAct ? ' act' : ''}${k === 'inb' && nw ? ' nw' : ''}${t >= 999.5 ? ' w4' : ''}${dayC(d)}" style="--ci:${i}" title="${esc(tip)}">${n0(t)}</td>`;
         }).join('')}<td class="tot">${s_ >= 0.5 ? n0(s_) : ''}</td></tr>`;
       });
     }
@@ -218,6 +225,7 @@
     const useTxt = (j) => j.use.slice().sort((a, b) => b[3] - a[3]).slice(0, 4).map((r) => `${esc(r[0])} ${esc(r[1])} ${esc(r[2])} ${n0(r[3])}t`).join(' · ');
     const rows = L.sort((a, b) => b.t - a.t).map((e) => {
       if (e.kind === 'use') { const j = e.j; return `<tr><td class="l"><b>${esc(MP.codeNm(j.code))}</b></td><td class="l">${esc(MP.supNm(e.s))} <small class="muted">배정 ${Math.round((e.s.share || 0) * 100)}%</small></td><td>${n0(e.t)}</td><td>-</td><td>생산 투입</td><td>-</td><td>${md(j.first)}</td><td class="l small">${useTxt(j)}</td></tr>`; }
+      if (e.kind === 'act') { const a = e.a; return `<tr><td class="l"><b>${esc(MP.codeNm(a.code))}</b></td><td class="l">${esc((MP.P.supNames || {})[a.sup] || a.sup || '-')}</td><td>${n0(e.t)}</td><td>-</td><td><b>${k === 'ord' ? '발주 실적' : '입고 실적'}</b> (MES)</td><td>${md(e.d)}</td><td>-</td><td class="l small"></td></tr>`; }
       if (e.kind === 'arr') { const a = e.a; return `<tr><td class="l"><b>${esc(MP.codeNm(a.code))}</b></td><td class="l">${esc((MP.P.supNames || {})[a.sup] || a.sup || '-')}</td><td>${n0(e.t)}</td><td>${a.po ? esc(a.po) : '-'}</td><td><span class="pos">입고 예정(기발주)</span></td><td>${md(e.d)}</td><td>-</td><td class="l small">${esc(a.note || '')}</td></tr>`; }
       const j = e.j, x = e.x;
       const st = k === 'ord' ? (e.late ? `<span class="neg">마감 ${md(x.dl)} 지남</span>` : `발주 마감 ${md(x.dl)}`) : (j.needBy < today ? `<span class="neg">입고 필요 ${md(j.needBy)} 지남</span>` : '입고 예정(새 발주분)');
@@ -233,14 +241,18 @@
   // ---------- 차트 공통(2026-10-21 사용자: 막대그래프 다시 — 한 색조 단계·2px 칸 사이·4px 둥근 끝·가는 격자·글자 안 늘어남) ----------
   const kf = (v) => (Math.abs(v) >= 1000 ? `${+(v / 1000).toFixed(Math.abs(v) >= 10000 ? 0 : 1)}K` : String(Math.round(v)));
   // 세로 막대: cats = [{ name, a(진한 칸), b(옅은 칸), plan(높이 기준 — 모자라는 몫은 회색 트랙), cap(위 숫자 HTML), sub(아래 작은 글), neg(sub 빨강), tip }]
-  function colChart(cats, vh = 180) {
-    const mx = Math.max(1, ...cats.map((c) => Math.max(c.plan || 0, (c.a || 0) + (c.b || 0)))), sc = UI.scale(mx * 1.12, 0), P = (v) => (v / sc.hi * 100).toFixed(2);
+  // 세로 막대(사용자 10/21: 막대 위 숫자 두 줄이 아마추어 같음) — 막대 위엔 달성률 하나, 계획은 가로 표시선, 숫자는 막대 아래 정렬된 표(행 = labels)
+  function colChart(cats, vh = 180, labels = ['실적', '계획', '잔여']) {
+    const mx = Math.max(1, ...cats.map((c) => Math.max(c.plan || 0, (c.a || 0) + (c.b || 0)))), sc = UI.scale(mx * 1.15, 0), P = (v) => (v / sc.hi * 100).toFixed(2);
     const y = sc.ticks.map((t) => `<span style="bottom:${P(t)}%">${kf(t)}</span>`).join(''), gl = sc.ticks.filter((t) => t > 0).map((t) => `<i class="gl" style="bottom:${P(t)}%"></i>`).join('');
-    const col = (c) => { const a = c.a || 0, b = c.b || 0, t = Math.max(0, (c.plan || 0) - a - b), top = a + b + t;
-      const seg = [[a, 'a'], [b, 'b'], [t, 't']].filter(([v]) => v > top * 0.004).map(([v, k]) => `<i class="${k}" style="flex:${v} 0 0"></i>`).join('');
-      return `<div class="vz-c" title="${esc(c.tip || '')}"><div class="vz-st" style="height:${P(top)}%">${seg}</div><div class="vz-cap" style="bottom:${P(top)}%">${c.cap || ''}</div></div>`; };
+    const col = (c) => { const a = c.a || 0, b = c.b || 0, top = a + b, pl = c.plan || 0;
+      const seg = [[a, 'a'], [b, 'b']].filter(([v]) => v > Math.max(top, pl) * 0.004).map(([v, k]) => `<i class="${k}" style="flex:${v} 0 0"></i>`).join('');
+      const pc = pl ? Math.round(top / pl * 100) : null;
+      return `<div class="vz-c" title="${esc(c.tip || '')}"><div class="vz-st" style="height:${P(top)}%">${seg}</div>${pl ? `<em class="vz-pl" style="bottom:${P(pl)}%"></em>` : ''}`
+        + `<div class="vz-cap${c.neg ? ' neg' : ''}" style="bottom:${P(Math.max(top, pl))}%">${pc == null ? '' : pc + '%'}</div></div>`; };
+    const tbl = labels.map((lb, i) => `<div class="vz-r"><span class="vz-rl">${lb}</span><div class="vz-rv">${cats.map((c) => { const v = (c.vals || [])[i]; return `<span class="${i === labels.length - 1 && c.neg ? 'neg' : ''}${i === 0 ? ' b' : ''}">${v == null ? '-' : n0(v)}</span>`; }).join('')}</div></div>`).join('');
     return `<div class="vz-col" style="--vh:${vh}px"><div class="vz-y">${y}</div><div class="vz-plot">${gl}${cats.map(col).join('')}</div>`
-      + `<div class="vz-x">${cats.map((c) => `<div><b>${esc(c.name)}</b>${c.sub ? `<small class="${c.neg ? 'neg' : ''}">${c.sub}</small>` : ''}</div>`).join('')}</div></div>`;
+      + `<div class="vz-x">${cats.map((c) => `<div><b>${esc(c.name)}</b></div>`).join('')}</div></div><div class="vz-tbl">${tbl}</div>`;
   }
   const vzLegend = (items) => `<div class="vz-lg">${items.map(([k, t]) => `<span><i class="${k}"></i>${t}</span>`).join('')}</div>`;
 
@@ -384,7 +396,7 @@
     typeCal(ds, head);
     document.querySelectorAll('#s-cal [data-d]').forEach((el) => el.onclick = () => pick(el.dataset.d, 'g'));      // 가동 캘린더 → 생산 상세
     document.querySelectorAll('#s-cal2 [data-d]').forEach((el) => el.onclick = () => pick(el.dataset.d, 'm'));     // 소재 캘린더 → 소재 상세
-    for (const [w, t] of [[$('s-calw'), $('s-cal')], [$('s-calw3'), $('s-cal3')], [$('s-calw2'), $('s-cal2')]]) { const th = t.querySelector(`thead th[data-d="${add(today, -2)}"]`); if (th && w.scrollWidth > w.clientWidth) w.scrollLeft = th.getBoundingClientRect().left - t.getBoundingClientRect().left - 140; }
+    for (const [w, t] of [[$('s-calw'), $('s-cal')], [$('s-calw3'), $('s-cal3')], [$('s-calw2'), $('s-cal2')]]) { const th = t.querySelector(`thead th[data-d="${add(today, -2)}"]`); if (th && w.scrollWidth > w.clientWidth) { const st = [...t.querySelectorAll('thead tr:first-child :is(.c0,.c1,.lb)')].reduce((a, x) => a + x.getBoundingClientRect().width, 0) || 122; w.scrollLeft = Math.round(th.getBoundingClientRect().left - t.getBoundingClientRect().left - st); } }   // 고정 칸 폭만큼 정확히 — 날짜 칸이 반쯤 가려져 '깨져 보이던' 것(10/21)
     const sync = (a, b) => a.addEventListener('scroll', () => { if (Math.abs(b.scrollLeft - a.scrollLeft) > 1) b.scrollLeft = a.scrollLeft; });   // 두 달력 가로 스크롤 함께
     if (!cal.synced) { const W3 = [$('s-calw'), $('s-calw3'), $('s-calw2')]; for (const x of W3) for (const y of W3) if (x !== y) sync(x, y); cal.synced = true; }
     charts(ds);
@@ -627,8 +639,8 @@
     const P = T.rec + T.ord + T.nw, F = T.rec + T.ord, pc = P ? Math.round(F / P * 100) : 0;
     return `<div class="mv-h"><b>${pl === 'G' ? '도금 소재 (F/H)' : '컬러 구매 소재'}</b><span>${+m.slice(5)}월 확보 <b>${n0(F)}</b> / ${n0(P)}t (${pc}%)</span><span class="mv-s">입고 ${n0(T.rec)} · 발주 ${n0(T.ord)} · <span class="${T.nw >= 1 ? 'n' : ''}">잔여 ${n0(T.nw)}</span></span></div>`
       + (cs.length ? colChart(cs.map((c) => { const x = v(c), p = x.rec + x.ord + x.nw;
-        return { name: nmf(c), a: x.rec, b: x.ord, plan: p, cap: `<b>${n0(x.rec + x.ord)}</b><small>/ ${n0(p)}</small>`, sub: `잔여 ${n0(x.nw)}`, neg: x.nw >= 1,
-          tip: `${nmf(c)} ${+m.slice(5)}월: 들어와야 할 양 ${n0(p)}t = 입고 완료 ${n0(x.rec)} + 발주(입고 예정) ${n0(x.ord)} + 잔여(아직 발주 안 함) ${n0(x.nw)}` }; }), 170) : '<p class="small muted">이 달 들어와야 할 소재 없음</p>');
+        return { name: nmf(c), a: x.rec, b: x.ord, plan: p, vals: [x.rec + x.ord, p, x.nw], neg: x.nw >= 1,
+          tip: `${nmf(c)} ${+m.slice(5)}월: 들어와야 할 양 ${n0(p)}t = 입고 완료 ${n0(x.rec)} + 발주(입고 예정) ${n0(x.ord)} + 잔여(아직 발주 안 함) ${n0(x.nw)}` }; }), 170, ['확보', '필요', '잔여']) : '<p class="small muted">이 달 들어와야 할 소재 없음</p>');
   }
   function monthSum() {
     if (!$('s-msum').id) return;
@@ -696,11 +708,11 @@
     // 판매그룹별 생산 진행(사용자 10/21: 월 계획 얼마에 그룹별로 얼마 생산, 얼마 잔여 — 세로 막대): 진한 = 생산 실적, 옅은 = 남은 기간 계획 생산(재계획·편성), 회색 = 월 계획까지 모자라는 몫
     const grpPanel = (pl, title) => { const gs = G.filter((g) => g.pl === pl && g.prod && g.prod.month > 0); if (!gs.length || !UI.inScope(pl)) return '';
       return `<div class="pgv" data-dom="${pl}"><h3>${title}</h3>` + colChart(gs.map((g) => { const x = g.prod, rem = Math.max(0, x.month - x.actual), fin = x.actual + (x.after || 0);
-        return { name: g.name.replace(/\(.*\)/, '').replace('도금 자가재', '자가재'), a: x.actual, b: x.after || 0, plan: x.month, cap: `<b>${n0(x.actual)}</b><small>/ ${n0(x.month)}</small>`, sub: `잔여 ${n0(rem)}`, neg: fin < x.month - 0.5,
-          tip: `${g.name}: 월 계획 ${n0(x.month)}t · 생산 ${n0(x.actual)}t · 잔여 ${n0(rem)}t · 남은 기간 계획 생산 ${n0(x.after || 0)}t → 월말 예상 ${n0(fin)}t (${fin >= x.month ? '+' : '−'}${n0(Math.abs(fin - x.month))}t)` }; }), 170) + '</div>'; };
+        return { name: g.name.replace(/\(.*\)/, '').replace('도금 자가재', '자가재'), a: x.actual, b: x.after || 0, plan: x.month, vals: [x.actual, x.month, rem, fin], neg: fin < x.month - 0.5,
+          tip: `${g.name}: 월 계획 ${n0(x.month)}t · 생산 ${n0(x.actual)}t · 잔여 ${n0(rem)}t · 남은 기간 계획 생산 ${n0(x.after || 0)}t → 월말 예상 ${n0(fin)}t (${fin >= x.month ? '+' : '−'}${n0(Math.abs(fin - x.month))}t)` }; }), 170, ['생산', '월 계획', '잔여', '월말 예상']) + '</div>'; };
     const gv = grpPanel('G', '도금 판매그룹별 생산') + grpPanel('C', '컬러 판매그룹별 생산');
     $('s-prog').innerHTML = `<h2>이번 달 진행 <small>계획 대비 실적 — 막대 = 실적 / 월 계획, 세로선 = 오늘까지 계획</small><span class="unit">톤</span></h2><div class="pgs">${out.join('')}</div>`
-      + (gv ? `<div class="pgvs">${gv}</div>${vzLegend([['a', '생산 실적'], ['b', '남은 기간 계획 생산'], ['t', '월 계획까지 모자라는 몫']])}<p class="small muted" style="margin:2px 0 0 46px">위 숫자 = 생산 / 월 계획, 아래 잔여 = 월 계획 − 생산(빨강 = 남은 기간 계획을 다 만들어도 월 계획 미달)</p>` : '') + `
+      + (gv ? `<div class="pgvs">${gv}</div>${vzLegend([['a', '생산 실적'], ['b', '남은 기간 계획 생산'], ['p', '월 계획']])}<p class="small muted" style="margin:2px 0 0 46px">막대 위 % = 월말 예상 ÷ 월 계획 · 빨강 = 남은 기간 계획을 다 만들어도 월 계획 미달</p>` : '') + `
       <p class="small muted" style="margin:8px 2px 0">생산 = MES 실적 · 출하 실적 = MES 출하(판매 출고, 부서 → 판매그룹) · 월 계획·오늘까지 계획 = 판매생산속보. 라인별 상세는 <a href="status.html">도금 가동 현황</a> · <a href="color_status.html">컬러 가동 현황</a></p>`;
   }
 

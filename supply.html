@@ -124,7 +124,7 @@ table.sc td.gs { color: #a35a00; } table.sc tr.grs td { font-size: 11.5px; color
 html .gtable td.hi { background: color-mix(in srgb, var(--warn) 16%, var(--surface)); }
 html .gtable .c1 small { color: var(--ink-3); font-weight: 500; }
 .pgvs { display: grid; grid-template-columns: 1fr 1fr; gap: 12px 28px; margin-top: 16px; } @media (max-width: 900px) { .pgvs { grid-template-columns: 1fr; } }
-.pgv h3 { font-size: 14px; margin: 0 0 26px 46px; color: var(--ink); }
+.pgv h3 { font-size: 15px; margin: 0 0 26px 70px; color: var(--ink); }
 /* 가동 캘린더 · 출하·재고 표(2026-10-21 사용자: 가동 현황 캘린더처럼 색, 기울임 없이, 고급스럽게) */
 :root { --pt-act: #f3f6fa; --pt-al: #dcebfb; --pt-az: #fde3d6; --pt-mac: #d6f2e6; --pt-cc: #e3f3ee; --pt-mc: #ffe48a; --pt-mcb: #e0a800; --pt-g: #2a78d6; --pt-c: #0f9d7a; --pt-sat: #fdebd0; --pt-sun: #fbdada; --pt-ok: #e2f3e6; --pt-hi: #ffe7b8; --pt-hi2: #ffcf87; --pt-ship: #e4f0fc; --pt-shipA: #cfe3f8; }
 @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --pt-act: #18202a; --pt-al: #1d3553; --pt-az: #4a2a1d; --pt-mac: #173f31; --pt-cc: #173a31; --pt-mc: #6b5600; --pt-mcb: #c99a00; --pt-sat: #3d3220; --pt-sun: #402629; --pt-ok: #1c3a24; --pt-hi: #4a3a14; --pt-hi2: #6a4a10; --pt-ship: #1b2c40; --pt-shipA: #23405e; } }
@@ -208,6 +208,35 @@ html #s-ship th.line { font-size: 12.5px; }
 .glegend .muted { color: var(--ink-3); }
 html :is(#s-cal, #s-ship) tbody td.w4 { font-size: 10.5px; letter-spacing: -0.7px; }
 html :is(#s-cal, #s-ship) tbody td.w5 { font-size: 9.5px; letter-spacing: -0.9px; }
+
+/* 가동 캘린더 3차(2026-10-21 사용자: 깨짐·칸·색감·글자 아마추어, 종일 정지 색 안 보임) — 진한 채움 대신 옅은 색 + 진한 글자, 한 달이 한 화면에 */
+html body main :is(#s-cal, #s-ship) { min-width: 1500px !important; }
+:is(#s-cal, #s-ship) .c1 { box-shadow: 2px 0 0 var(--line); }
+:is(#s-cal, #s-ship) tbody td { color: var(--ink); }
+:is(#s-cal, #s-ship) tr.grp > * { background: var(--pt-gbg) !important; color: var(--ink) !important; border-bottom: 1px solid var(--line) !important; border-right-color: var(--grid) !important; }
+:is(#s-cal, #s-ship) tr.grp .gh { box-shadow: inset 4px 0 0 var(--pt-g), 4px 0 0 var(--pt-gbg); } :is(#s-cal, #s-ship) tr.grp.C .gh { box-shadow: inset 4px 0 0 var(--pt-c), 4px 0 0 var(--pt-gbg); }
+:is(#s-cal, #s-ship) tr.grp .gh small, :is(#s-cal, #s-ship) tr.grp .gh2 { color: var(--ink-3) !important; opacity: 1; }
+:is(#s-cal, #s-ship) tr.grp td.tot.gt, :is(#s-cal, #s-ship) tr.grp.C td.tot.gt, :is(#s-cal, #s-ship) tr.grp.A td.tot.gt { background: var(--pt-gbg2) !important; color: var(--ink) !important; }
+:is(#s-cal, #s-ship) tr.grp td.tb { border-left: 2px solid var(--brand-2); }
+#s-cal tr.r-a td { padding: 4px 1px; }
+#s-cal tr.r-a td.fbar { color: var(--fc); background: color-mix(in srgb, var(--fc) 15%, var(--surface)) !important; box-shadow: inset 0 3px 0 var(--surface), inset 0 -3px 0 var(--surface), inset 3px 0 0 var(--fc); font-weight: 800; font-size: 12.5px; }
+#s-cal tr.r-a td.fbar small { color: var(--ink-2); opacity: 1; font-weight: 600; }
+#s-cal tr.r-a td.f-AL { --fc: var(--pt-AL); } #s-cal tr.r-a td.f-AZ { --fc: var(--pt-AZ); } #s-cal tr.r-a td.f-MAC { --fc: var(--pt-MAC); }
+#s-cal tr.r-a td.f-C수출 { --fc: var(--pt-Cx); } #s-cal tr.r-a td.f-C건재 { --fc: var(--pt-Cb); } #s-cal tr.r-a td.f-C수요 { --fc: var(--pt-Cd); }
+#s-cal tr.r-a td.mcbar { background: var(--pt-mcbg) !important; color: var(--pt-mcT); box-shadow: inset 0 3px 0 var(--surface), inset 0 -3px 0 var(--surface); font-size: 11.5px; font-weight: 800; letter-spacing: 0; }
+#s-cal td.mc { background: var(--pt-mcbg) !important; box-shadow: none; color: var(--pt-mcT); }
+#s-cal td.sdblock { background: var(--pt-sd2) !important; color: #fff !important; font-weight: 800; }
+#s-cal td.sdblock small { color: #fff !important; opacity: .9; }
+#s-cal tr.r-p td.idle, #s-cal tr.r-a td.idle { background: repeating-linear-gradient(135deg, transparent 0 4px, color-mix(in srgb, var(--ink-3) 28%, transparent) 4px 5px) !important; }
+#s-cal tr.r-h td { font-size: 12px; }
+#s-cal tr.r-p td { font-size: 12.5px; }
+:is(#s-cal, #s-ship) tbody td.past { background: var(--pt-act); }
+.glegend .sw.sdsw { background: var(--pt-sd2) !important; }
+.glegend .sw.idsw { background: repeating-linear-gradient(135deg, transparent 0 3px, color-mix(in srgb, var(--ink-3) 45%, transparent) 3px 4px) !important; }
+.glegend .sw.mcsw { background: var(--pt-mcbg) !important; box-shadow: inset 0 0 0 1px var(--pt-mcT) !important; }
+:root { --pt-gbg: #eef2f7; --pt-gbg2: #e2e8f0; --pt-sd2: #7b8796; --pt-mcbg: #fdefc3; --pt-mcT: #7a5200; --pt-AL: #1f6fd1; --pt-AZ: #d35a1f; --pt-MAC: #0f8f62; --pt-Cx: #5b45b5; --pt-Cb: #08798a; --pt-Cd: #a63d70; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --pt-gbg: #1f2833; --pt-gbg2: #26313e; --pt-sd2: #5d6878; --pt-mcbg: #4a3a12; --pt-mcT: #f3cf74; --pt-AL: #6ba6ff; --pt-AZ: #ff9a66; --pt-MAC: #4fd1a0; --pt-Cx: #a896ff; --pt-Cb: #4cc3d1; --pt-Cd: #ee8ab8; } }
+:root[data-theme="dark"] { --pt-gbg: #1f2833; --pt-gbg2: #26313e; --pt-sd2: #5d6878; --pt-mcbg: #4a3a12; --pt-mcT: #f3cf74; --pt-AL: #6ba6ff; --pt-AZ: #ff9a66; --pt-MAC: #4fd1a0; --pt-Cx: #a896ff; --pt-Cb: #4cc3d1; --pt-Cd: #ee8ab8; }
 </style>
 </head>
 <body>

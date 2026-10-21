@@ -1,4 +1,4 @@
-/* 포털(홈): published/portal.enc.json (cglplan/pages.py) — 오너 한눈에(상태 4칸 = 주간보고 기준) · 월말·분기말 전망 · 확인할 일 · 그룹별 이번 달, 실무 상세는 접어 둠 */
+/* 포털(홈): published/portal.enc.json (cglplan/pages.py) — 오너 한눈에(상태 4칸 = 주간보고 기준) · 월말·분기말 전망 · 그룹별 이번 달, 실무 상세는 접어 둠 */
 (function () {
   'use strict';
   const $ = (id) => document.getElementById(id);
@@ -151,16 +151,6 @@
     return `<h2>월말·4분기 전망 <small>이번 달 = 속보 실적 + 남은 계획 · 재고 = 어제 실제 재고에서 계획대로 굴린 값(재고 추이와 같음), 이번 달 남은 출고 = 속보 월차 − 실적</small><span class="unit">톤</span></h2>
       <div class="scroll"><table class="fc"><thead><tr><th class="l"></th>${M.map((m) => `<th>${+m.slice(5)}월</th>`).join('')}<th>4분기</th></tr></thead><tbody>${rows.join('')}</tbody></table></div>`;
   }
-  // 확인할 일: 자동 점검 목록(조치 → 주의), 상위 5건 + 나머지 접기
-  function issCard(O) {
-    const E = (O.exceptions || []).filter((e) => UI.inScope(e.area === '도금' ? 'G' : e.area === '컬러' ? 'C' : ''));
-    if (!E.length) return '';
-    const S = E.slice().sort((a, b) => (a.lvl === 'bad' ? 0 : 1) - (b.lvl === 'bad' ? 0 : 1));
-    const li = (e) => `<li class="${e.lvl}"><span class="ar">${esc(e.area)}</span><a href="${esc(e.link || '#')}">${esc(e.text)}</a>${e.who ? `<small>담당 ${esc(e.who)}</small>` : ''}</li>`;
-    const nb = S.filter((e) => e.lvl === 'bad').length;
-    return `<h2>확인할 일 <small>조치 ${nb}건 · 주의 ${S.length - nb}건 — 매일 자동 점검</small></h2><ul class="iss">${S.slice(0, 5).map(li).join('')}</ul>
-      ${S.length > 5 ? `<details style="margin-top:8px"><summary class="small" style="cursor:pointer">나머지 ${S.length - 5}건</summary><ul class="iss" style="margin-top:8px">${S.slice(5).map(li).join('')}</ul></details>` : ''}`;
-  }
   function loadCard(O) {
     const p = O.planMonth || O.plating, mx = Math.max(...O.months.map((m, i) => p.g1[i] + p.g2[i])) * 1.04;
     return `<h2>월별 도금 계획 <small>${O.planMonth ? '실적 + 최신 재계획' : O.rec}</small><span class="unit">톤</span></h2><div class="legend"><span><i style="background:var(--c1)"></i>1CGL</span><span><i style="background:var(--c2)"></i>2CGL</span></div>
@@ -223,7 +213,6 @@
     $('h-meta').innerHTML = `실적 <b>~${md(O.asOf)}</b> · 계획 <b>확정 계획 · 도금은 매일 실적 반영 재계산</b> · 계산 ${esc(String(O.built).replace('T', ' ').slice(5, 16))}`;
     $('h-own').innerHTML = owner(O);
     const fc = fcCard(O); $('h-fc').innerHTML = fc; $('h-fc').hidden = !fc;
-    const is = issCard(O); $('h-iss').innerHTML = is; $('h-iss').hidden = !is;
     const gh = grp(O); $('h-grp').innerHTML = gh; $('h-grp').hidden = !gh;
     $('h-lines').innerHTML = lines(O);
     const wh = woCard(O); $('h-wo').innerHTML = wh; $('h-wo').hidden = !wh;

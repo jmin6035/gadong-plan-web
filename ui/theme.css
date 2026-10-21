@@ -909,7 +909,7 @@ html body main :is(.strip span, .calc .more) { font-size: 13px !important; }
 html body main .flw .fs small { font-size: 13.5px !important; }
 html body main :is(ul, ol) > li { font-size: max(14px, 1em); }
 /* 31일 캘린더: 하루 칸을 48px 이상으로 — 글자를 줄이지 않고 표를 넓혀 가로 스크롤(왼쪽 라인·구분 열은 고정) */
-html body main :is(#s-cal, #s-ship, #g-table, table.sc) { min-width: 1760px !important; }
+html body main :is(#s-cal, #s-ship, table.sc) { min-width: 1760px !important; }
 html body main :is(table.gtable td.w4, table.gtable td.w5, table.sc td.w4) { font-size: 13.5px !important; }
 /* 가동 상세: 흐름(소재 → 생산 → 납기)은 칸이 모자라면 다음 줄로 */
 html body main .flw { flex-wrap: wrap; white-space: normal; row-gap: 5px; }
@@ -927,3 +927,38 @@ button.nv-tg:hover { color: var(--side-ink); }
 .nv-sec.open .nv-ch { transform: rotate(90deg); }
 .nv-sec .nv-items { display: none; }
 .nv-sec.open .nv-items { display: block; }
+
+/* 도금 가동 현황 계획 대비 실적(10/21): 표 두 개를 나란히, 내용 폭만큼 */
+.vs-wrap { display: flex; flex-wrap: wrap; gap: 16px; align-items: flex-start; }
+.vs-wrap > .scroll { flex: 0 1 auto; max-width: 100%; }
+html body table.data.vs2 { width: auto; min-width: 0; }
+html body table.data.vs2 th, html body table.data.vs2 td { padding: 7px 9px; white-space: nowrap; }
+html body table.data.vs2 td.l, html body table.data.vs2 th.l { text-align: left; }
+html body table.data.vs2 td.n { text-align: right; font-variant-numeric: tabular-nums; }
+html body table.data.vs2 td small { color: var(--ink-3); margin-left: 1px; }
+html body table.data.vs2 tr.tot td { font-weight: 800; border-top: 1px solid var(--line); background: var(--hover); }
+html body table.data.vs2 td.neg, html body table.data.vs2 td.neg b { color: var(--bad); }
+
+/* 세로 막대 서식(10/21): 넓은 막대, 계획 = 가로 표시선, 막대 위 % 하나, 숫자는 아래 정렬 표 */
+.vz-st { width: min(56px, 46%) !important; gap: 0 !important; }
+.vz-st i.a { border-radius: 0; } .vz-st i:last-child { border-radius: 3px 3px 0 0; }
+.vz-pl { position: absolute; left: 50%; transform: translate(-50%, 1px); width: min(76px, 62%); height: 0; border-top: 2px solid var(--ink); }
+.vz-cap { padding-bottom: 6px !important; font-size: 14px !important; font-weight: 800; color: var(--ink); }
+.vz-cap.neg { color: var(--bad); }
+.vz-x b { font-size: 14px !important; font-weight: 700; }
+.vz-tbl { margin: 8px 0 0; border-top: 1px solid var(--line); font-variant-numeric: tabular-nums; }
+.vz-r { display: grid; grid-template-columns: 40px 1fr; column-gap: 6px; padding: 5px 0; border-bottom: 1px solid var(--grid); }
+.vz-rv { display: flex; } .vz-rv span { flex: 1; min-width: 0; }
+.vz-r span { text-align: center; font-size: 14px; color: var(--ink-2); white-space: nowrap; }
+.vz-r span.b { color: var(--ink); font-weight: 700; } .vz-r span.neg { color: var(--bad); font-weight: 700; }
+.vz-r .vz-rl { text-align: right; font-size: 12.5px; color: var(--ink-3); font-weight: 700; padding-right: 2px; }
+.vz-lg i.p { background: none; height: 0; border-top: 2px solid var(--ink); width: 14px; vertical-align: 3px; border-radius: 0; }
+.vz-col { grid-template-columns: 64px 1fr !important; }
+.vz-r { grid-template-columns: 64px 1fr !important; }
+.vz-lg { margin-left: 70px !important; }
+
+/* 도금·컬러 가동 현황 월 표(10/21): 카드 밖으로 넘쳐 화면이 깨지던 것 — 카드 안 가로 스크롤, 칸 폭 확보 */
+html body .gtable-wrap { overflow-x: auto !important; }
+html body .card:has(.gtable-wrap) { overflow: hidden !important; }
+html body main table.gtable { min-width: 1500px !important; font-size: 12.5px !important; }
+html body main .gtable th, html body main .gtable td { letter-spacing: -0.2px !important; padding: 5px 1px !important; }
