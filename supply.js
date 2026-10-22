@@ -282,6 +282,7 @@
     const dayCls = (d) => (d < today ? ' past' : d === today ? ' today tb' : '');   // 지난 날(실적) 옅은 바탕 · 오늘 앞 파란 경계선 — 기울임 대신(사용자 10/21)
     const dn = {};                                                       // 라인|날짜 → [[종류, 분]]
     for (const [d, l, k, mn] of D.W.colorDown || []) if (d.slice(0, 7) === mon) (dn[`${l}|${d}`] = dn[`${l}|${d}`] || []).push([k, mn]);
+    const dnPlan = Object.assign({}, dn);                                // 휴지계획(실적으로 덮기 전) — 생산 없는 날 이유 찾기용
     const DA = D.downAct;                                                // 지난 날 컬러 = MES 실제 휴지(휴지계획 아님, 사용자 10/21) — 종일 기록 없고 계획이 S/D·수리면 계획 이름 유지
     if (DA && DA.days) for (const d of ds) { if (d > DA.asOf) break; for (const l of ['1CCL', '2CCL', '3CCL', '4CCL']) { const k = `${l}|${d}`, act = (DA.days[d] || {})[l] || [], gap = act.filter((x) => x[0] === 'gap').reduce((a, x) => a + x[1], 0), plan = (dn[k] || []).filter((x) => HARD.includes(x[0]));
       if (gap >= 1439 && plan.length) dn[k] = plan; else if (act.length) dn[k] = act.map((x) => [x[0], x[1]]); else delete dn[k]; } }
@@ -293,15 +294,26 @@
     // 2026-10-21 사용자: 도금/컬러 구분 + 색 줄이기 — 색은 강종(AL·AZ·MAC 막대)·M/C·종일 정지만, 숫자 칸은 무채색
     const kindOf = (l, d) => { const k0 = (dn[`${l}|${d}`] || []).filter((x) => HARD.includes(x[0])).sort((a, b) => b[1] - a[1])[0]; return k0 ? k0[0] : 'plan'; };
     const runsOf = (l) => { const rs = [];                               // [시작, 끝, 종류] — 종류가 바뀌면 다른 칸(휴지·수리 구분, 10/22 사용자)
-      const src = /CGL$/.test(l) ? D.pl : D.co;                         // 생산 없는 날(종일 정지 아님)도 한 덩어리로 합침 — 이어진 날 가로·같은 기간 라인 세로(10/22 사용자)
-      ds.forEach((d, i) => { const x = src[`${l}|${d}`], kk = full(l, d) ? kindOf(l, d) : (!x || (x.t || 0) < 0.5) && !(x && /M\/C/.test(x.ev || '')) ? 'idle' : null; if (!kk) return;
+      const src = /CGL$/.test(l) ? D.pl : D.co;                         // 생산 없는 날도 이유를 붙여 합침(10/22 사용자: 왜 생산 없는지 · 붙은 휴지와 왜 따로냐)
+      const K = ds.map((d) => { const x = src[`${l}|${d}`];
+        if (full(l, d)) return [kindOf(l, d), 0];
+        if ((x && (x.t || 0) >= 0.5) || (x && /M\/C/.test(x.ev || ''))) return [null, 0];
+        const pk = (dnPlan[`${l}|${d}`] || []).filter((y) => HARD.includes(y[0])).sort((a, b) => b[1] - a[1])[0];
+        if (pk) return [pk[0], 1];                                       // 그날 휴지계획(계획휴지·S/D·수리)
+        const past = DA && DA.asOf && d <= DA.asOf;
+        return [past ? 'plan' : 'idle', past ? 2 : 3]; });               // 2 = 지난 날 실적 없음(MES 사유 기록 없음) → 휴지, 3 = 앞날 계획 물량 없음
+      const hard = (k) => k[0] && k[0] !== 'idle' && k[1] !== 2;
+      for (let i = 1; i < K.length; i++) if (K[i][1] >= 2 && hard(K[i - 1])) K[i] = [K[i - 1][0], 1];     // 바로 앞 휴지·수리에 붙임(이어진 날까지)
+      for (let i = K.length - 2; i >= 0; i--) if (K[i][1] >= 2 && hard(K[i + 1])) K[i] = [K[i + 1][0], 1];  // 바로 뒤 휴지·수리에 붙임
+      for (let i = 1; i < K.length; i++) if (K[i][1] === 3 && K[i - 1][0] === 'plan') K[i] = ['plan', 2];   // 실적 없는 휴지에 이어지는 앞날(계획 물량 없음) = 휴지가 이어지는 것
+      ds.forEach((d, i) => { const kk = K[i][0]; if (!kk) return;
         const r = rs[rs.length - 1]; if (r && r[1] === i - 1 && r[2] === kk) r[1] = i; else rs.push([i, i, kk]); }); return rs; };
     const SDK = new Set();
     const sdCell = (ls, run) => { const d = ds[run[0]], kk = run[2], n = run[1] - run[0] + 1;
-      if (kk === 'idle') return `<td class="idle idleblk" colspan="${n}" rowspan="${ls.length}" title="${esc(`생산 없음 ${md(ds[run[0]])}${n > 1 ? '~' + md(ds[run[1]]) : ''} · ${ls.join('·')}`)}" data-d="${d}">${n >= 3 ? `<span class="idl">생산 없음 ${md(ds[run[0]])}~${md(ds[run[1]])}</span>` : ''}</td>`;
+      if (kk === 'idle') return `<td class="idle idleblk" colspan="${n}" rowspan="${ls.length}" title="${esc(`계획 물량 없음(이 라인에 배정된 생산 없음) ${md(ds[run[0]])}${n > 1 ? '~' + md(ds[run[1]]) : ''} · ${ls.join('·')}`)}" data-d="${d}">${n >= 3 ? `<span class="idl">계획 물량 없음 ${md(ds[run[0]])}~${md(ds[run[1]])}</span>` : ''}</td>`;
       SDK.add(kk);
       const SH = { plan: '휴지', sd: 'S/D', repair: '수리', jr: '정기수리' }, nm = n === 1 ? (SH[kk] || KN[kk]) : n === 2 && KN[kk].length > 3 ? SH[kk] || KN[kk] : KN[kk];
-      return `<td class="sdblock sk-${kk}${n === 1 ? ' one' : ''}" colspan="${n}" rowspan="${ls.length}" title="${esc(`${KN[kk]} ${md(ds[run[0]])}${n > 1 ? '~' + md(ds[run[1]]) : ''} · ${ls.map((l) => `${l} ${dTxt(l, d)}`).join(' / ')}`)}" data-d="${d}">${nm}<small>${md(ds[run[0]])}${n > 1 ? '~' + md(ds[run[1]]) : ''}</small></td>`; };
+      return `<td class="sdblock sk-${kk}${n === 1 ? ' one' : ''}" colspan="${n}" rowspan="${ls.length}" title="${esc(`${KN[kk]} ${md(ds[run[0]])}${n > 1 ? '~' + md(ds[run[1]]) : ''} · ${ls.map((l) => `${l} ${dTxt(l, d) || '생산 실적 없음(MES 휴지 사유 기록 없음)'}`).join(' / ')}`)}" data-d="${d}">${nm}<small>${md(ds[run[0]])}${n > 1 ? '~' + md(ds[run[1]]) : ''}</small></td>`; };
     const isMC = (x) => x && /M\/C/.test(x.ev || '');
     const CGM = { 가전수출: 'C수출', 가전내수: 'C수출', 건재수출: 'C수출', 계획재: 'C건재', 주문재: 'C건재', 수요개발: 'C수요' }, CGN = { C수출: '컬러수출', C건재: '컬러건재', C수요: '수요개발' }, CGS = { C수출: '수출', C건재: '건재', C수요: '수요' };
     const cTop = (x) => { const a = {}; for (const [g, t] of Object.entries(x.g || {})) { const k = CGM[g] || (/^C/.test(g) ? g : 'C건재'); a[k] = (a[k] || 0) + t; } return Object.entries(a).sort((p, q) => q[1] - p[1])[0][0]; };
@@ -338,7 +350,7 @@
     const sw = (c, t) => `<span><i class="sw ${c}"></i>${t}</span>`, sep = '<i class="gsep"></i>';
     $('s-calleg').innerHTML = (UI.inScope('G') ? '<span class="muted">도금 강종</span>' + sw('f-AL', 'AL') + sw('f-AZ', 'AZ') + sw('f-MAC', 'MAC') + sw('mcsw', 'M/C(강종 교체)') + sep : '')
       + (UI.inScope('C') ? '<span class="muted">컬러 판매그룹</span>' + sw('f-C수출', '컬러수출') + sw('f-C건재', '컬러건재') + sw('f-C수요', '수요개발') + sep : '')
-      + ['plan', 'repair', 'sd', 'jr'].filter((k) => SDK.has(k)).map((k) => sw(`sk-${k}`, `${KN[k]}(종일)`)).join('') + sw('idsw', '생산 없음') + sep + sw('tbsw', '오늘') + '<span class="muted">칸 숫자 = 생산(t) · 오늘 이전 = 실적 · 칸에 마우스를 올리면 강종·판매그룹·휴지</span>';
+      + ['plan', 'repair', 'sd', 'jr'].filter((k) => SDK.has(k)).map((k) => sw(`sk-${k}`, `${KN[k]}(종일)`)).join('') + sw("idsw", "계획 물량 없음") + sep + sw('tbsw', '오늘') + '<span class="muted">칸 숫자 = 생산(t) · 오늘 이전 = 실적 · 칸에 마우스를 올리면 강종·판매그룹·휴지</span>';
     $('s-shipleg').innerHTML = '<span class="muted">재고 칸 색 = 목표 대비</span>' + sw('hiw', '100~130%') + sw('hi2w', '130% 넘음') + sep + sw('tbsw', '오늘') + '<span class="muted">출하(t) · 재고(천t) · 오늘 이전 = 실적</span>';
     // 판매그룹 출하·재고(라인 구분 없는 자료 — 사용자 10/21: 밑으로 따로 하나 더)
     let S2 = headG('판매그룹');
