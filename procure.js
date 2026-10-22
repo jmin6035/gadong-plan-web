@@ -181,10 +181,12 @@
     const tbl = (kind) => `<h3 class="fd-h">${esc(kind)} — 사양별 <small>${{ gap: '인도납기보다 먼저 들어오는 일수', arr: '실제 입고 일수', due: '인도납기 일수', t: '발주량', thk: '두께', wdt: '폭' }[st.k]} ${st.d < 0 ? '큰' : '작은'} 순 · 칸 머리를 누르면 정렬</small></h3>
       <div class="scroll"><table class="t ft-t"><thead><tr>${sh('thk', '두께', 'l')}${sh('wdt', '폭', 'l')}${sh('t', '발주량')}${sh('arr', '실제 입고')}<th>TF 기준</th>${sh('due', '인도납기')}<th class="ft-cell">발주 후 일수 (0 → 50일)</th>${sh('gap', '인도납기 − 실제')}</tr></thead><tbody>${rows(kind)}</tbody></table></div>`;
     // 규격별(10/22 사용자: SMATA1080 '규격' 칸 — C01 : AS A653 CSA 등). 사양(두께·폭) 표와 같은 칸, 발주량 큰 순
+    const SPKO = { 'CSP1-HA': '일반용', 'CSP2-HA': '가공용', 'CSP3E-HA': '초심가공용', 'CSP360-HA': '구조용37', 'IS-CR0-CQ': '인도 BIS 일반용', 'IS-CR0-DQ': '인도 BIS 가공용', 'POSACCS-F1': '심가공 · 고내열 내변색',
+      'CSP1-HG': '일반용', 'CSP2-HG': '가공용', 'CSP1-FL': '일반용 · 평탄도 관리', 'CSP360-HG': '구조용37', 'CSP400-HG': '구조용41', 'CSP440-HG': '구조용46', 'CSP490-HG': '구조용 GrF', 'CSP570-HG': '구조용58' };   // MES 코드표 A10G 품질 등급(사내 PC 자료에 specKo 가 없을 때)
     const SP = (F.bySpec || []).filter((r) => r.kind !== '수입 FH' && r.arrDays != null);
     const stbl = (kind) => { const L = SP.filter((r) => r.kind === kind); if (!L.length) return '';
-      return `<h3 class="fd-h">${esc(kind)} — 규격별 <small>발주량 큰 순 · 규격 = MES 소재발주 규격(SMATA1080)</small></h3>
-      <div class="scroll"><table class="t ft-t"><thead><tr><th class="l">규격</th><th>발주량</th><th>실제 입고</th><th>TF 기준</th><th>인도납기</th><th class="ft-cell">발주 후 일수 (0 → 50일)</th><th>인도납기 − 실제</th></tr></thead><tbody>${L.map((r) => `<tr><td class="l">${esc(r.spec)}</td><td>${n0(r.t)}t</td>
+      return `<h3 class="fd-h">${esc(kind)} — 규격별 <small>발주량 큰 순 · 규격 = MES 소재발주 규격(SMATA1080), 옆 글자 = 품질 등급(일반용 CQ · 가공용 DQ · 심가공용 DDQ · 구조용 = 강도급)</small></h3>
+      <div class="scroll"><table class="t ft-t"><thead><tr><th class="l">규격</th><th>발주량</th><th>실제 입고</th><th>TF 기준</th><th>인도납기</th><th class="ft-cell">발주 후 일수 (0 → 50일)</th><th>인도납기 − 실제</th></tr></thead><tbody>${L.map((r) => `<tr><td class="l"><b>${esc(r.spec)}</b>${(r.specKo || SPKO[r.spec]) ? ` <span class="muted">${esc(r.specKo || SPKO[r.spec])}</span>` : ''}</td><td>${n0(r.t)}t</td>
       <td class="ar"><b>${r.arrDays}일</b></td><td>${r.tfDays}일</td><td class="du">${r.dueDays}일</td><td class="ft-cell"><div class="ft-line">${mk('ar', r.arrDays)}${mk('tf', r.tfDays)}${mk('du', r.dueDays)}</div></td>
       <td class="${r.dueDays - r.arrDays >= 14 ? 'gap' : ''}">${r.dueDays - r.arrDays}일</td></tr>`).join('')}</tbody></table></div>`; };
     const specHtml = SP.length ? PK.map((r) => stbl(r.kind)).join('') : '<p class="small">규격별 비교: MES 소재발주 규격 칸을 사내 PC 다음 원격 조회(설치 묶음 v67 이상)부터 받아 표시합니다.</p>';
