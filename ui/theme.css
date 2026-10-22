@@ -994,3 +994,4 @@ html body main table.gt.nd .q { background: var(--surface-2); }
 html body main table.gt.nd tr.tot td { font-weight: 800; border-top: 1px solid var(--line); background: var(--surface-2); }
 html body main table.gt.nd tr.sec td { text-align: left; font-weight: 800; color: var(--ink-2); background: transparent; padding-top: 12px; }
 html body main table.gt.nd b.warn { color: #b26b00; }
+html body main table.gt.nd .sk { border-left: 2px solid var(--line); }

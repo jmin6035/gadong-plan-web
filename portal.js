@@ -84,24 +84,36 @@
     const act = {}; for (const g of O.groups || []) act[g.key] = g.prod ? g.prod.actual : null;
     const L = O.lines || [], mon = (pl) => L.filter((x) => x.pl === pl).reduce((a, x) => a + (x.month || 0), 0);
     const tone = (r) => (r == null ? '' : r >= er - 0.03 ? 'pos' : r >= er - 0.1 ? 'warn' : 'neg');
+    // 재고(10/22 사용자: 그룹별 이번 달 재고 수준) — 어제 실제(판매생산속보 원천 표) · 월말 예상(재고 추이와 같은 매일 롤링) · 월말 재고 일수(÷ 다음 달 하루 판매) vs 목표 일수(계획 엔진 기준)
+    const SK = { 'G자가재': '도금 제품(자가재)' }, ST0 = {}; let sd = '';
+    for (const [d, k, t] of O.stockTrend || []) { if (d >= sd) sd = d; }
+    for (const [d, k, t] of O.stockTrend || []) if (d === sd) ST0[k] = t;
+    const stNow = (g) => (ST0['g:' + g] != null ? ST0['g:' + g] : SK[g] && ST0[SK[g]] != null ? ST0[SK[g]] : null);
+    const mEnd = `${cur}-${String(D).padStart(2, '0')}`, stEnd = (g) => rollAt(O, [g], mEnd);
+    const nm1 = M[Math.min(mi + 1, M.length - 1)], TR = IG.tfRules || {};
+    const tgtD = (g) => (g[0] === 'C' ? (IG.targets && IG.targets[g] ? IG.targets[g].days : null) : IG.tfDays && IG.tfDays[g] ? IG.tfDays[g][mi] : (TR.days || {})[g]);
+    const sdays = (c) => { const n = (c.ds != null ? c.ds : c.sales[Math.min(mi + 1, M.length - 1)]) / dim(nm1); return c.end != null && n > 0 ? c.end / n : null; };
+    const dTone = (v, t) => (v == null || !t ? '' : v < t * 0.7 ? 'neg' : v > t * 1.3 ? 'warn' : 'pos');
     const cell = (g) => { const p = PL[g] || []; const a = act[g]; const need = (p[mi] || {}).prod || 0; const r = a != null && need > 0 ? a / need : null;
-      return { sales: p.map((x) => x.sales || 0), prod: p.map((x) => x.prod || 0), a, r }; };
+      return { sales: p.map((x) => x.sales || 0), prod: p.map((x) => x.prod || 0), a, r, now: stNow(g), end: stEnd(g), tgt: tgtD(g) }; };
     const row = (g, cls) => { const c = typeof g === 'string' ? cell(g) : g; const nm = typeof g === 'string' ? GN[g] : g.nm;
       const q = (k) => c[k].reduce((x, y) => x + y, 0);
       return `<tr class="${cls || ''}"><td class="l">${nm}</td>`
         + M.map((m, i) => `<td class="${i === mi ? 'cm' : ''}">${n0(c.sales[i])}</td><td class="${i === mi ? 'cm' : ''}"><b>${n0(c.prod[i])}</b></td>`
-          + (i === mi ? `<td class="cm">${c.mon != null ? n0(c.mon) : '<span class="mu">-</span>'}</td><td class="cm">${c.a != null ? n0(c.a) : '-'}</td><td class="cm"><b class="${tone(c.r)}">${c.r != null ? Math.round(c.r * 100) + '%' : '-'}</b></td>` : '')).join('')
+          + (i === mi ? `<td class="cm">${c.mon != null ? n0(c.mon) : '<span class="mu">-</span>'}</td><td class="cm">${c.a != null ? n0(c.a) : '-'}</td><td class="cm"><b class="${tone(c.r)}">${c.r != null ? Math.round(c.r * 100) + '%' : '-'}</b></td>`
+            + `<td class="cm sk">${c.now != null ? n0(c.now) : '-'}</td><td class="cm">${c.end != null ? n0(c.end) : '-'}</td><td class="cm">${(() => { const v = sdays(c); return v == null ? '-' : `<b class="${dTone(v, c.tgt)}">${Math.round(v)}일</b>${c.tgt ? ` <small class="mu">/ ${Math.round(c.tgt)}</small>` : ''}`; })()}</td>` : '')).join('')
         + `<td class="q">${n0(q('sales'))}</td><td class="q"><b>${n0(q('prod'))}</b></td></tr>`; };
     const sec = (pl, t, gs) => { if (!UI.inScope(pl)) return ''; const C = gs.map(cell);
-      const T = { nm: `${t} 계`, sales: M.map((_, i) => C.reduce((a, c) => a + c.sales[i], 0)), prod: M.map((_, i) => C.reduce((a, c) => a + c.prod[i], 0)), a: C.reduce((a, c) => a + (c.a || 0), 0), mon: mon(pl) };
+      const CS = C.filter((c) => c.now != null && c.end != null), sm = (k) => (CS.length ? CS.reduce((a, c) => a + c[k], 0) : null);   // 재고 계 = 어제·월말 둘 다 있는 그룹만(도금 = 판매재, 자가재 제외)
+      const T = { nm: `${t} 계`, sales: M.map((_, i) => C.reduce((a, c) => a + c.sales[i], 0)), prod: M.map((_, i) => C.reduce((a, c) => a + c.prod[i], 0)), a: C.reduce((a, c) => a + (c.a || 0), 0), mon: mon(pl), now: sm('now'), end: sm('end'), tgt: null, ds: CS.reduce((a, c) => a + c.sales[Math.min(mi + 1, M.length - 1)], 0) };
       T.r = T.prod[mi] ? T.a / T.prod[mi] : null;
-      return `<tr class="sec"><td colspan="${3 + M.length * 2 + 3}">${t}</td></tr>` + gs.map((g) => row(g)).join('') + row(T, 'tot'); };
-    const hd = M.map((m, i) => `<th colspan="${i === mi ? 5 : 2}" class="${i === mi ? 'cm' : ''}">${+m.slice(5)}월${i === mi ? ` <small>(진행 중 · 경과 ${Math.round(er * 100)}%)</small>` : ''}</th>`).join('') + '<th colspan="2" class="q">4분기</th>';
-    const hd2 = M.map((m, i) => '<th>판매계획</th><th>필요 생산</th>' + (i === mi ? '<th>월차</th><th>생산 실적</th><th>진도율</th>' : '')).join('') + '<th class="q">판매계획</th><th class="q">필요 생산</th>';
+      return `<tr class="sec"><td colspan="${3 + M.length * 2 + 6}">${t}</td></tr>` + gs.map((g) => row(g)).join('') + row(T, 'tot'); };
+    const hd = M.map((m, i) => `<th colspan="${i === mi ? 8 : 2}" class="${i === mi ? 'cm' : ''}">${+m.slice(5)}월${i === mi ? ` <small>(진행 중 · 경과 ${Math.round(er * 100)}%)</small>` : ''}</th>`).join('') + '<th colspan="2" class="q">4분기</th>';
+    const hd2 = M.map((m, i) => '<th>판매계획</th><th>필요 생산</th>' + (i === mi ? `<th>월차</th><th>생산 실적</th><th>진도율</th><th class="sk">재고 <small>${sd ? +sd.slice(5, 7) + '/' + +sd.slice(8, 10) : ''}</small></th><th>월말 예상</th><th>월말 재고 일수 <small>/ 목표</small></th>` : '')).join('') + '<th class="q">판매계획</th><th class="q">필요 생산</th>';
     return `<h2>그룹별 판매계획 → 필요 생산 → 진도 <small>필요 생산 = 판매계획 + 월말 목표 재고 − 월초 재고(계획 엔진 월 물량) · 진도율 = 이번 달 생산 실적 ÷ 필요 생산</small><span class="unit">톤</span></h2>
       <div class="scroll"><table class="gt nd"><thead><tr><th class="l" rowspan="2">그룹</th>${hd}</tr><tr>${hd2}</tr></thead>
       <tbody>${sec('G', '도금', ['G국내', 'G수출', 'G자동차', 'G자가재'])}${sec('C', '컬러', ['C건재', 'C수출', 'C수요'])}</tbody></table></div>
-      <p class="small" style="margin:6px 0 0">진도율 색: 경과율(${Math.round(er * 100)}%) 이상 초록 · 10%p 안쪽 노랑 · 그보다 낮으면 빨강. 월차 = 판매생산속보 라인 월차 합(그룹별 월차는 속보에 없어 계에만). 목표 재고: 도금 = TF 목표 일수(자동차 약 30·수출 15·국내 20일), 컬러 = 생산주기 기준. 도금 자가재 판매계획 = 컬러 공장이 쓸 자가재 소재</p>`;
+      <p class="small" style="margin:6px 0 0">진도율 색: 경과율(${Math.round(er * 100)}%) 이상 초록 · 10%p 안쪽 노랑 · 그보다 낮으면 빨강. 월차 = 판매생산속보 라인 월차 합(그룹별 월차는 속보에 없어 계에만). 재고 = 판매생산속보 원천 표 실제 재고(자가재 = 도금 제품 자가재 전체, 도금 계는 자가재 빼고 판매재만), 월말 예상 = 재고 추이와 같은 매일 롤링(어제 실제 + 남은 생산 − 남은 출하), 월말 재고 일수 = 월말 예상 ÷ 다음 달 하루 판매 — 목표 일수 대비 70% 미만 빨강 · 130% 넘으면 노랑. 목표 재고: 도금 = TF 목표 일수(자동차 약 30·수출 15·국내 20일), 컬러 = 생산주기 기준. 도금 자가재 판매계획 = 컬러 공장이 쓸 자가재 소재</p>`;
   }
 
   // ---------- 오너 한눈에: 상태 4칸 — 주간보고(report.html)와 같은 숫자·기준(생산 98/90 · 출하 95/80 · 재고 110/130%) ----------

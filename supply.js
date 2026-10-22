@@ -420,7 +420,7 @@
     if (!cal.synced) { const W3 = [$('s-calw'), $('s-calw3'), $('s-calw2')]; for (const x of W3) for (const y of W3) if (x !== y) sync(x, y); cal.synced = true; }
     charts(ds);
     const pm = PAGE === 'matcal' ? 'm' : 'g';
-    if (sel && sel.slice(0, 7) === mon) pick(sel, pm); else pick(ds.includes(today) ? today : ds[0], pm);
+    if (sel && sel.slice(0, 7) === mon) pick(sel, pm, true); else pick(ds.includes(today) ? today : ds[0], pm, true);   // 자동 선택(달 바꿈·다시 그림)은 스크롤하지 않음(10/22 사용자)
   }
 
   // ---------- 자가재 도우미(도금 생산 → 컬러 투입 연결) ----------
@@ -513,11 +513,11 @@
   }
 
   // ---------- 날짜 상세 ----------
-  function pick(d, mode = 'g') {
+  function pick(d, mode = 'g', auto = false) {
     sel = d;
     calAll('.sel').forEach((el) => el.classList.remove('sel'));
     document.querySelectorAll(`${mode === 'm' ? '#s-cal2' : '#s-cal'} [data-d="${d}"]`).forEach((el) => el.classList.add('sel'));
-    if (mode === 'm') { $('s-det').innerHTML = ''; matDetail(d); return; }
+    if (mode === 'm') { $('s-det').innerHTML = ''; matDetail(d, auto); return; }
     $('s-det2').innerHTML = '';
     const pcard = (l) => { const x = D.pl[`${l}|${d}`]; if (!x) return ''; return `<section class="card rv wide" data-noexport data-dom="G"><h3>${l} · ${x.t > 0.5 ? `${x.fam} ${n0(x.t)}t` : '생산 없음'} ${x.act ? '<small>(실적)</small>' : ''} ${x.ev ? `<small style="color:#8a5a00">${esc(x.ev)}</small>` : ''}</h3>
       <div class="scroll"><table class="dt mt fl"><thead><tr><th>강종 · 부서</th><th>목적지</th><th class="r">톤</th><th>소재</th><th>일정 (소재 → 생산 → 납기)</th><th>판정</th></tr></thead><tbody>${x.items.map((r) => { const f = r[1] === '자가재' ? flowOf(r[6], r[2], r[0]) : null, m = matG(r, d);
@@ -545,7 +545,7 @@
   }));
 
   // ---------- 소재 상세(소재 캘린더에서 날짜를 누를 때): 자가재 입출고 · 구매 소재 재고·입고·발주 마감 · 당일 투입 소재 ----------
-  function matDetail(d) {
+  function matDetail(d, auto = false) {
     const M = D.W.mat || {};
     // ① 자가재: 그날 도금 생산(라인) → 언제 컬러에 투입 / 그날 컬러 사용(라인) ← 언제 도금 생산
     const selfRows = ['AZ', 'MAC', 'AL'].map((a) => { const x = D.self[`${a}|${d}`] || {};
@@ -570,9 +570,8 @@
     const uc = keys.length ? `<section class="card rv wide" data-noexport><h3>당일 컬러 생산 투입 소재 <small>라인별 · 제품 톤 기준(품명별 소재 비중) — 자가재 표의 출고는 투입 8일 전 기준이라 수치가 다름</small></h3><div class="scroll"><table class="dt"><thead><tr><th>소재</th>${lines.map((l) => `<th>${l}</th>`).join('')}<th>합계</th></tr></thead><tbody>${keys.map((k) => `<tr><td><b>${esc(k)}</b></td>${lines.map((l) => `<td>${use[k][l] ? n0(use[k][l]) : ''}</td>`).join('')}<td><b>${n0(lines.reduce((s_, l) => s_ + (use[k][l] || 0), 0))}</b></td></tr>`).join('')}</tbody></table></div></section>` : '';
     $('s-det2').innerHTML = `<div class="dethd m"><span>${md(d)}(${WD[wd(d)]}) 소재 상세 <small>자가재 입출고 · 구매 소재 재고·입고·발주 마감 · 당일 투입 소재 — 라인별 품목은 <a href="supply.html">가동 캘린더</a>에서</small></span>${foldBtn('s-det2')}</div>` + sc + mc + uc;
     UI.reveal($('s-det2'));
-    if (matDetail.n++) $('s-det2').scrollIntoView({ behavior: 'smooth', block: 'start' });   // 처음 열 때(오늘 자동 선택)는 스크롤하지 않음
+    if (!auto) $('s-det2').scrollIntoView({ behavior: 'smooth', block: 'start' });   // 칸을 눌렀을 때만 상세로 스크롤(처음 열 때·달 바꿀 때 자동 선택은 그대로)
   }
-  matDetail.n = 0;
 
   // ---------- 추이 그래프(달 단위) ----------
   function lineChart(title, series, ds, tgt) {   // 10/21: 글자·선이 늘어나지 않게(비율 고정 viewBox), 2px 선, 오른쪽 끝 값, 오늘 세로선, 가는 격자
