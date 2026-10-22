@@ -180,6 +180,14 @@
     const sh = (k, lb, cls = '') => `<th class="${cls} ft-s${st.k === k ? ' on' : ''}" data-fk="${k}">${lb}${st.k === k ? (st.d < 0 ? ' ▼' : ' ▲') : ''}</th>`;
     const tbl = (kind) => `<h3 class="fd-h">${esc(kind)} — 사양별 <small>${{ gap: '인도납기보다 먼저 들어오는 일수', arr: '실제 입고 일수', due: '인도납기 일수', t: '발주량', thk: '두께', wdt: '폭' }[st.k]} ${st.d < 0 ? '큰' : '작은'} 순 · 칸 머리를 누르면 정렬</small></h3>
       <div class="scroll"><table class="t ft-t"><thead><tr>${sh('thk', '두께', 'l')}${sh('wdt', '폭', 'l')}${sh('t', '발주량')}${sh('arr', '실제 입고')}<th>TF 기준</th>${sh('due', '인도납기')}<th class="ft-cell">발주 후 일수 (0 → 50일)</th>${sh('gap', '인도납기 − 실제')}</tr></thead><tbody>${rows(kind)}</tbody></table></div>`;
+    // 규격별(10/22 사용자: SMATA1080 '규격' 칸 — C01 : AS A653 CSA 등). 사양(두께·폭) 표와 같은 칸, 발주량 큰 순
+    const SP = (F.bySpec || []).filter((r) => r.kind !== '수입 FH' && r.arrDays != null);
+    const stbl = (kind) => { const L = SP.filter((r) => r.kind === kind); if (!L.length) return '';
+      return `<h3 class="fd-h">${esc(kind)} — 규격별 <small>발주량 큰 순 · 규격 = MES 소재발주 규격(SMATA1080)</small></h3>
+      <div class="scroll"><table class="t ft-t"><thead><tr><th class="l">규격</th><th>발주량</th><th>실제 입고</th><th>TF 기준</th><th>인도납기</th><th class="ft-cell">발주 후 일수 (0 → 50일)</th><th>인도납기 − 실제</th></tr></thead><tbody>${L.map((r) => `<tr><td class="l">${esc(r.spec)}</td><td>${n0(r.t)}t</td>
+      <td class="ar"><b>${r.arrDays}일</b></td><td>${r.tfDays}일</td><td class="du">${r.dueDays}일</td><td class="ft-cell"><div class="ft-line">${mk('ar', r.arrDays)}${mk('tf', r.tfDays)}${mk('du', r.dueDays)}</div></td>
+      <td class="${r.dueDays - r.arrDays >= 14 ? 'gap' : ''}">${r.dueDays - r.arrDays}일</td></tr>`).join('')}</tbody></table></div>`; };
+    const specHtml = SP.length ? PK.map((r) => stbl(r.kind)).join('') : '<p class="small">규격별 비교: MES 소재발주 규격 칸을 사내 PC 다음 원격 조회(설치 묶음 v67 이상)부터 받아 표시합니다.</p>';
     const O = (F.open || []).filter((x) => x.kind !== '수입 FH'), ymd = (v) => `${+v.slice(5, 7)}/${+v.slice(8, 10)}`;
     const arrOf = (k) => (PK.find((r) => r.kind === k) || {}).arrDays;
     const addD = (v, n) => { const d = new Date(v + 'T00:00:00'); d.setDate(d.getDate() + n); return d.toISOString().slice(0, 10); };
@@ -191,6 +199,7 @@
       `<p class="du-lead">${lead}</p>
       <div class="ft-lg"><span><i class="ar"></i>실제 입고(MES 입고 실적)</span><span><i class="tf"></i>TF 기준(팀 리드타임 표: 발주 + 5주)</span><span><i class="du"></i>인도납기(MES 발주의 인도납기일)</span><small>모두 발주일부터 센 일수, 발주량 가중 중앙값</small></div>
       <div class="ft-ks">${PK.map(big).join('')}</div>
+      ${specHtml}
       ${PK.map((r) => tbl(r.kind)).join('')}
       <h3 class="fd-h">남은 발주 — 언제 들어올까 <small>세 기준 날짜 비교(두 기준이 1주 넘게 다른 발주만) · 실적 기준 예상 = 발주일 + 그 종류 실제 입고 일수</small></h3>${otbl}
       ${IM ? `<p class="small">수입 FH(발주 ${n0(IM.n)}행번)는 MES 발주가 실제 발주보다 늦게(입고 약 2주 전) 등록되고 인도납기일도 발주일보다 앞서 찍혀 있어 비교에서 뺐습니다 — TF 기준(발주 다음다음 달 7일경)을 그대로 씁니다.</p>` : ''}
