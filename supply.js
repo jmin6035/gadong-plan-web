@@ -293,9 +293,13 @@
     // 2026-10-21 사용자: 도금/컬러 구분 + 색 줄이기 — 색은 강종(AL·AZ·MAC 막대)·M/C·종일 정지만, 숫자 칸은 무채색
     const kindOf = (l, d) => { const k0 = (dn[`${l}|${d}`] || []).filter((x) => HARD.includes(x[0])).sort((a, b) => b[1] - a[1])[0]; return k0 ? k0[0] : 'plan'; };
     const runsOf = (l) => { const rs = [];                               // [시작, 끝, 종류] — 종류가 바뀌면 다른 칸(휴지·수리 구분, 10/22 사용자)
-      ds.forEach((d, i) => { if (!full(l, d)) return; const kk = kindOf(l, d), r = rs[rs.length - 1]; if (r && r[1] === i - 1 && r[2] === kk) r[1] = i; else rs.push([i, i, kk]); }); return rs; };
+      const src = /CGL$/.test(l) ? D.pl : D.co;                         // 생산 없는 날(종일 정지 아님)도 한 덩어리로 합침 — 이어진 날 가로·같은 기간 라인 세로(10/22 사용자)
+      ds.forEach((d, i) => { const x = src[`${l}|${d}`], kk = full(l, d) ? kindOf(l, d) : (!x || (x.t || 0) < 0.5) && !(x && /M\/C/.test(x.ev || '')) ? 'idle' : null; if (!kk) return;
+        const r = rs[rs.length - 1]; if (r && r[1] === i - 1 && r[2] === kk) r[1] = i; else rs.push([i, i, kk]); }); return rs; };
     const SDK = new Set();
-    const sdCell = (ls, run) => { const d = ds[run[0]], kk = run[2], n = run[1] - run[0] + 1; SDK.add(kk);
+    const sdCell = (ls, run) => { const d = ds[run[0]], kk = run[2], n = run[1] - run[0] + 1;
+      if (kk === 'idle') return `<td class="idle idleblk" colspan="${n}" rowspan="${ls.length}" title="${esc(`생산 없음 ${md(ds[run[0]])}${n > 1 ? '~' + md(ds[run[1]]) : ''} · ${ls.join('·')}`)}" data-d="${d}">${n >= 3 ? `<span class="idl">생산 없음 ${md(ds[run[0]])}~${md(ds[run[1]])}</span>` : ''}</td>`;
+      SDK.add(kk);
       const SH = { plan: '휴지', sd: 'S/D', repair: '수리', jr: '정기수리' }, nm = n === 1 ? (SH[kk] || KN[kk]) : n === 2 && KN[kk].length > 3 ? SH[kk] || KN[kk] : KN[kk];
       return `<td class="sdblock sk-${kk}${n === 1 ? ' one' : ''}" colspan="${n}" rowspan="${ls.length}" title="${esc(`${KN[kk]} ${md(ds[run[0]])}${n > 1 ? '~' + md(ds[run[1]]) : ''} · ${ls.map((l) => `${l} ${dTxt(l, d)}`).join(' / ')}`)}" data-d="${d}">${nm}<small>${md(ds[run[0]])}${n > 1 ? '~' + md(ds[run[1]]) : ''}</small></td>`; };
     const isMC = (x) => x && /M\/C/.test(x.ev || '');
