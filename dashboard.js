@@ -54,6 +54,7 @@
       const e = await GP.latest('plating_actual.enc.json'); if (!e || !A) return;
       const x = await GP.decryptJSON(e, pw); if (!x || !x.dayMin) return;
       A.actMin = {}; for (const [d, L] of Object.entries(x.dayMin)) for (const [l, m] of Object.entries(L)) A.actMin[`${l}|${d}`] = m;
+      A.actStops = x.dayStops || null; A.actDummy = x.dayDummy || null;   // 24시간 구성(10/22 사용자: 24시간 안 되는 날 이유) — 설치 묶음 v69 이상
       A.accHist = x.accHist || null;                              // 날마다 '그날 아침 계획 vs 실적'(사내 PC 매일 기록) — 계획 대비 실적 표
       render();
     } catch (err) { /* 실적 자료 없으면 환산값 */ }
@@ -78,30 +79,61 @@
     if (document.querySelector('details.more').open) { renderDaily(); drawTab(Math.min(gTab, H.ym.length)); }
   }
 
-  // ---------------- 기준일 현황 ----------------
+  // ---------------- 24시간 구성(실적 날): 생산(더미 제외 코일) · 더미 코일 · 휴지(종류·사유, MES 휴지 실적) · 기록 없음(코일 사이 빈 시간) ----------------
+  const SCOL = { '강종 전환(M/C)': 'var(--mc)', '정기수리': 'var(--sd)', '설비·운전': 'var(--down)', '기타': '#9aa5b1' };
+  function mix(l, d) {
+    const run = A.actMin && A.actMin[`${l}|${d}`]; if (run == null) return null;
+    const st = ((A.actStops || {})[d] || {})[l] || [], dm = ((A.actDummy || {})[d] || {})[l] || 0;
+    const sm = GP.sum(st, (x) => x[1]), gap = Math.max(0, 1440 - Math.min(1440, run) - dm - sm);
+    return { run: Math.min(1440, run), dm, st, sm, gap, known: !!A.actStops };
+  }
+  const hh = (m) => (m / 60).toFixed(m % 60 ? 1 : 0);
+  const mixTxt = (x) => [`생산 ${hh(x.run)}h`, x.dm ? `더미 코일 ${hh(x.dm)}h` : '', ...x.st.map((s) => `${s[2]}(${s[0]}) ${hh(s[1])}h`), x.gap >= 15 ? `기록 없음 ${hh(x.gap)}h` : ''].filter(Boolean).join(' · ');
+
+  // ---------------- 기준일 현황(컬러 가동 현황과 같은 카드, 10/22 사용자) ----------------
   function renderNow() {
-    const d = $('d-date').value, P = R.P;
+    const d = $('d-date').value, P = R.P; if (!d) return;
     const byDep = {};
     for (const [dd, l, a, c, t] of R.rows) if (dd === d) { byDep[l] = byDep[l] || {}; byDep[l][c] = (byDep[l][c] || 0) + t; }
+    const mi = A.mIdx(d), [yy, mm] = A.H.ym[Math.max(0, mi)], el = +d.slice(8) / GP.daysInMonth(yy, mm);
     $('d-now').innerHTML = P.lines.map((l) => {
       const c = A.calBy[`${l}|${d}`]; if (!c) return '';
-      const used = A.used[`${l}|${d}`] || 0, prod = A.prodLD[`${l}|${d}`] || 0;
-      const cp = A.campaigns.find((x) => x.line === l && x.start <= d && d <= x.end);
+      const used = A.used[`${l}|${d}`] || 0, prod = A.prodLD[`${l}|${d}`] || 0, x = mix(l, d);
+      const cp = A.campaigns.find((q) => q.line === l && q.start <= d && d <= q.end);
       const next = A.events.find((e) => e.line === l && e.date > d);
-      const sdNext = P.shutdowns.find((s) => s.line === l && s.start > d);
-      const mi = A.mIdx(d);
+      const sdNext = P.shutdowns.find((q) => q.line === l && q.start > d);
       const monthPlan = GP.sum(R.rows.filter((r) => r[1] === l && A.mIdx(r[0]) === mi), (r) => r[4]);
       const toDate = GP.sum(R.rows.filter((r) => r[1] === l && A.mIdx(r[0]) === mi && r[0] <= d), (r) => r[4]);
-      const deps = Object.entries(byDep[l] || {}).sort((a, b) => b[1] - a[1]).map(([k, v]) => `${k} ${GP.fmt(v)}t`).join(', ');
-      const state = c.blackout ? '<span class="pill">정기수리</span>' : `<i class="sw" style="background:${famVar(c.fam)}"></i> ${c.fam}`;
-      return `<div class="line-card"><h3>${l} ${state} ${c.event && !c.blackout ? `<span class="pill ${GP.isSwitch(c) ? 'warn' : 'down'}">${esc(c.event)}</span>` : ''}</h3><dl>
-        <dt>계획 생산</dt><dd>${c.blackout ? '-' : `${GP.fmt(prod)}t (가동률 ${c.cap > 0 ? GP.fmt(used / c.cap * 100) : 0}%)`}</dd>
-        <dt>부서별</dt><dd>${deps || '-'}</dd>
-        <dt>현재 캠페인</dt><dd>${cp ? `${cp.fam} ${GP.md(cp.start)}~${GP.md(cp.end)} (${GP.diffDays(d, cp.start) + 1}/${GP.diffDays(cp.end, cp.start) + 1}일)` : '-'}</dd>
-        <dt>다음 전환</dt><dd>${next ? `${GP.md(next.date)} (D-${GP.diffDays(next.date, d)}) ${next.kind === 'M/C' ? `M/C ${next.from}→${next.to}` : `재가동 ${next.from === next.to ? next.to + ' 유지' : next.from + '→' + next.to}`}` : '분기 내 없음'}</dd>
-        ${sdNext ? `<dt>다음 정기수리</dt><dd>${GP.md(sdNext.start)}~${GP.md(sdNext.end)} (D-${GP.diffDays(sdNext.start, d)})</dd>` : ''}
-        <dt>${A.H.ym[mi][1]}월 누계</dt><dd>${GP.fmt(toDate)} / ${GP.fmt(monthPlan)}t</dd>
-      </dl></div>`;
+      const deps = Object.entries(byDep[l] || {}).sort((a, b) => b[1] - a[1]);
+      const off = c.blackout || prod < 0.5, st = c.blackout ? ['정기수리', 'bad'] : x ? ['실적', 'good'] : ['계획', 'info'];
+      const hrs = x ? x.run / 60 : used / 60;
+      let seg, leg, list = '';
+      if (x) {
+        const S = [['생산', x.run, 'var(--brand-2)'], ['더미 코일', x.dm, 'color-mix(in srgb, var(--mc) 45%, var(--surface))']].concat(x.st.map((s) => [`${s[2]}`, s[1], SCOL[s[0]] || '#9aa5b1', s[0]]), [['기록 없음', x.gap, 'repeating-linear-gradient(135deg,#c9cfd7 0 3px,transparent 3px 6px)']]).filter((q) => q[1] >= 1);
+        seg = S.map((q) => `<i style="flex:${q[1]};background:${q[2]}" title="${esc(q[0])} ${hh(q[1])}h"></i>`).join('');
+        const cat = {}; x.st.forEach((s) => { cat[s[0]] = (cat[s[0]] || 0) + s[1]; });
+        leg = [['생산', x.run, 'var(--brand-2)'], ['더미 코일', x.dm, 'color-mix(in srgb, var(--mc) 45%, var(--surface))'], ...Object.entries(cat).map(([k, v]) => [k, v, SCOL[k]]), ['기록 없음', x.gap, '#c9cfd7']].filter((q) => q[1] >= 1)
+          .map((q) => `<span><i style="background:${q[2]}"></i>${q[0]} ${hh(q[1])}h</span>`).join('');
+        list = x.st.length ? `<ul class="ln-items">${x.st.map((s) => `<li><span>${esc(s[2])} <small class="muted">${esc(s[0])}</small></span><b>${hh(s[1])}h</b></li>`).join('')}</ul>`
+          : (x.known ? '' : '<p class="ln-sub">휴지 사유는 사내 PC 설치 묶음 v69 이상부터 표시</p>');
+        if (x.gap >= 60) list += `<p class="ln-sub">기록 없음 ${hh(x.gap)}h = MES 에 코일·휴지 기록이 없는 시간(코일 사이 대기·통판 등)</p>`;
+      } else if (!c.blackout) {
+        const cap = c.cap || 0;
+        seg = `<i style="flex:${used};background:var(--brand-2)" title="계획 생산 ${hh(used)}h"></i><i style="flex:${Math.max(0, cap - used)};background:var(--grid)" title="여유 ${hh(Math.max(0, cap - used))}h"></i><i style="flex:${Math.max(0, 1440 - cap)};background:var(--mc)" title="M/C·더미·설비 정지 공제 ${hh(Math.max(0, 1440 - cap))}h"></i>`;
+        leg = `<span><i style="background:var(--brand-2)"></i>계획 생산 ${hh(used)}h</span><span><i style="background:var(--grid)"></i>여유 ${hh(Math.max(0, cap - used))}h</span><span><i style="background:var(--mc)"></i>${c.event ? esc(c.event.split(' · ')[0]) + '·' : ''}더미·설비 정지 공제 ${hh(Math.max(0, 1440 - cap))}h</span>`;
+      }
+      const pr = monthPlan ? Math.min(1, toDate / monthPlan) : 0;
+      const chips = [cp ? `<span class="tag">캠페인 ${cp.fam} ${GP.md(cp.start)}~${GP.md(cp.end)} (${GP.diffDays(d, cp.start) + 1}/${GP.diffDays(cp.end, cp.start) + 1}일)</span>` : '',
+        next ? `<span class="tag ${GP.diffDays(next.date, d) <= 7 ? 'warn' : ''}">${next.kind === 'M/C' ? `M/C ${next.from}→${next.to}` : `재가동 ${next.from === next.to ? next.to + ' 유지' : next.from + '→' + next.to}`} ${GP.md(next.date)} · D-${GP.diffDays(next.date, d)}</span>` : '<span class="tag">분기 내 전환 없음</span>',
+        sdNext ? `<span class="tag">정기수리 ${GP.md(sdNext.start)}~${GP.md(sdNext.end)} · D-${GP.diffDays(sdNext.start, d)}</span>` : ''].filter(Boolean).join('');
+      return `<div class="ln-card${off ? ' off' : ''}"><div class="ln-h"><b>${l} ${c.blackout ? '' : `<small style="font-size:14px;color:var(--ink-3)">${c.fam}</small>`}</b><span class="tag ${st[1]}">${st[0]}</span></div>
+        <div class="ln-big">${c.blackout ? '-' : GP.fmt(prod)}<small>t</small><span>${c.blackout ? '정기수리' : x ? `가동 ${hrs.toFixed(1)}h / 24h` : `계획 가동 ${hrs.toFixed(1)}h · 가동률 ${c.cap > 0 ? GP.fmt(used / c.cap * 100) : 0}%`}</span></div>
+        <div class="ln-gauge" title="가동시간"><i style="width:${Math.min(100, hrs / 24 * 100)}%"></i></div>
+        ${seg ? `<p class="ln-l">24시간 구성 ${x ? '<span>MES 실적</span>' : '<span>계획</span>'}</p><div class="ln-mix">${seg}</div><div class="ln-mixl">${leg}</div>${list}` : ''}
+        <p class="ln-l">부서 구성</p><div class="ln-mixl">${deps.map(([k, v]) => `<span>${esc(DSHORT[k] || k)} ${GP.fmt(v)}t</span>`).join('') || '<span class="muted">-</span>'}</div>
+        <p class="ln-l">${mm}월 진도 <span>${GP.fmt(toDate)} / ${GP.fmt(monthPlan)}t · ${Math.round(pr * 100)}%</span></p>
+        <div class="ln-prog" title="세로선 = 경과일 ${Math.round(el * 100)}%"><i style="width:${pr * 100}%"></i><u style="left:${el * 100}%"></u></div>
+        <div class="ln-chips">${chips}</div></div>`;
     }).join('');
   }
   $('d-date').onchange = () => R && renderNow();
@@ -213,12 +245,13 @@
     for (const l of P.lines) {
       const fams = GP.famOrder(P, l);
       const deps = GP.DEPTS.filter((c) => ds.some((d) => (dep[`${l}|${d}|${c}`] || 0) > 0.5));
-      const rows = fams.map((f) => ({ kind: 'fam', f })).concat(deps.map((c) => ({ kind: 'dep', c })), [{ kind: 'hrs' }]);
+      const hasStop = ds.some((d) => { const x = mix(l, d); return x && (x.sm + x.dm + x.gap) >= 30; });
+      const rows = fams.map((f) => ({ kind: 'fam', f })).concat(deps.map((c) => ({ kind: 'dep', c })), [{ kind: 'hrs' }], hasStop ? [{ kind: 'stop' }] : []);
       const sdIdx = ds.map((d, i) => (A.calBy[`${l}|${d}`].blackout ? i : -1)).filter((i) => i >= 0);
       rows.forEach((r, ri) => {
         h += `<tr class="r-${r.kind}${ri === 0 ? ' first' : ''}">`;
         if (ri === 0) h += `<th class="c0 line" rowspan="${rows.length}">${l}</th>`;
-        h += `<th class="c1">${r.kind === 'fam' ? r.f : r.kind === 'dep' ? DSHORT[r.c] : '가동시간(h)'}</th>`;
+        h += `<th class="c1">${r.kind === 'fam' ? r.f : r.kind === 'dep' ? DSHORT[r.c] : r.kind === 'hrs' ? '가동시간(h)' : '비가동(h)'}</th>`;
         let tot = 0;
         ds.forEach((d, i) => {
           if (sdIdx.includes(i)) {
@@ -229,12 +262,14 @@
           let v = 0, txt = '';
           if (r.kind === 'fam') { v = fam[`${l}|${d}|${r.f}`] || 0; const mm = GP.isSwitch(c) && /\((.+)→/.exec(c.event); txt = v > 0.5 ? String(Math.round(v)) : (mm && mm[1] === r.f && c.event.startsWith('M/C') ? 'M/C' : ''); }
           else if (r.kind === 'dep') { v = dep[`${l}|${d}|${r.c}`] || 0; txt = v > 0.5 ? String(Math.round(v)) : ''; }   // 일별 칸은 쉼표 없이(한 달이 폭에 맞게)
-          else { const u = A.dayMin(l, d) / 60; txt = u > 0 ? u.toFixed(1) : ''; }
+          else if (r.kind === 'hrs') { const u = A.dayMin(l, d) / 60; txt = u > 0 ? u.toFixed(1) : ''; }
+          else { const x = mix(l, d), m0 = x ? x.sm + x.dm + x.gap : 0; txt = m0 >= 30 ? (m0 / 60).toFixed(1) : ''; }
           tot += v;
-          const cls = [GP.isSwitch(c) ? 'mc' : '', d === today ? 'today' : ''].filter(Boolean).join(' ');   // 실적 미달 빨간 밑줄은 뺌 — 날짜별 미달은 위 '계획 대비 실적' 표(10/22 사용자: 이게 뭔지 모름)
-          h += `<td class="${cls}${txt === 'M/C' ? ' mclab' : ''}" style="--ci:${i}">${txt}</td>`;
+          const xm = (r.kind === 'hrs' || r.kind === 'stop') ? mix(l, d) : null, big = xm && xm.st.length ? xm.st.slice().sort((p, q) => q[1] - p[1])[0][0] : '';
+          const cls = [GP.isSwitch(c) ? 'mc' : '', d === today ? 'today' : '', r.kind === 'stop' && big && txt ? 'sk' : ''].filter(Boolean).join(' ');   // 실적 미달 빨간 밑줄은 뺌 — 날짜별 미달은 위 '계획 대비 실적' 표(10/22 사용자: 이게 뭔지 모름)
+          h += `<td class="${cls}${txt === 'M/C' ? ' mclab' : ''}" style="--ci:${i}${r.kind === 'stop' && big ? `;--skc:${SCOL[big]}` : ''}" data-d="${d}"${xm ? ` title="${esc(mixTxt(xm))}"` : ''}>${txt}</td>`;
         });
-        h += `<td class="tot">${r.kind === 'hrs' ? '' : GP.fmt(tot)}</td></tr>`;
+        h += `<td class="tot">${r.kind === 'hrs' || r.kind === 'stop' ? '' : GP.fmt(tot)}</td></tr>`;
       });
     }
     $('g-table').innerHTML = h + '</tbody>';
@@ -244,6 +279,7 @@
     if (wrap && wrap.scrollWidth > wrap.clientWidth) { const hs = $('g-table').querySelectorAll('thead tr:first-child th'), th = hs[2 + Math.max(0, ti - 1)], stick = hs[0].offsetWidth + hs[1].offsetWidth; wrap.scrollLeft = ti > 0 && th ? th.getBoundingClientRect().left - $('g-table').getBoundingClientRect().left - stick : 0; }   // 고정 열(라인·구분) 폭만큼 빼서 칸이 잘리지 않게
   }
   $('g-tabs').onclick = (ev) => { if (ev.target.dataset.g != null) renderGantt(+ev.target.dataset.g); };
+  $('g-table').addEventListener('click', (ev) => { const td = ev.target.closest('td[data-d]'); if (!td || !R) return; $('d-date').value = td.dataset.d; renderNow(); $('d-now').scrollIntoView({ behavior: 'smooth', block: 'center' }); });   // 칸을 누르면 그날 라인 현황(컬러 가동 현황과 같음)
   document.querySelector('details.more').addEventListener('toggle', (ev) => { if (ev.target.open && R) { renderDaily(); drawTab(Math.min(gTab, A.H.ym.length)); } });
 
   function renderDept() {

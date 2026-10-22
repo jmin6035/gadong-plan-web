@@ -8,7 +8,7 @@
     '|컬러', ['colorstat', 'color_status.html', '가동 현황'], ['coloranal', 'color_analysis.html', '조건 분석'], ['coloract', 'color_actual.html', '실적'], ['planstock', 'planstock.html', '계획재'], ['wo', 'wo.html', '작업지시 순서'],
     '|소재', ['procure', 'procure.html', '소재 발주'],
     '|계획 계산', ['rolling', 'rolling.html', '도금 계획 계산'], ['colorcalc', 'color_calc.html', '컬러 계획 계산'], '|',
-    ['decisions', 'decisions.html', '결정 기록'], ['tfrules', 'tf_rules.html', '재고 목표 기준'], ['health', 'health.html', '자료 상태'], ['docs', 'docs.html', '문서'],
+    ['decisions', 'decisions.html', '결정 기록'], ['rules', 'rules.html', '계획 규칙'], ['health', 'health.html', '자료 상태'], ['docs', 'docs.html', '문서'],
   ];
   const TKEY = 'cgl-theme', SKEY = 'cgl-scope', NKEY = 'cgl-nav-open';
   const ONLY = { status: 'G', analysis: 'G', rolling: 'G', platact: 'G', coloract: 'C', planstock: 'C', wo: 'C', colorstat: 'C', coloranal: 'C', colorcalc: 'C' };     // 도금 자료만 있는 화면
