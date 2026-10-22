@@ -154,7 +154,12 @@
 
   // F/H 납기 비교 3차(2026-10-21 사용자: 더 직관적으로) — "발주하고 며칠 뒤에 들어오나" 한 줄: 실제 입고 · TF 기준 · 인도납기 세 날을 같은 축에
   function dueTab() {
-    const F = D.fhDue, K = D.dueTrack;
+    let F = D.fhDue; const K = D.dueTrack;
+    if (F && !F.byKind && F.byGrp) {                  // 설치 묶음 v61 이하가 만든 옛 형식(byGrp: lt = 발주→입고, dl = 발주→인도납기) → 같은 화면으로(TF 기준 = 발주 + 35일)
+      const cv = (r) => ({ kind: r.grp, thk: r.thk, wdt: r.wdt, n: r.n, t: r.t, arrDays: r.lt, dueDays: r.dl, tfDays: 35 });
+      const fh = (r) => /^F\/H/.test(r.grp);
+      F = Object.assign({}, F, { byKind: F.byGrp.filter(fh).map(cv), rows: (F.rows || []).filter(fh).map(cv), open: [] });
+    }
     if (!F || !F.byKind || !F.byKind.some((r) => r.arrDays != null)) return card('p-due', 'F/H 납기 비교', '', '<p class="muted">자료 없음 — 사내 PC 다음 자동 실행(설치 묶음 v62 이상) 뒤 표시</p>');
     const PK = F.byKind.filter((r) => r.kind !== '수입 FH' && r.arrDays != null), IM = F.byKind.find((r) => r.kind === '수입 FH');
     const AX = 50, X = (v) => (Math.max(0, Math.min(AX, v)) / AX * 100).toFixed(2);
