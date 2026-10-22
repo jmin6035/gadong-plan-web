@@ -167,7 +167,8 @@
     const axis = `<div class="ft-ax">${[0, 10, 20, 30, 40, 50].map((v) => `<span style="left:${X(v)}%">${v === 0 ? '발주' : v + '일'}</span>`).join('')}</div>`;
     const big = (r) => `<div class="ft-k"><div class="ft-kh">POSCO ${esc(r.kind)} <small>발주 ${n0(r.n)}행번 · ${n0(r.t)}t</small></div>
       <div class="ft-line big">${mk('ar', r.arrDays, `실제 입고 <b>${r.arrDays}일</b>`)}${mk('tf', r.tfDays, `TF 기준 <b>${r.tfDays}일</b>`)}${mk('du', r.dueDays, `인도납기 <b>${r.dueDays}일</b>`)}<i class="ft-span" style="left:${X(Math.min(r.arrDays, r.tfDays, r.dueDays))}%;width:${X(Math.max(r.arrDays, r.tfDays, r.dueDays)) - X(Math.min(r.arrDays, r.tfDays, r.dueDays))}%"></i></div>${axis}
-      <p class="ft-say">발주하고 <b>${r.arrDays}일</b>쯤 들어옵니다 — TF 기준(${r.tfDays}일)보다 <b>${r.tfDays - r.arrDays}일 빠르고</b>, 인도납기(${r.dueDays}일)보다 <b>${r.dueDays - r.arrDays}일 빠름</b>.</p></div>`;
+      <p class="ft-say">발주하고 가운데값 <b>${r.arrDays}일</b>에 들어옵니다 — TF 기준(${r.tfDays}일)보다 <b>${r.tfDays - r.arrDays}일 빠르고</b>, 인도납기(${r.dueDays}일)보다 <b>${r.dueDays - r.arrDays}일 빠름</b>.</p>
+      ${r.arrSd != null ? `<p class="ft-say">퍼짐: 평균 <b>${r.arrMean}일 ± ${r.arrSd}일</b>(표준편차) · <b>95%가 ${r.arrP95}일 안</b>에 입고 · TF 기준 날짜 안에 든 양 <b class="${r.inTf < 80 ? 'neg' : ''}">${r.inTf}%</b> · 인도납기 안 <b>${r.inDue}%</b></p>` : ''}</div>`;
     const lead = PK.length ? `POSCO F/H는 <b>발주 후 약 ${PK[0].arrDays}일</b>에 들어옵니다. 소재 계획의 TF 기준(<b>${PK[0].tfDays}일</b>)이 인도납기일(<b>${PK[0].dueDays}일</b>)보다 실제에 가깝습니다.` : '';
     // 사양별 표: 기본 = 인도납기 − 실제(차이) 큰 순(내림차순, 사용자 10/21), 머리를 누르면 그 칸으로 내림차순 ↔ 오름차순
     const SK = { arr: (r) => r.arrDays, due: (r) => r.dueDays, gap: (r) => r.dueDays - r.arrDays, t: (r) => r.t, thk: (r) => r.thk, wdt: (r) => r.wdt };
@@ -176,19 +177,21 @@
     const rows = (kind) => F.rows.filter((r) => r.kind === kind && r.arrDays != null).sort(cmp).map((r) => `<tr><td class="l">${esc(r.thk)}mm</td><td class="l">${esc(r.wdt)}</td><td>${n0(r.t)}t</td>
       <td class="ar"><b>${r.arrDays}일</b></td><td>${r.tfDays}일</td><td class="du">${r.dueDays}일</td>
       <td class="ft-cell"><div class="ft-line">${mk('ar', r.arrDays)}${mk('tf', r.tfDays)}${mk('du', r.dueDays)}</div></td>
-      <td class="${r.dueDays - r.arrDays >= 14 ? 'gap' : ''}">${r.dueDays - r.arrDays}일</td></tr>`).join('');
+      <td class="${r.dueDays - r.arrDays >= 14 ? 'gap' : ''}">${r.dueDays - r.arrDays}일</td>${stc(r)}</tr>`).join('');
     const sh = (k, lb, cls = '') => `<th class="${cls} ft-s${st.k === k ? ' on' : ''}" data-fk="${k}">${lb}${st.k === k ? (st.d < 0 ? ' ▼' : ' ▲') : ''}</th>`;
     const tbl = (kind) => `<h3 class="fd-h">${esc(kind)} — 사양별 <small>${{ gap: '인도납기보다 먼저 들어오는 일수', arr: '실제 입고 일수', due: '인도납기 일수', t: '발주량', thk: '두께', wdt: '폭' }[st.k]} ${st.d < 0 ? '큰' : '작은'} 순 · 칸 머리를 누르면 정렬</small></h3>
-      <div class="scroll"><table class="t ft-t"><thead><tr>${sh('thk', '두께', 'l')}${sh('wdt', '폭', 'l')}${sh('t', '발주량')}${sh('arr', '실제 입고')}<th>TF 기준</th>${sh('due', '인도납기')}<th class="ft-cell">발주 후 일수 (0 → 50일)</th>${sh('gap', '인도납기 − 실제')}</tr></thead><tbody>${rows(kind)}</tbody></table></div>`;
+      <div class="scroll"><table class="t ft-t"><thead><tr>${sh('thk', '두께', 'l')}${sh('wdt', '폭', 'l')}${sh('t', '발주량')}${sh('arr', '실제 입고')}<th>TF 기준</th>${sh('due', '인도납기')}<th class="ft-cell">발주 후 일수 (0 → 50일)</th>${sh('gap', '인도납기 − 실제')}${STH}</tr></thead><tbody>${rows(kind)}</tbody></table></div>`;
     // 규격별(10/22 사용자: SMATA1080 '규격' 칸 — C01 : AS A653 CSA 등). 사양(두께·폭) 표와 같은 칸, 발주량 큰 순
+    const stc = (r) => (r.arrSd != null ? `<td>${r.arrMean}일 <small class="muted">± ${r.arrSd}</small></td><td><b>${r.arrP95}일</b></td><td class="${r.inTf < 80 ? 'gap' : ''}">${r.inTf}%</td><td>${r.inDue}%</td>` : '<td colspan="4" class="muted">사내 PC 다음 실행부터</td>');
+    const STH = '<th>평균 ± 표준편차</th><th>95% 입고</th><th>TF 기준 안</th><th>인도납기 안</th>';
     const SPKO = { 'CSP1-HA': '일반용', 'CSP2-HA': '가공용', 'CSP3E-HA': '초심가공용', 'CSP360-HA': '구조용37', 'IS-CR0-CQ': '인도 BIS 일반용', 'IS-CR0-DQ': '인도 BIS 가공용', 'POSACCS-F1': '심가공 · 고내열 내변색',
       'CSP1-HG': '일반용', 'CSP2-HG': '가공용', 'CSP1-FL': '일반용 · 평탄도 관리', 'CSP360-HG': '구조용37', 'CSP400-HG': '구조용41', 'CSP440-HG': '구조용46', 'CSP490-HG': '구조용 GrF', 'CSP570-HG': '구조용58' };   // MES 코드표 A10G 품질 등급(사내 PC 자료에 specKo 가 없을 때)
     const SP = (F.bySpec || []).filter((r) => r.kind !== '수입 FH' && r.arrDays != null);
     const stbl = (kind) => { const L = SP.filter((r) => r.kind === kind); if (!L.length) return '';
       return `<h3 class="fd-h">${esc(kind)} — 규격별 <small>발주량 큰 순 · 규격 = MES 소재발주 규격(SMATA1080), 옆 글자 = 품질 등급(일반용 CQ · 가공용 DQ · 심가공용 DDQ · 구조용 = 강도급)</small></h3>
-      <div class="scroll"><table class="t ft-t"><thead><tr><th class="l">규격</th><th>발주량</th><th>실제 입고</th><th>TF 기준</th><th>인도납기</th><th class="ft-cell">발주 후 일수 (0 → 50일)</th><th>인도납기 − 실제</th></tr></thead><tbody>${L.map((r) => `<tr><td class="l"><b>${esc(r.spec)}</b>${(r.specKo || SPKO[r.spec]) ? ` <span class="muted">${esc(r.specKo || SPKO[r.spec])}</span>` : ''}</td><td>${n0(r.t)}t</td>
+      <div class="scroll"><table class="t ft-t"><thead><tr><th class="l">규격</th><th>발주량</th><th>실제 입고</th><th>TF 기준</th><th>인도납기</th><th class="ft-cell">발주 후 일수 (0 → 50일)</th><th>인도납기 − 실제</th>${STH}</tr></thead><tbody>${L.map((r) => `<tr><td class="l"><b>${esc(r.spec)}</b>${(r.specKo || SPKO[r.spec]) ? ` <span class="muted">${esc(r.specKo || SPKO[r.spec])}</span>` : ''}</td><td>${n0(r.t)}t</td>
       <td class="ar"><b>${r.arrDays}일</b></td><td>${r.tfDays}일</td><td class="du">${r.dueDays}일</td><td class="ft-cell"><div class="ft-line">${mk('ar', r.arrDays)}${mk('tf', r.tfDays)}${mk('du', r.dueDays)}</div></td>
-      <td class="${r.dueDays - r.arrDays >= 14 ? 'gap' : ''}">${r.dueDays - r.arrDays}일</td></tr>`).join('')}</tbody></table></div>`; };
+      <td class="${r.dueDays - r.arrDays >= 14 ? 'gap' : ''}">${r.dueDays - r.arrDays}일</td>${stc(r)}</tr>`).join('')}</tbody></table></div>`; };
     const specHtml = SP.length ? PK.map((r) => stbl(r.kind)).join('') : '<p class="small">규격별 비교: MES 소재발주 규격 칸을 사내 PC 다음 원격 조회(설치 묶음 v67 이상)부터 받아 표시합니다.</p>';
     const O = (F.open || []).filter((x) => x.kind !== '수입 FH'), ymd = (v) => `${+v.slice(5, 7)}/${+v.slice(8, 10)}`;
     const arrOf = (k) => (PK.find((r) => r.kind === k) || {}).arrDays;
@@ -199,7 +202,7 @@
       : `<p class="small">인도납기 변경 이력: ${K ? `${md(K.start)}부터 매일 비교 중 — 아직 바뀐 것 없음` : '사내 PC 다음 실행부터 매일 비교'}</p>`;
     return card('p-due', 'F/H 납기 비교 — 발주하고 며칠 뒤에 들어오나', `발주 ${md(F.from)}~${md(F.to)}`,
       `<p class="du-lead">${lead}</p>
-      <div class="ft-lg"><span><i class="ar"></i>실제 입고(MES 입고 실적)</span><span><i class="tf"></i>TF 기준(팀 리드타임 표: 발주 + 5주)</span><span><i class="du"></i>인도납기(MES 발주의 인도납기일)</span><small>모두 발주일부터 센 일수, 발주량 가중 중앙값</small></div>
+      <div class="ft-lg"><span><i class="ar"></i>실제 입고(MES 입고 실적)</span><span><i class="tf"></i>TF 기준(팀 리드타임 표: 발주 + 5주)</span><span><i class="du"></i>인도납기(MES 발주의 인도납기일)</span><small>모두 발주일부터 센 일수. 실제 입고 = 입고량 가중 가운데값(평균·표준편차·95% = 입고 건별 분포, TF·인도납기 안 = 그 날짜까지 들어온 양의 비율)</small></div>
       <div class="ft-ks">${PK.map(big).join('')}</div>
       ${specHtml}
       ${PK.map((r) => tbl(r.kind)).join('')}
