@@ -45,9 +45,9 @@
   }
   const HEAD = '<thead><tr><th>순서</th><th>시간</th><th class="l">품명 · 그룹</th><th class="l">두께 × 폭 · 색</th><th>톤 · 생산</th><th class="l">앞 작업과 바뀌는 것</th><th class="l">생기는 휴지 (MES 코드·분)</th><th class="l">준비 (도료·PF·부자재)</th></tr></thead>';
   const NC = 8;
-  const LEG = '<div class="strip-lg"><span>날짜 줄 아래 막대 = 그날 0~24시 라인 사용:</span><span><i class="sr"></i>생산(숫자 = 순서)</span><span><i class="sd"></i>전환 휴지</span><span><i class="sp"></i>휴지계획</span><span><i class="sw"></i>기다림(도료·PF 준비 전)</span><span><i class="sc"></i>이미 확정된 지시 작업</span></div>';
-  // 하루 띠: 0~24시 위에 생산(파랑)·휴지(주황)·휴지계획(회색)·기다림(빨강)
-  const mins = (s, d) => { if (!s) return 0; const sd = s.slice(0, 5), dd = d.slice(5); if (sd < dd) return 0; if (sd > dd) return 1440; return (+s.slice(6, 8)) * 60 + (+s.slice(9, 11)); };
+  const LEG = '<div class="strip-lg"><span>날짜 줄 아래 막대 = 그날 07시~다음날 07시 라인 사용:</span><span><i class="sr"></i>생산(숫자 = 순서)</span><span><i class="sd"></i>전환 휴지</span><span><i class="sp"></i>휴지계획</span><span><i class="sw"></i>기다림(도료·PF 준비 전)</span><span><i class="sc"></i>이미 확정된 지시 작업</span></div>';
+  // 하루 띠: 07시~다음날 07시 위에 생산(파랑)·휴지(주황)·휴지계획(회색)·기다림(빨강)
+  const mins = (s, d) => { if (!s) return 0; const y = +d.slice(0, 4), t = Date.UTC(y, +s.slice(0, 2) - 1, +s.slice(3, 5), +s.slice(6, 8), +s.slice(9, 11)), b = Date.UTC(y, +d.slice(5, 7) - 1, +d.slice(8, 10), 7, 0); return Math.max(0, Math.min(1440, (t - b) / 6e4)); };   // 하루 = 07시~다음날 07시(MES 일수 기준, 10/22 사용자)
   function strip(v, ph, d, byS, first) {
     const seg = []; let x0min = null;
     const add = (a, b, cls, tip, lab) => { const x0 = mins(a, d), x1 = mins(b, d); if (x1 <= x0) return; if (x0min == null || x0 < x0min) x0min = x0;
@@ -57,7 +57,7 @@
       else if (e.ph === ph) add(e.start, e.end, e.kind === 'plan' ? 'sp' : 'sw', `${e.kind === 'plan' ? '휴지계획' : '기다림(준비 안 된 지시)'} ${n0(e.min)}분`, e.kind === 'plan' ? '휴지' : '대기');
     });
     if (first && x0min > 0) seg.unshift(`<i class="sc" style="left:0;width:${(x0min / 14.4).toFixed(2)}%" title="이미 확정된 지시 작업(제안 대상 아님)">${x0min >= 90 ? '<b>확정분 작업</b>' : ''}</i>`);
-    return `<div class="strip">${seg.join('')}<span class="h0">0시</span><span class="h6">6시</span><span class="h12">12시</span><span class="h18">18시</span><span class="h24">24시</span></div>`;
+    return `<div class="strip">${seg.join('')}<span class="h0">7시</span><span class="h6">13시</span><span class="h12">19시</span><span class="h18">1시</span><span class="h24">7시</span></div>`;
   }
 
   function table(v, items, ph) {
@@ -117,8 +117,8 @@
     const C = [
       ['편성 대상', 'SSCHC1020 화면의 확정여부 N · 소재매치 Y · 지시 종료일 없음 (지시일 1년 안)', 'WRK_DRT_CONF · RAW_MCH_YN · WRK_DRT_END_DT', '대상 정의'],
       ['남은 양', '지시량 − 같은 계약·지시일로 이미 생산된 코일 무게. 95% 넘게 생산됐으면 끝난 지시로 봄', 'WRK_DRT_WGT − 코일 실적 PDT_WGT', '대상 정의'],
-      ['① 도료 입고일', '도료생산일(입고일) 0시부터 넣을 수 있음 — 당일 생산 가능', 'PNT_ENT_SCHE_DAT', '반드시 지킴'],
-      ['② PF 입고일', 'PF종류가 00 이 아니면 PF입고예정일 0시부터 (당일 가능). 날짜가 비어 있으면 경고만', 'PF_SRT_CD · PF_ENT_SCHE_DAT', '반드시 지킴'],
+      ['① 도료 입고일', '도료생산일(입고일) 07시부터 넣을 수 있음 — 당일 생산 가능(MES 일수 기준 07시)', 'PNT_ENT_SCHE_DAT', '반드시 지킴'],
+      ['② PF 입고일', 'PF종류가 00 이 아니면 PF입고예정일 07시부터 (당일 가능). 날짜가 비어 있으면 경고만', 'PF_SRT_CD · PF_ENT_SCHE_DAT', '반드시 지킴'],
       ['③ 확정 대기열', '확정여부 Y 인 지시는 MES 순서 그대로 맨 앞 (순서 안 바꿈)', 'WRK_SCHE_DT · WRK_SCHE_SEQ', '반드시 지킴'],
       ['④ 준비된 날 순', '도료·PF 준비가 끝난 날이 빠른 지시부터(이미 준비된 지시는 모두 오늘 묶음). 그룹 순위(수출 → 내수 → 계획재)는 보지 않음 — 그룹 순위는 분기 가동계획에만, 주간 실제 작업지시는 고려 안 함', '①·② 날짜', '반드시 지킴'],
       ['⑤ 휴지 최소', '같은 날 준비된 지시끼리 아래 휴지 기준표로 셈한 휴지 합이 가장 적은 순서 (블록끼리 모음 — 결과적으로 같은 색·같은 주문 연속, 상도만 바뀌는 쪽 먼저, 넓은 폭 → 좁은 폭, 비슷한 두께끼리)', '아래 표', '최대한'],
@@ -149,7 +149,7 @@
     $('wo-meta').textContent = `${O.now} 기준(지금) · 계산 ${O.built || ''}`;
     const dz = DZ.filter(([k]) => v.downFree[k] > 0.5).map(([k, nm]) => `${nm} ${n0(v.downFree[k])}`).join(' · ') || '없음';
     const gain = v.mes.sum - v.ours.sum;
-    const stop = v.stop ? `<div class="miss"><b>${line} 휴지 중</b> — ${esc(v.stop.note)}. ${v.stop.until ? `재가동 ${md(v.stop.until)} 0시부터 시각 계산` : '재가동일 미정 — 아래 시각은 <b>지금 바로 재가동한다고 가정</b>한 것'}</div>` : '';
+    const stop = v.stop ? `<div class="miss"><b>${line} 휴지 중</b> — ${esc(v.stop.note)}. ${v.stop.until ? `재가동 ${md(v.stop.until)} 07시부터 시각 계산` : '재가동일 미정 — 아래 시각은 <b>지금 바로 재가동한다고 가정</b>한 것'}</div>` : '';
     const ns = (O.nospec || []).filter((x) => x.line === line);
     $('wo-main').innerHTML = tabs() + (O.missing && O.missing.length ? `<div class="miss"><b>아직 안 들어온 자료</b> — ${O.missing.map(esc).join(' / ')}</div>` : '')
       + (ns.length ? `<div class="miss"><b>순서에서 뺀 지시 ${ns.length}건 — 계약 상세(두께·폭)가 MES 에 없음</b>: ${ns.map((x) => `${esc(x.con)} ${esc(x.item)} ${x.t}t(지시 ${md(x.drtDate)})`).join(' · ')}. 오래전 지시가 종료되지 않고 남은 것으로 보임 — MES 정리 확인</div>` : '')

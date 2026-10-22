@@ -37,12 +37,12 @@
   }
   const HEAD = '<thead><tr><th>순서</th><th>시간 (추정)</th><th class="l">소재 코일 · 계약</th><th>생산요청일</th><th class="l">두께 × 폭 · 후처리 · 도유</th><th>톤 · 생산</th><th class="l">앞 코일과 바뀌는 것</th><th class="l">예상 더미 (분 · 근거)</th></tr></thead>';
   const NC = 8;
-  const mins = (s, d) => { if (!s) return 0; const sd = s.slice(0, 5), dd = d.slice(5); if (sd < dd) return 0; if (sd > dd) return 1440; return (+s.slice(6, 8)) * 60 + (+s.slice(9, 11)); };
+  const mins = (s, d) => { if (!s) return 0; const y = +d.slice(0, 4), t = Date.UTC(y, +s.slice(0, 2) - 1, +s.slice(3, 5), +s.slice(6, 8), +s.slice(9, 11)), b = Date.UTC(y, +d.slice(5, 7) - 1, +d.slice(8, 10), 7, 0); return Math.max(0, Math.min(1440, (t - b) / 6e4)); };   // 하루 = 07시~다음날 07시(MES 일수 기준, 10/22 사용자)
   function strip(v, d, byS) {
     const seg = [];
     const add = (a, b, cls, tip) => { const x0 = mins(a, d), x1 = mins(b, d); if (x1 > x0) seg.push(`<i class="${cls}" style="left:${(x0 / 14.4).toFixed(2)}%;width:${(Math.max(x1 - x0, 2) / 14.4).toFixed(2)}%" title="${esc(tip)}"></i>`); };
     (v.events || []).forEach((e) => { const x = byS[e.seq]; if (!x) return; if (x.exp >= 0.05) add(x.downStart, x.start, 'sd', `${x.seq} 앞 예상 더미 ${n1(x.exp)}분`); add(x.start, x.end, 'sr', `${x.seq} ${x.raw} ${x.thick}×${n0(x.width)} ${n1(x.t)}t`); });
-    return `<div class="strip">${seg.join('')}<span class="h0">0시</span><span class="h6">6시</span><span class="h12">12시</span><span class="h18">18시</span><span class="h24">24시</span></div>`;
+    return `<div class="strip">${seg.join('')}<span class="h0">7시</span><span class="h6">13시</span><span class="h12">19시</span><span class="h18">1시</span><span class="h24">7시</span></div>`;
   }
   function table(v) {
     const byS = {}; v.items.forEach((x) => { byS[x.seq] = x; });
@@ -124,7 +124,7 @@
       + (v.n ? `<div class="wo-cmp${gain < 0 ? ' bad' : ''}"><b>1010 순서와 비교</b> — 같은 ${n0(v.n)}코일을 1010 에 들어간 순서대로 돌리면 예상 더미 ${n1(v.mes)}분 (사양 바뀜 ${n0(v.mesChg)}번) → 제안이 <b>${gain >= 0 ? `${n1(gain)}분 짧음` : `${n1(-gain)}분 김`}</b> <span class="bk">(같은 더미 기준표)</span></div>` : '')
       + (blk ? `<div class="cgbs"><span class="bk">표면사상 묶음</span> ${blk}</div>` : '')
       + '</section>'
-      + (v.n ? `<section class="card"><h2>제안 순서 <small class="bk">날짜별 · 줄마다 그 코일 앞에 생길 더미와 생산</small></h2><div class="strip-lg"><span>날짜 줄 아래 막대 = 그날 0~24시 라인 사용:</span><span><i class="sr"></i>생산(코일)</span><span><i class="sd"></i>예상 더미</span><span>빈 칸 = 제안 대상 아닌 시간(앞 지시 작업·대기)</span></div>${table(v)}</section>` : '<section class="card"><p>1010 대상 코일이 없습니다.</p></section>');
+      + (v.n ? `<section class="card"><h2>제안 순서 <small class="bk">날짜별 · 줄마다 그 코일 앞에 생길 더미와 생산</small></h2><div class="strip-lg"><span>날짜 줄 아래 막대 = 그날 07시~다음날 07시 라인 사용:</span><span><i class="sr"></i>생산(코일)</span><span><i class="sd"></i>예상 더미</span><span>빈 칸 = 제안 대상 아닌 시간(앞 지시 작업·대기)</span></div>${table(v)}</section>` : '<section class="card"><p>1010 대상 코일이 없습니다.</p></section>');
     $('wo-lines').querySelectorAll('button').forEach((b) => b.onclick = () => { line = b.dataset.l; render(); });
     bindTabs();
     if (window.UI) UI.reveal($('wo-main'));

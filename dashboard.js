@@ -59,7 +59,7 @@
       render();
     } catch (err) { /* 실적 자료 없으면 환산값 */ }
   }
-  function localToday() { const d = new Date(); return GP.ymd(d.getFullYear(), d.getMonth() + 1, d.getDate()); }
+  function localToday() { const d = new Date(Date.now() - 7 * 3600e3); return GP.ymd(d.getFullYear(), d.getMonth() + 1, d.getDate()); }
 
   function render() {
     const P = R.P, H = A.H, L = P.lines;

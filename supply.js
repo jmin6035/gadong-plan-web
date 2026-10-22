@@ -11,7 +11,7 @@
   const WD = ['일', '월', '화', '수', '목', '금', '토'];
   const wd = (d) => new Date(d + 'T00:00:00').getDay();
   const add = (d, k) => { const x = new Date(d + 'T00:00:00'); x.setDate(x.getDate() + k); return x.toLocaleDateString('sv-SE'); };
-  const today = new Date().toLocaleDateString('sv-SE');
+  const today = new Date(Date.now() - 7 * 3600e3).toLocaleDateString('sv-SE');   // 생산일 = 07시 기준(MES 일수 기준, 10/22)
   const diff = (a, b) => Math.round((new Date(a + 'T00:00:00') - new Date(b + 'T00:00:00')) / 864e5);
   const dayC = (d) => (d < today ? ' past' : d === today ? ' tb' : '');   // 지난 날(실적) 옅은 바탕 · 오늘 앞 파란 경계선(기울임 대신, 사용자 10/21)
   const FAM = (a) => (/^AZ/.test(a) ? 'AZ' : /^MAC/.test(a) ? 'MAC' : 'AL');
