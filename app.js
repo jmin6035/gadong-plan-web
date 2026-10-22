@@ -197,7 +197,7 @@
     $('early').innerHTML = '<tr><th>라인</th><th>강종</th><th>부서</th><th>생산월</th><th>마감</th><th>물량(t)</th><th>사유</th></tr>' + er.map((x) => `<tr><td>${x.line}</td><td>${x.alloy}</td><td>${x.cls}</td><td>${x.prodMonth}월</td><td>${GP.md(x.due)}</td><td class="n">${GP.fmt(x.tons, 1)}</td><td class="l">${esc(x.why)}</td></tr>`).join('') + `<tr><td colspan="5"><b>합계</b></td><td class="n"><b>${GP.fmt(A.earlyT, 1)}</b></td><td></td></tr>`;
     renderReplanBox();
     show('sec-replan', true);
-    const H = A.H, today = (() => { const d = new Date(); return GP.ymd(d.getFullYear(), d.getMonth() + 1, d.getDate()); })();
+    const H = A.H, today = (() => { const d = new Date(Date.now() - 7 * 3600e3); return GP.ymd(d.getFullYear(), d.getMonth() + 1, d.getDate()); })();
     const last = GP.addDays(H.D1, -1);
     $('rp-t0').min = H.D0; $('rp-t0').max = last;
     if (!$('rp-t0').value || $('rp-t0').value < H.D0 || $('rp-t0').value > last) $('rp-t0').value = today < H.D0 ? H.D0 : today > last ? last : today;

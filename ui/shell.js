@@ -129,7 +129,7 @@
     const want = FEED[h.dataset.page] || '도금 생산 실적(코일)';
     const f = (S.feeds || []).find((x) => x.name === want) || (S.feeds || [])[0];
     if (!f || !f.last) return;
-    const today = new Date(); const d0 = new Date(f.last + 'T00:00:00');
+    const today = new Date(Date.now() - 7 * 3600e3); const d0 = new Date(f.last + 'T00:00:00');   // 생산일(07시 기준)
     const age = Math.floor((new Date(today.getFullYear(), today.getMonth(), today.getDate()) - d0) / 864e5);
     const el = document.getElementById('ui-fresh');
     el.hidden = false; el.className = 'fresh ' + (age <= 1 ? 'ok' : age <= 2 ? 'warn' : 'bad');
