@@ -67,9 +67,41 @@
     const sec = (pl, t) => { const L = G.filter((g) => g.pl === pl); return L.length ? `<tr class="sec" data-dom="${pl}"><td colspan="8">${t}</td></tr>` + L.map(row).join('') + tot(pl, t, L) : ''; };
     const g0 = G.find((g) => g.pl === 'G'), c0 = G.find((g) => g.pl === 'C'), s0 = (G.find((g) => g.ship) || {}).ship;
     return `<h2>마케팅 그룹별 이번 달 <small>${g0 ? `도금 ~${md(g0.prod.asOf)}` : ''}${c0 ? ` · 컬러 ~${md(c0.prod.asOf)}` : ''}${s0 ? ` · 출하 ${esc(String(s0.asOf).slice(5, 10).replace('-', '/'))} 속보` : ''}</small><span class="unit">톤</span></h2>
-      <div class="scroll"><table class="gt"><thead><tr><th class="l">그룹</th><th class="l">생산 진도 <span style="font-weight:400">(줄무늬 = 남은 계획, 선 = 월 계획)</span></th><th>실적 / 계획</th><th class="hide-m">남은</th><th class="hide-m">하루 필요</th><th>월말 예상</th><th>출하 / 월차</th><th class="hide-m">일정 대비</th></tr></thead>
+      <div class="scroll"><table class="gt"><thead><tr><th class="l">그룹</th><th class="l">생산 진도 <span style="font-weight:400">(줄무늬 = 남은 계획, 선 = 월 계획)</span></th><th>실적 / 생산계획</th><th class="hide-m">잔여 생산량</th><th class="hide-m">하루 필요</th><th>월말 예상</th><th>출하 / 월차</th><th class="hide-m">출하 일정 대비</th></tr></thead>
       <tbody>${sec('G', '도금')}${sec('C', '컬러')}</tbody></table></div>
-      <p class="small" style="margin:6px 0 0">도금 계에는 컬러 소재로 가는 자가재가 들어 있어 도금 + 컬러 생산을 더하면 이중 계상 — 공장 전체 출하 합계는 위 '출하' 칸(판매생산속보 합계)</p>`;
+      <p class="small" style="margin:6px 0 0">생산계획 = 확정 계획(계획 엔진)의 이번 달 그룹 생산량(판매계획 아님 — 판매계획은 아래 표) · 잔여 생산량 = 생산계획 − 실적 · 월말 예상 = (실적 + 남은 날 재계획 생산) ÷ 생산계획 · 출하 일정 대비 = 출하 실적 − 판매생산속보 출하 일정누계(오늘까지 나갔어야 할 양). 도금 계에는 컬러 소재로 가는 자가재가 들어 있어 도금 + 컬러 생산을 더하면 이중 계상</p>`;
+  }
+
+  // ---------- 그룹별 판매계획 → 필요 생산 → 진도(10/22 사용자: 판매계획·필요생산량(월차)·진도율 그룹별, 도금·컬러) ----------
+  let IG = null;                                               // 통합 계획(integrated.enc.json) — 그룹 월 판매·필요 생산(계획 엔진 월 물량 LP)
+  const GN = { G국내: '도금판매(국내)', G수출: '도금수출', G자동차: '자동차강판', G자가재: '도금 자가재(컬러 소재)', C건재: '컬러건재', C수출: '컬러수출', C수요: '수요개발' };
+  function needCard(O) {
+    if (!IG || !IG.variants) return '';
+    const V = IG.variants[IG.rec || 'V1'] || IG.variants.V1, PL = V && V.plan;
+    if (!PL) return '';
+    const M = O.months || ['2026-10', '2026-11', '2026-12'], cur = String(O.asOf || '').slice(0, 7), mi = Math.max(0, M.indexOf(cur));
+    const el = +String(O.asOf).slice(8, 10), D = dim(cur), er = el / D;      // 오늘까지 경과율(실적 마지막 날 기준)
+    const act = {}; for (const g of O.groups || []) act[g.key] = g.prod ? g.prod.actual : null;
+    const L = O.lines || [], mon = (pl) => L.filter((x) => x.pl === pl).reduce((a, x) => a + (x.month || 0), 0);
+    const tone = (r) => (r == null ? '' : r >= er - 0.03 ? 'pos' : r >= er - 0.1 ? 'warn' : 'neg');
+    const cell = (g) => { const p = PL[g] || []; const a = act[g]; const need = (p[mi] || {}).prod || 0; const r = a != null && need > 0 ? a / need : null;
+      return { sales: p.map((x) => x.sales || 0), prod: p.map((x) => x.prod || 0), a, r }; };
+    const row = (g, cls) => { const c = typeof g === 'string' ? cell(g) : g; const nm = typeof g === 'string' ? GN[g] : g.nm;
+      const q = (k) => c[k].reduce((x, y) => x + y, 0);
+      return `<tr class="${cls || ''}"><td class="l">${nm}</td>`
+        + M.map((m, i) => `<td class="${i === mi ? 'cm' : ''}">${n0(c.sales[i])}</td><td class="${i === mi ? 'cm' : ''}"><b>${n0(c.prod[i])}</b></td>`
+          + (i === mi ? `<td class="cm">${c.mon != null ? n0(c.mon) : '<span class="mu">-</span>'}</td><td class="cm">${c.a != null ? n0(c.a) : '-'}</td><td class="cm"><b class="${tone(c.r)}">${c.r != null ? Math.round(c.r * 100) + '%' : '-'}</b></td>` : '')).join('')
+        + `<td class="q">${n0(q('sales'))}</td><td class="q"><b>${n0(q('prod'))}</b></td></tr>`; };
+    const sec = (pl, t, gs) => { if (!UI.inScope(pl)) return ''; const C = gs.map(cell);
+      const T = { nm: `${t} 계`, sales: M.map((_, i) => C.reduce((a, c) => a + c.sales[i], 0)), prod: M.map((_, i) => C.reduce((a, c) => a + c.prod[i], 0)), a: C.reduce((a, c) => a + (c.a || 0), 0), mon: mon(pl) };
+      T.r = T.prod[mi] ? T.a / T.prod[mi] : null;
+      return `<tr class="sec"><td colspan="${3 + M.length * 2 + 3}">${t}</td></tr>` + gs.map((g) => row(g)).join('') + row(T, 'tot'); };
+    const hd = M.map((m, i) => `<th colspan="${i === mi ? 5 : 2}" class="${i === mi ? 'cm' : ''}">${+m.slice(5)}월${i === mi ? ` <small>(진행 중 · 경과 ${Math.round(er * 100)}%)</small>` : ''}</th>`).join('') + '<th colspan="2" class="q">4분기</th>';
+    const hd2 = M.map((m, i) => '<th>판매계획</th><th>필요 생산</th>' + (i === mi ? '<th>월차</th><th>생산 실적</th><th>진도율</th>' : '')).join('') + '<th class="q">판매계획</th><th class="q">필요 생산</th>';
+    return `<h2>그룹별 판매계획 → 필요 생산 → 진도 <small>필요 생산 = 판매계획 + 월말 목표 재고 − 월초 재고(계획 엔진 월 물량) · 진도율 = 이번 달 생산 실적 ÷ 필요 생산</small><span class="unit">톤</span></h2>
+      <div class="scroll"><table class="gt nd"><thead><tr><th class="l" rowspan="2">그룹</th>${hd}</tr><tr>${hd2}</tr></thead>
+      <tbody>${sec('G', '도금', ['G국내', 'G수출', 'G자동차', 'G자가재'])}${sec('C', '컬러', ['C건재', 'C수출', 'C수요'])}</tbody></table></div>
+      <p class="small" style="margin:6px 0 0">진도율 색: 경과율(${Math.round(er * 100)}%) 이상 초록 · 10%p 안쪽 노랑 · 그보다 낮으면 빨강. 월차 = 판매생산속보 라인 월차 합(그룹별 월차는 속보에 없어 계에만). 목표 재고: 도금 = TF 목표 일수(자동차 약 30·수출 15·국내 20일), 컬러 = 생산주기 기준. 도금 자가재 판매계획 = 컬러 공장이 쓸 자가재 소재</p>`;
   }
 
   // ---------- 오너 한눈에: 상태 4칸 — 주간보고(report.html)와 같은 숫자·기준(생산 98/90 · 출하 95/80 · 재고 110/130%) ----------
@@ -213,6 +245,7 @@
     $('h-own').innerHTML = owner(O);
     const fc = fcCard(O); $('h-fc').innerHTML = fc; $('h-fc').hidden = !fc;
     const gh = grp(O); $('h-grp').innerHTML = gh; $('h-grp').hidden = !gh;
+    const nd = needCard(O); $('h-need').innerHTML = nd; $('h-need').hidden = !nd;
     $('h-lines').innerHTML = lines(O);
     const wh = woCard(O); $('h-wo').innerHTML = wh; $('h-wo').hidden = !wh;
     const wk = weekCard(O); $('h-week').innerHTML = wk; $('h-week').hidden = !wk;
@@ -231,7 +264,8 @@
   const envReady = GP.latest('portal.enc.json');
   async function unlock(pw) {
     if (!env) env = await envReady;
-    try { const O = await GP.decryptJSON(env, pw); try { localStorage.setItem(PW_KEY, pw); } catch (e) { /* 무시 */ } $('h-lock').hidden = true; render(O); UI.onScope(() => render(lastO)); }
+    try { const O = await GP.decryptJSON(env, pw); try { localStorage.setItem(PW_KEY, pw); } catch (e) { /* 무시 */ } $('h-lock').hidden = true; render(O); UI.onScope(() => render(lastO));
+      GP.latest('integrated.enc.json').then((e) => (e ? GP.decryptJSON(e, pw) : null)).then((x) => { if (x) { IG = x; render(lastO); } }).catch(() => { /* 통합 계획 없으면 표 생략 */ }); }
     catch (e) { $('h-own').innerHTML = ''; $('h-lock').hidden = false; $('h-msg').textContent = pw ? '암호가 맞지 않습니다' : ''; }
   }
   $('h-form').addEventListener('submit', (e) => { e.preventDefault(); unlock($('h-pw').value); });

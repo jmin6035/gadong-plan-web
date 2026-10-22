@@ -1,0 +1,153 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>재고 목표 기준</title>
+<meta name="description" content="계획 계산이 쓰는 재고 목표(TF 목표 일수·공장 월말 최대)를 보고 고침 — 저장하면 다음 계획 재계산부터 적용, 바꾼 이력이 남음">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 40'><defs><clipPath id='c'><rect width='40' height='40' rx='11'/></clipPath></defs><g clip-path='url(%23c)'><rect width='40' height='40' fill='%231b3f5f'/><path d='M-6 30 30-6h9L3 30z' fill='%233774a1'/><path d='M4 40 40 4v9L13 40z' fill='%236cb1d8'/><path d='M17 40 40 17v8L25 40z' fill='%23fff'/></g></svg>">
+<link rel="stylesheet" href="ui/theme.css?v=2610220437">
+<style>
+.tr-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(420px, 1fr)); gap: 18px; }
+table.t.tr td, table.t.tr th { padding: 9px 12px; }
+table.t.tr td.l, table.t.tr th.l { text-align: left; }
+table.t.tr td.num { text-align: right; }
+table.t.tr input { width: 92px; text-align: right; font: inherit; font-variant-numeric: tabular-nums; padding: 5px 8px; border: 1px solid var(--line); border-radius: 6px; background: var(--surface); color: var(--ink); }
+table.t.tr input.chg { border-color: var(--warn); background: var(--warn-bg); font-weight: 700; }
+.tr-off { color: var(--ink-3); font-size: 12.5px; }
+.tr-save { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; margin-top: 16px; }
+.tr-save input { font: inherit; padding: 7px 10px; border: 1px solid var(--line); border-radius: 7px; background: var(--surface); color: var(--ink); }
+.tr-save #t-memo { flex: 1; min-width: 240px; }
+.tr-note { border-left: 4px solid var(--brand-2); background: var(--tint); padding: 10px 14px; border-radius: 6px; line-height: 1.7; margin: 0 0 16px; }
+table.t.hist td { white-space: normal; vertical-align: top; }
+table.t.hist td.l { text-align: left; }
+.chgl b { color: var(--warn); }
+</style>
+</head>
+<body>
+<header id="shell" data-page="tfrules" data-crumb="관리" data-title="재고 목표 기준" data-sub="계획 계산이 쓰는 그룹별 TF 목표 일수와 공장 월말 최대 재고 — 고치면 다음 계획 재계산부터 적용"></header>
+<main class="wrap">
+  <section class="card" id="t-lock" style="margin-top:12px" hidden>
+    <h2>분석 암호를 입력하세요</h2>
+    <form class="unlock" id="t-form" style="justify-content:flex-start"><input type="password" id="t-pw" placeholder="분석 암호" autocomplete="current-password" aria-label="분석 암호"><button type="submit">열기</button></form>
+    <p class="hint" id="t-msg"></p>
+  </section>
+  <div id="t-main" hidden style="margin-top:16px">
+    <section class="card"><h2>기준 고치기 <small id="t-src"></small></h2>
+      <p class="tr-note" id="t-note"></p>
+      <div class="tr-grid">
+        <div><h3>그룹별 TF 목표 일수 <small class="muted">월말 재고 = 목표 일수 × 다음 달 하루 판매</small></h3>
+          <div class="scroll"><table class="t tr"><thead><tr><th class="l">그룹</th><th>계획에 쓴 값</th><th>새 값(일)</th></tr></thead><tbody id="t-days"></tbody></table></div></div>
+        <div><h3>공장 월말 최대 재고 <small class="muted">'27 판생그룹 목표 — 그룹 목표보다 우선</small></h3>
+          <div class="scroll"><table class="t tr"><thead><tr><th class="l">구분</th><th>계획에 쓴 값</th><th>새 값(t)</th></tr></thead><tbody id="t-max"></tbody></table></div></div>
+      </div>
+      <div class="tr-save"><input id="t-who" maxlength="40" placeholder="바꾼 사람(부서·이름)"><input id="t-memo" maxlength="300" placeholder="바꾼 이유(예: 11월 판생회의 — 자동차 재고 25일로)"><button type="button" class="btn primary" id="t-saveb">저장</button><button type="button" class="btn" id="t-reset">되돌리기</button></div>
+      <p class="small" id="t-res"></p>
+    </section>
+    <section class="card"><h2>바꾼 이력 <small id="t-hn"></small></h2>
+      <div class="scroll"><table class="t hist"><thead><tr><th>저장 시각</th><th>바꾼 사람</th><th class="l">바뀐 항목(직전 저장 대비)</th><th class="l">이유</th><th>계획 반영</th></tr></thead><tbody id="t-hist"></tbody></table></div>
+      <p class="small">저장 내용은 분석 암호로 잠가 공유 저장소에 쌓입니다(추가만 가능 — 고치거나 지울 수 없어서 이력이 그대로 남음). 암호가 다른 줄은 계산에 쓰지 않습니다.</p>
+    </section>
+  </div>
+</main>
+<footer class="foot"><div class="wrap"><span>저장 = 공유 저장소(모든 사람이 같은 값) · 계획 반영 = 다음 재계산·게시</span><span>POSCO STEELEON 도금·컬러 가동계획</span></div></footer>
+<script src="ui/shell.js?v=2610220437"></script>
+<script src="engine/crypto.js?v=2610220437"></script>
+<script>
+(function () {
+  'use strict';
+  const $ = (id) => document.getElementById(id);
+  const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  const n0 = (v) => (v == null ? '-' : Number(v).toLocaleString('ko-KR', { maximumFractionDigits: 1 }));
+  const PW_KEY = 'cgl-analysis-pw';
+  const API = GP.SUPABASE_URL + '/rest/v1/cgl_tf_rules', KEY = 'sb_publishable_BlfAhxz_v3yg6iJw_nbRaA_YMFAOS7K';   // 공개용 키(표 권한 = 읽기·추가만)
+  const H = { apikey: KEY, Authorization: 'Bearer ' + KEY, 'Content-Type': 'application/json' };
+  // 항목·순서 = cglplan/tfrules.py DAY_KEYS·MAX_KEYS (같이 고칠 것)
+  const DAYS = [['도금', 'G수출', '도금 수출'], ['도금', 'G국내', '도금 국내'], ['도금', 'G자가재', '도금 자가재(컬러 투입)'],
+    ['도금', null, '도금 자동차'], ['도금', 'AL-STS', 'AL-STS', 1], ['도금', '임가공', '임가공', 1], ['도금', '기타', '그 외', 1],
+    ['컬러', '건재수출', '컬러 건재수출'], ['컬러', '가전수출', '컬러 가전수출'], ['컬러', '가전내수', '컬러 가전내수'], ['컬러', '주문재', '컬러 주문재(건재)'], ['컬러', '수요개발', '컬러 수요개발']];
+  const MAXK = ['도금 소재(F/H)', '도금 제품(판매재)', '컬러 소재', '컬러 제품'];
+  const DEF = { days: { 'G수출': 15, 'G국내': 20, 'G자가재': 15, 'AL-STS': 30, '임가공': 15, '기타': 45, '건재수출': 15, '가전수출': 15, '가전내수': 30, '주문재': 20, '수요개발': 30 },
+    stockMax: { '도금 소재(F/H)': 12600, '도금 제품(판매재)': 22300, '컬러 소재': 20940, '컬러 제품': 19320 } };
+  let PW = '', APPLIED = null, LATEST = null, HIST = [];
+
+  function valid(o) {
+    if (!o || !o.days || !o.stockMax) return false;
+    return DAYS.every(([, k]) => !k || (+o.days[k] >= 0 && +o.days[k] <= 120)) && MAXK.every((k) => +o.stockMax[k] > 0 && +o.stockMax[k] <= 100000);
+  }
+  async function loadHist() {
+    const r = await fetch(API + '?select=id,at,who,payload&order=id.desc&limit=100', { headers: H });
+    if (!r.ok) throw new Error('공유 저장소 읽기 ' + r.status);
+    const rows = await r.json(), out = [];
+    for (const x of rows) { try { const o = await GP.decryptJSON(JSON.parse(x.payload), PW); if (valid(o)) out.push(Object.assign({ id: x.id, at: x.at, who: x.who }, o)); } catch (e) { /* 암호 다른 줄 = 건너뜀 */ } }
+    HIST = out; LATEST = out[0] || null;
+  }
+  function cur() { return LATEST || APPLIED || DEF; }
+  function draw() {
+    const A = APPLIED || DEF, C = cur(), modeG = APPLIED && APPLIED.modeG, modeC = APPLIED && APPLIED.modeC;
+    const offC = modeC && modeC !== 'tf';
+    $('t-days').innerHTML = DAYS.map(([sec, k, lb, sub]) => (!k ? `<tr><td class="l">${lb}</td><td></td><td></td></tr>`
+      : `<tr><td class="l">${sub ? '└ ' : ''}${lb}${sec === '컬러' && offC ? ' <span class="tr-off">지금 계획 미적용</span>' : ''}</td><td class="num">${n0(A.days[k])}일</td><td><input type="number" min="0" max="120" step="1" data-s="days" data-k="${esc(k)}" value="${C.days[k]}"></td></tr>`)).join('');
+    $('t-max').innerHTML = MAXK.map((k) => `<tr><td class="l">${esc(k)}</td><td class="num">${n0(A.stockMax[k])}t</td><td><input type="number" min="1" max="100000" step="100" data-s="stockMax" data-k="${esc(k)}" value="${C.stockMax[k]}"></td></tr>`).join('');
+    const src = APPLIED && APPLIED.src;
+    $('t-src').textContent = src ? `계획에 쓴 값 = ${src.id ? `#${src.id} ${String(src.at).slice(0, 10)} ${src.who || ''}` : (src.who || '') + ' ' + (src.at || '')}` : '계획에 쓴 값 = 10/21 TF 확정값';
+    $('t-note').innerHTML = `계획 엔진은 달마다 그룹별 생산량을 정할 때 <b>월말 재고 = 목표 일수 × 다음 달 하루 판매</b>를 맞추고, 공장 월말 최대를 넘지 않게 합니다.<br>`
+      + `지금 도금은 <b>${modeG === 'cycle' ? '생산주기 기준' : 'TF 목표 일수'}</b>, 컬러는 <b>${offC ? '생산주기 기준(10/21 결정 — 컬러 목표 일수는 저장만 되고 아직 계획에 안 씀)' : 'TF 목표 일수'}</b>로 계산합니다. 월말 최대는 도금·컬러 모두 적용됩니다.<br>`
+      + `저장하면 <b>다음 계획 재계산부터</b> 적용됩니다. 지금 게시된 계획 숫자는 재계산·게시 전까지 그대로입니다.`;
+    marks();
+    $('t-hn').textContent = HIST.length ? `${HIST.length}건` : '';
+    const key = (o, s, k) => (o && o[s] ? o[s][k] : undefined);
+    const lbl = Object.fromEntries(DAYS.filter((d) => d[1]).map((d) => [d[1], d[2]]));
+    $('t-hist').innerHTML = HIST.map((h, i) => {
+      const p = HIST[i + 1], ch = [];
+      for (const [s, ks, u] of [['days', DAYS.filter((d) => d[1]).map((d) => d[1]), '일'], ['stockMax', MAXK, 't']]) for (const k of ks) if (p && key(p, s, k) !== key(h, s, k)) ch.push(`${esc(lbl[k] || k)} ${n0(key(p, s, k))} → <b>${n0(key(h, s, k))}${u}</b>`);
+      const used = src && src.id === h.id;
+      return `<tr><td>${esc(new Date(h.at).toLocaleString('sv-SE', { timeZone: 'Asia/Seoul' }).slice(0, 16))}</td><td>${esc(h.who)}</td><td class="l chgl">${p ? (ch.join(' · ') || '바뀐 값 없음') : '첫 기록'}</td><td class="l">${esc(h.memo || '')}</td><td>${used ? '<b>지금 계획</b>' : (src && src.id && h.id > src.id ? '다음 재계산' : '')}</td></tr>`;
+    }).join('') || '<tr><td colspan="5" class="muted">아직 저장한 기록이 없습니다</td></tr>';
+  }
+  function marks() {
+    const C = cur();
+    document.querySelectorAll('table.tr input').forEach((el) => el.classList.toggle('chg', +el.value !== +C[el.dataset.s][el.dataset.k]));
+  }
+  async function save() {
+    const o = { days: {}, stockMax: {}, memo: $('t-memo').value.trim().slice(0, 300) };
+    document.querySelectorAll('table.tr input').forEach((el) => { o[el.dataset.s][el.dataset.k] = +el.value; });
+    if (!valid(o)) { $('t-res').textContent = '값을 확인하세요 — 목표 일수 0~120일, 월말 최대 1~100,000t'; return; }
+    const C = cur();
+    if (DAYS.every(([, k]) => !k || o.days[k] === +C.days[k]) && MAXK.every((k) => o.stockMax[k] === +C.stockMax[k])) { $('t-res').textContent = '바뀐 값이 없습니다'; return; }
+    if (!$('t-who').value.trim()) { $('t-res').textContent = '바꾼 사람을 적어 주세요'; $('t-who').focus(); return; }
+    $('t-saveb').disabled = true; $('t-res').textContent = '저장 중…';
+    try {
+      const env = await GP.encryptJSON(o, PW, 'tf_rules');
+      const r = await fetch(API, { method: 'POST', headers: Object.assign({ Prefer: 'return=minimal' }, H), body: JSON.stringify({ who: $('t-who').value.trim().slice(0, 40), payload: JSON.stringify(env) }) });
+      if (!r.ok) throw new Error('저장 실패 ' + r.status);
+      try { localStorage.setItem('cgl-me', $('t-who').value.trim()); } catch (e) { /* 무시 */ }
+      $('t-memo').value = '';
+      await loadHist(); draw();
+      $('t-res').textContent = '저장했습니다 — 다음 계획 재계산부터 적용됩니다';
+      if (window.UI && UI.toast) UI.toast('재고 목표 기준 저장');
+    } catch (e) { $('t-res').textContent = e.message; }
+    $('t-saveb').disabled = false;
+  }
+  async function unlock(pw) {
+    try {
+      const env = await GP.latest('integrated.enc.json');
+      const IG = await GP.decryptJSON(env, pw);
+      PW = pw; try { localStorage.setItem(PW_KEY, pw); } catch (e) { /* 무시 */ }
+      APPLIED = IG.tfRules || { days: DEF.days, stockMax: IG.stockMax || DEF.stockMax, modeG: 'tf', modeC: 'cycle' };   // tfRules 없는 옛 게시본 = 10/21 TF 확정값·도금 TF·컬러 생산주기
+    } catch (e) { $('t-lock').hidden = false; $('t-msg').textContent = pw ? '암호가 맞지 않습니다' : ''; return; }
+    $('t-lock').hidden = true; $('t-main').hidden = false;
+    try { $('t-who').value = localStorage.getItem('cgl-me') || ''; } catch (e) { /* 무시 */ }
+    try { await loadHist(); } catch (e) { $('t-res').textContent = e.message; }
+    draw();
+  }
+  document.addEventListener('input', (e) => { if (e.target.matches('table.tr input')) marks(); });
+  $('t-saveb').addEventListener('click', save);
+  $('t-reset').addEventListener('click', draw);
+  $('t-form').addEventListener('submit', (e) => { e.preventDefault(); unlock($('t-pw').value); });
+  let s = ''; try { s = localStorage.getItem(PW_KEY) || ''; } catch (e) { /* 무시 */ }
+  if (s) unlock(s); else $('t-lock').hidden = false;
+})();
+</script>
+</body>
+</html>

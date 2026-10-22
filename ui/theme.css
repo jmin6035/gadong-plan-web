@@ -985,3 +985,12 @@ html body main table.vs3 th.ln { font-size: 16px; }
 /* 기준일 라인 현황 카드: 긴 휴지 사유 칸은 카드 안에서 줄바꿈(10/22 사용자: 칸 튀어나옴) */
 html body main .ln-card .tag { white-space: normal; max-width: 100%; box-sizing: border-box; border-radius: 10px; line-height: 1.45; word-break: keep-all; overflow-wrap: anywhere; }
 html body main .ln-card { min-width: 0; overflow: hidden; }
+/* 홈 그룹별 판매계획 → 필요 생산 → 진도 */
+html body main table.gt.nd th, html body main table.gt.nd td { text-align: right; white-space: nowrap; padding: 7px 9px; }
+html body main table.gt.nd th.l, html body main table.gt.nd td.l { text-align: left !important; padding-left: 12px; }
+html body main table.gt.nd thead th { text-align: center; }
+html body main table.gt.nd .cm { background: color-mix(in srgb, var(--brand-2) 6%, var(--surface)); }
+html body main table.gt.nd .q { background: var(--surface-2); }
+html body main table.gt.nd tr.tot td { font-weight: 800; border-top: 1px solid var(--line); background: var(--surface-2); }
+html body main table.gt.nd tr.sec td { text-align: left; font-weight: 800; color: var(--ink-2); background: transparent; padding-top: 12px; }
+html body main table.gt.nd b.warn { color: #b26b00; }
